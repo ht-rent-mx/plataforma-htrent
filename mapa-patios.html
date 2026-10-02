@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0B3D66">
+<title>Mapa de patios · Plataforma HT</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Saira:ital,wght@1,700;1,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="ht.css">
+<style>
+/* =====================================================================
+   Módulo Mapa de patios · complementa ht.css
+   Colores corporativos de la hoja compartida; aquí solo el plano y los avatares.
+   ===================================================================== */
+:root{
+  --concreto:var(--bg); --asfalto:#DCE1EA; --asfalto-2:#CBD3E0; --linea:var(--navy);
+  --tinta:var(--text); --tinta-suave:var(--muted); --panel:var(--surface); --borde:var(--line);
+  --libre:var(--ok); --asignado:#2F7FD1; --transito:#D98A00; --otro:#8A8F95;
+  --fuente:var(--sans); --fuente-cond:var(--display);
+  --celda:28px;
+}
+main{max-width:none;padding:0}
+html,body{height:100%;font-size:14px}
+.btn{height:34px;padding:0 14px;display:inline-flex;align-items:center;white-space:nowrap}
+.btn.activo{background:var(--navy);border-color:var(--edge);color:#fff}
+
+/* ---------- Barra de herramientas del módulo ---------- */
+.herramientas{display:flex;align-items:center;gap:12px;padding:10px 20px;background:var(--panel);border-bottom:1px solid var(--borde);flex-wrap:wrap}
+.herramientas .migaja{margin:0;white-space:nowrap}
+.buscar{flex:1;min-width:200px;max-width:380px;display:flex;align-items:center;gap:8px;background:var(--concreto);border:1px solid var(--borde);border-radius:var(--r);padding:0 12px;height:36px}
+.buscar input{flex:1;border:0;background:transparent;outline:none;height:100%;min-width:0}
+.filtros{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.filtros select{height:36px;border:1px solid var(--borde);border-radius:var(--r);background:#fff;padding:0 8px;max-width:220px}
+.conexion{margin-left:auto;display:flex;align-items:center;gap:8px;color:var(--tinta-suave);font-size:13px;white-space:nowrap}
+.conexion i{width:9px;height:9px;border-radius:50%;background:var(--otro);display:inline-block}
+.conexion.ok i{background:var(--libre)} .conexion.error i{background:var(--red)}
+/* ---------- Estructura ---------- */
+#cuerpo{display:grid;grid-template-columns:250px 1fr;min-height:calc(100vh - 170px)}
+aside{background:var(--panel);border-right:1px solid var(--borde);overflow:auto;padding:14px 0}
+aside h2{margin:0 20px 8px}
+.patio{display:flex;align-items:center;gap:10px;padding:8px 20px;cursor:pointer;border-left:4px solid transparent}
+.patio:hover{background:#F5F4F0} .patio.activo{border-left-color:var(--linea);background:#F5F4F0;font-weight:600}
+.patio.drop{background:var(--lime-soft);border-left-color:var(--lime-ink)}
+.patio .n{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--tinta-suave);font-size:13px;min-width:34px;text-align:right}
+.leyenda{padding:14px 20px 0;border-top:1px solid var(--borde);margin-top:12px;font-size:12px;color:var(--tinta-suave)}
+.leyenda div{display:flex;align-items:center;gap:8px;margin:4px 0} .leyenda i{width:10px;height:10px;border-radius:2px;display:inline-block}
+
+section#vista{position:relative;overflow:auto;padding:18px 22px}
+.titulo{display:flex;align-items:center;gap:14px;margin-bottom:12px;flex-wrap:wrap}
+.titulo h1{margin:0} .titulo .sub{color:var(--tinta-suave)}
+.titulo .acciones{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+
+/* ---------- Plano ---------- */
+.plano-envoltura{background:var(--panel);border:1px solid var(--borde);border-radius:var(--r);padding:14px;overflow:auto}
+.plano{position:relative;background-color:var(--asfalto);border-radius:6px;
+  background-image:radial-gradient(rgba(11,61,102,.18) 1px,transparent 1px);background-size:var(--celda) var(--celda)}
+.plano.con-fondo{background-image:var(--fondo);background-size:100% 100%}
+.plano.editando{background-image:linear-gradient(rgba(11,61,102,.18) 1px,transparent 1px),linear-gradient(90deg,rgba(11,61,102,.18) 1px,transparent 1px);background-size:var(--celda) var(--celda)}
+.plano.editando.con-fondo{background-image:linear-gradient(rgba(11,61,102,.3) 1px,transparent 1px),linear-gradient(90deg,rgba(11,61,102,.3) 1px,transparent 1px),var(--fondo);background-size:var(--celda) var(--celda),var(--celda) var(--celda),100% 100%}
+.zona{position:absolute;border:2px dashed var(--linea);border-radius:var(--r);display:flex;flex-direction:column;background:rgba(255,255,255,.72);overflow:hidden}
+.zona.drop{background:var(--lime-soft);border-style:solid;border-color:var(--lime-ink)}
+.zona-cab{display:flex;align-items:center;gap:8px;padding:5px 10px 3px;color:var(--ink);font-family:var(--fuente-cond);font-style:italic;font-weight:800;font-size:16px;flex:none;white-space:nowrap;overflow:hidden}
+.zona-cab .cnt{color:var(--tinta-suave);font-family:var(--fuente);font-style:normal;font-weight:600;font-size:12px}
+.zona-cab .nombre{overflow:hidden;text-overflow:ellipsis}
+.equipos{display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start;flex:1;overflow:auto;padding:4px 8px 8px}
+.vacio{color:var(--tinta-suave);font-size:12px;padding:6px 0}
+.plano.editando .zona{cursor:move;border-style:solid;box-shadow:0 2px 8px rgba(11,61,102,.2)}
+.plano.editando .equipos{pointer-events:none;opacity:.35}
+.asa{position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize;display:none;
+  background:linear-gradient(135deg,transparent 50%,var(--lime-ink) 50%)}
+.plano.editando .asa{display:block}
+.zona-cab .herr{margin-left:auto;display:none;gap:2px} .plano.editando .zona-cab .herr{display:flex}
+.zona-cab .herr button{background:none;border:0;color:var(--tinta-suave);font-size:14px;line-height:1;padding:2px 5px} .zona-cab .herr button:hover{color:var(--ink)}
+.bandeja{margin-top:12px;border:2px dashed var(--borde);border-radius:var(--r);padding:8px 10px 10px;background:var(--concreto)}
+.bandeja .zona-cab{color:var(--tinta-suave);padding:0 0 4px}
+.bandeja .equipos{max-height:260px;padding:0}
+.bandeja.drop{background:var(--lime-soft)}
+
+/* ---------- Avatar ---------- */
+.eq{width:112px;background:#fff;border:1px solid var(--borde);border-radius:var(--r);padding:5px 6px 4px;cursor:grab;color:var(--tinta);position:relative;user-select:none;flex:none;box-shadow:0 1px 2px rgba(11,61,102,.08)}
+.eq:hover{border-color:var(--navy)} .eq:focus-visible{outline:2px solid var(--linea)}
+.eq.arrastrando{opacity:.4} .eq.oculto{display:none}
+.eq svg{width:100%;height:36px;display:block}
+.eq .eco{font-family:var(--mono);font-weight:700;font-size:13px;line-height:1.1;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eq .meta{font-size:11px;color:var(--tinta-suave);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eq .dot{position:absolute;top:5px;right:5px;width:8px;height:8px;border-radius:50%}
+.eq.recien{animation:aterriza .5s ease-out}
+@keyframes aterriza{from{transform:scale(.85);box-shadow:0 0 0 6px rgba(60,232,30,.6)}to{transform:scale(1);box-shadow:none}}
+body.compacto .eq{width:72px;padding:3px 4px} body.compacto .eq svg{height:22px} body.compacto .eq .eco{font-size:12px} body.compacto .eq .meta{display:none}
+@media (prefers-reduced-motion:reduce){.eq.recien{animation:none}}
+
+/* ---------- Barra de edición ---------- */
+.barra-edicion{display:none;gap:10px;align-items:center;flex-wrap:wrap;background:var(--amber-soft);border:1px solid var(--amber);border-radius:var(--r);padding:10px 14px;margin-bottom:12px;font-size:13px}
+.barra-edicion.visible{display:flex}
+.barra-edicion label{display:flex;align-items:center;gap:6px}
+.barra-edicion input[type=number]{width:64px;height:30px;border:1px solid var(--borde);border-radius:6px;padding:0 6px}
+.barra-edicion .sep{width:1px;height:24px;background:var(--amber)}
+
+/* ---------- Diálogos ---------- */
+.aviso{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--navy);border-left:6px solid var(--lime);color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;display:none;max-width:90vw;z-index:60}
+.aviso.error{background:var(--red)}
+dialog{border:0;border-radius:10px;padding:0;width:min(440px,94vw);font-family:var(--fuente);color:var(--tinta)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+.dlg-cuerpo{padding:22px 24px}
+dialog h3{margin:0 0 12px;font-family:var(--fuente-cond);font-style:italic;font-weight:800;font-size:22px;color:var(--ink)}
+dialog label{display:block;margin:10px 0 4px;color:var(--tinta-suave);font-size:13px}
+dialog input,dialog select{width:100%;height:36px;border:1px solid var(--borde);border-radius:6px;padding:0 10px}
+dialog .pie{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+
+/* ficha completa */
+dialog.ficha{width:min(920px,96vw);max-height:92vh}
+.ficha-cab{display:flex;align-items:center;gap:14px;padding:16px 24px;background:var(--navy);border-bottom:5px solid var(--lime);color:#fff;border-radius:10px 10px 0 0;position:sticky;top:0;z-index:2}
+.ficha-cab svg{width:110px;height:52px;flex:none}
+.ficha-cab h3{margin:0;color:#fff;font-size:22px;font-family:var(--mono)}
+.ficha-cab .sub{color:rgba(255,255,255,.75);font-size:13px}
+.ficha-cab .cerrar{margin-left:auto;background:none;border:0;color:#fff;font-size:26px;line-height:1}
+.ficha-cuerpo{padding:18px 24px 24px;overflow:auto;max-height:calc(92vh - 84px)}
+.ficha-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px 28px}
+@media (max-width:700px){.ficha-grid{grid-template-columns:1fr}}
+.bloque h4{font-family:var(--fuente-cond);font-style:italic;font-weight:800;font-size:17px;color:var(--ink);margin:0 0 6px;padding-bottom:4px;border-bottom:3px solid var(--lime);display:inline-block}
+.datos{display:grid;grid-template-columns:auto 1fr;gap:3px 14px;font-size:13.5px;margin:0}
+.datos dt{color:var(--tinta-suave);margin:0} .datos dd{margin:0;font-weight:500}
+.chips{display:flex;flex-wrap:wrap;gap:6px} .chip{background:var(--concreto);border-radius:14px;padding:3px 10px;font-size:12.5px}
+.chip b{font-family:var(--fuente-cond)}
+.fotos{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
+.fotos a{display:block;aspect-ratio:4/3;background:var(--concreto);border-radius:6px;overflow:hidden;position:relative}
+.fotos img{width:100%;height:100%;object-fit:cover;display:block}
+.fotos span{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.55);color:#fff;font-size:11px;padding:2px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist{max-height:200px;overflow:auto;font-size:13px} .hist div{padding:5px 0;border-bottom:1px solid var(--borde)} .hist small{color:var(--tinta-suave)}
+.mover{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end}
+.mover .btn{height:36px}
+.nota{color:var(--tinta-suave);font-size:13px}
+.estado-pill{display:inline-block;padding:2px 9px;border-radius:12px;color:#fff;font-size:12px;font-weight:600}
+
+/* gps */
+.eq .gps{position:absolute;top:4px;left:5px;font-size:10px;line-height:1;color:var(--lime-ink)}
+.eq .gps.viejo{color:#B0B6C2}
+.eq.gps-disc{border-color:var(--amber);box-shadow:inset 0 0 0 1px var(--amber)}
+.gps-mapa{width:100%;height:220px;border:0;border-radius:6px;margin-top:8px;background:var(--concreto)}
+.alerta{background:var(--amber-soft);border:1px solid var(--amber);border-radius:6px;padding:8px 10px;font-size:13px;margin-top:8px}
+.barra-edicion input[type=text]{width:120px;height:30px;border:1px solid var(--borde);border-radius:6px;padding:0 6px}
+
+/* entregados */
+.patio.entregados{margin-top:8px;border-top:1px solid var(--borde);padding-top:12px}
+.entregados-lista{background:var(--panel);border:1px solid var(--borde);border-radius:var(--r);padding:14px;display:none}
+.entregados-lista .equipos{padding:0;max-height:none;overflow:visible}
+.entregados-lista .eq .meta{color:var(--lime-ink);font-weight:600}
+.entregados-lista .eq{cursor:pointer}
+.entregados-lista .eq .dot{display:none}
+.entregados-ayuda{color:var(--tinta-suave);font-size:13px;margin:0 0 10px}
+body.vista-entregados .plano-envoltura{display:none} body.vista-entregados .entregados-lista{display:block}
+body.vista-entregados #btnZona,body.vista-entregados #btnEditar{display:none}
+dialog textarea{width:100%;border:1px solid var(--borde);border-radius:6px;padding:8px 10px;min-height:60px;font:inherit}
+
+@media (max-width:820px){#cuerpo{grid-template-columns:1fr}aside{display:none}.filtros{display:none}}
+</style>
+</head>
+<body>
+<header>
+  <div class="cinta"></div>
+  <div class="barra">
+    <div class="marca">Plataforma <span>HT</span></div>
+    <div class="rotulo"><b>HT RENT &gt;</b><span>ARRENDA Y CRECE</span></div>
+    <div class="quien"><b id="nombreUsuario">—</b><br><span class="eyebrow" id="puestoUsuario"></span></div>
+    <button class="salir" id="salir">Salir</button>
+  </div>
+</header>
+
+<main>
+<div class="herramientas">
+  <a class="migaja" href="index.html">← Volver a módulos</a>
+  <div class="buscar"><span>🔍</span><input id="q" placeholder="Buscar por NIV o placa" aria-label="Buscar"></div>
+  <div class="filtros"><select id="fTipo" aria-label="Filtrar por tipo"><option value="">Todos los tipos</option></select>
+    <select id="fGps" aria-label="Filtrar por GPS"><option value="">GPS: todos</option><option value="con">Con GPS</option><option value="sin">Sin GPS</option><option value="disc">GPS en otro patio</option><option value="viejo">GPS sin señal (+48 h)</option></select>
+    <button class="btn claro" id="btnSync" title="Consultar Samsara ahora">Sincronizar GPS</button></div>
+  <div class="conexion" id="conexion"><i></i><span>Conectando…</span></div>
+</div>
+<div id="cuerpo">
+  <aside>
+    <h2>Patios</h2>
+    <div id="patios"></div>
+    <div class="patio entregados" id="btnEntregados"><span>Entregados / fuera de patio</span><span class="n" id="cntEntregados">0</span></div>
+    <div class="leyenda">
+      <div><i style="background:var(--libre)"></i>Libre</div><div><i style="background:var(--asignado)"></i>Asignado</div>
+      <div><i style="background:var(--transito)"></i>En tránsito</div><div><i style="background:var(--otro)"></i>Otro estatus</div>
+      <p style="margin:10px 0 0">Arrastra un equipo a otra zona o suéltalo sobre un patio de esta lista. Doble clic abre su ficha completa.</p>
+    </div>
+  </aside>
+  <section id="vista">
+    <div class="titulo">
+      <h1 id="tituloPatio">—</h1><span class="sub" id="subPatio"></span>
+      <div class="acciones">
+        <button class="btn claro" id="btnCompacto" title="Avatares más pequeños">Vista compacta</button>
+        <button class="btn claro" id="btnZona">Agregar zona</button>
+        <button class="btn claro" id="btnEditar">Editar plano</button>
+      </div>
+    </div>
+    <div class="barra-edicion" id="barraEdicion">
+      <b>Editando el plano.</b> Arrastra las zonas para acomodarlas y jala la esquina inferior derecha para cambiar su tamaño.
+      <span class="sep"></span>
+      <label>Columnas <input type="number" id="edCols" min="8" max="120"></label>
+      <label>Filas <input type="number" id="edFilas" min="6" max="120"></label>
+      <span class="sep"></span>
+      <label class="btn claro" style="height:30px;cursor:pointer">Imagen de fondo <input type="file" id="edFondo" accept="image/*" style="display:none"></label>
+      <button class="btn claro" id="edQuitarFondo" style="height:30px">Quitar fondo</button>
+      <span class="sep"></span>
+      <label title="Centro del patio (copia las coordenadas de Google Maps)">GPS del patio <input type="text" id="edCoord" placeholder="lat, lng  ej. 25.78, -100.19"></label>
+      <label>Radio m <input type="number" id="edRadio" min="50" max="5000" step="50"></label>
+      <span style="margin-left:auto"></span>
+      <button class="btn claro" id="edCancelar" style="height:30px">Cancelar</button>
+      <button class="btn" id="edGuardar" style="height:30px">Guardar plano</button>
+    </div>
+    <div class="plano-envoltura">
+      <div class="plano" id="plano"></div>
+      <div class="bandeja" id="bandeja"><div class="zona-cab"><span>Sin zona asignada</span><span class="cnt" id="cntBandeja">0</span></div><div class="equipos" id="eqBandeja"></div></div>
+    </div>
+    <div class="entregados-lista" id="listaEntregados">
+      <p class="entregados-ayuda">Equipos entregados a cliente o con residual pagado. No ocupan lugar en los patios. Si un cliente devuelve alguno, arrástralo a un patio de la lista de la izquierda o ábrelo con doble clic y usa <b>Regresar a patio</b>.</p>
+      <div class="equipos" id="eqEntregados"></div>
+    </div>
+  </section>
+</div>
+</main>
+
+<div class="aviso" id="aviso"></div>
+
+
+
+<dialog id="dlgZona"><div class="dlg-cuerpo">
+  <h3 id="dlgZonaTitulo">Nueva zona</h3>
+  <label for="zonaNombre">Nombre de la zona</label><input id="zonaNombre" placeholder="Ej. Fila A, Taller, Lavado, Entrega">
+  <div class="pie"><button class="btn claro" id="zonaCancelar">Cancelar</button><button class="btn" id="zonaGuardar">Guardar zona</button></div>
+</div></dialog>
+
+<dialog id="dlgReact"><div class="dlg-cuerpo">
+  <h3>Regresar equipo a patio</h3>
+  <div class="nota" id="reactInfo"></div>
+  <label for="reactPatio">Patio donde queda</label><select id="reactPatio"></select>
+  <label for="reactZona">Zona</label><select id="reactZona"></select>
+  <label for="reactEstatus">Nuevo estatus operativo</label><select id="reactEstatus"></select>
+  <label for="reactNota">Nota (opcional)</label><textarea id="reactNota" placeholder="Ej. Devolución del cliente, llegó con daño en puerta"></textarea>
+  <p class="nota" style="margin:10px 0 0">Al regresarlo queda como <b>Libre</b>, sin cliente asignado, y el cambio se registra en la bitácora.</p>
+  <div class="pie"><button class="btn claro" id="reactCancelar">Cancelar</button><button class="btn" id="reactGuardar">Regresar a patio</button></div>
+</div></dialog>
+
+<dialog id="dlgEq" class="ficha">
+  <div class="ficha-cab"><svg id="fAvatar" viewBox="0 0 104 52"></svg><div><h3 id="fNiv">—</h3><div class="sub" id="fSub"></div></div><button class="cerrar" id="fCerrar" aria-label="Cerrar">×</button></div>
+  <div class="ficha-cuerpo">
+    <div class="ficha-grid">
+      <div class="bloque"><h4>Datos del equipo</h4><dl class="datos" id="fDatos"></dl></div>
+      <div class="bloque"><h4>Estatus y ubicación</h4><dl class="datos" id="fEstatus"></dl>
+        <div class="mover" style="margin-top:12px">
+          <div><label for="fPatio" style="margin-top:0">Mover a patio</label><select id="fPatio"></select></div>
+          <div><label for="fZona" style="margin-top:0">Zona</label><select id="fZona"></select></div>
+          <button class="btn" id="fMover">Mover</button>
+        </div>
+        <div id="fRegresar" style="display:none;margin-top:12px"><button class="btn" id="fBtnRegresar">Regresar a patio</button> <span class="nota">Este equipo está fuera de patio.</span></div>
+      </div>
+      <div class="bloque" style="grid-column:1/-1"><h4>GPS (Samsara)</h4><div id="fGps" class="nota"></div></div>
+      <div class="bloque"><h4>Adicionales registrados</h4><div class="chips" id="fAdic"></div></div>
+      <div class="bloque"><h4>Último levantamiento en patio</h4><div id="fLev" class="nota">Consultando…</div></div>
+      <div class="bloque" style="grid-column:1/-1"><h4>Fotos</h4><div id="fFotos" class="nota">Consultando…</div></div>
+      <div class="bloque" style="grid-column:1/-1"><h4>Historial de movimientos</h4><div class="hist" id="fHist">Cargando…</div></div>
+    </div>
+  </div>
+</dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+const { createClient } = window.supabase;
+
+/* =====================================================================
+   CONFIGURACIÓN
+   ===================================================================== */
+const CFG = {
+  URL: 'https://ahfjstuwekcuxshclprl.supabase.co',
+  KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFoZmpzdHV3ZWtjdXhzaGNscHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwNDg2MjYsImV4cCI6MjEwMzYyNDYyNn0.lf1uw8WHPRy21GuYlK9NzeI5JgJK2be1LrODq22CodM',
+  // Proyecto de levantamientos (fotos y último levantamiento físico)
+  LEV_URL: 'https://myfmstaeilegsoobllni.supabase.co',
+  LEV_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15Zm1zdGFlaWxlZ3Nvb2JsbG5pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcxNjU2OTYsImV4cCI6MjEwMjc0MTY5Nn0.hwvkHX-Fx25IMB8FopzYgs1vEpc7fe1qCGZfr5TV9MU',
+  LEV_BUCKET: 'fotos-patio',
+  CELDA: 28,
+  // Estatus operativos que se consideran fuera de patio (no se dibujan en el plano)
+  FUERA: ['ENTREGADO','RESIDUAL_PAGADO'],
+};
+const sb  = createClient(CFG.URL, CFG.KEY, { db: { schema: 'core' }, auth: { persistSession: true, autoRefreshToken: true } }); // misma llave y almacenamiento que el shell: hereda la sesión
+const lev = createClient(CFG.LEV_URL, CFG.LEV_KEY, { db: { schema: 'patio' }, auth: { persistSession: false, autoRefreshToken: false } });
+const urlFoto = ruta => `${CFG.LEV_URL}/storage/v1/object/public/${CFG.LEV_BUCKET}/${ruta}`;
+
+/* =====================================================================
+   AVATARES
+   ===================================================================== */
+const AV = {
+  caja:`<rect x="6" y="6" width="80" height="34" rx="2" fill="#FFFFFF" stroke="#0B3D66" stroke-width="1.5"/><path d="M86 40 L94 40 L98 34 L98 40" fill="#FFFFFF" stroke="#0B3D66" stroke-width="1.5"/><circle cx="26" cy="45" r="5" fill="#0B3D66"/><circle cx="40" cy="45" r="5" fill="#0B3D66"/><circle cx="86" cy="45" r="5" fill="#0B3D66"/><line x1="20" y1="10" x2="20" y2="40" stroke="#C9D2DE"/><line x1="52" y1="10" x2="52" y2="40" stroke="#C9D2DE"/>`,
+  refrigerada:`<rect x="6" y="6" width="80" height="34" rx="2" fill="#FFFFFF" stroke="#0B3D66" stroke-width="1.5"/><rect x="78" y="4" width="10" height="16" fill="#CFE6FF" stroke="#0B3D66"/><circle cx="26" cy="45" r="5" fill="#0B3D66"/><circle cx="40" cy="45" r="5" fill="#0B3D66"/><circle cx="86" cy="45" r="5" fill="#0B3D66"/>`,
+  encortinado:`<rect x="6" y="6" width="80" height="34" rx="2" fill="#FFFFFF" stroke="#0B3D66" stroke-width="1.5"/><path d="M10 10 q4 4 8 0 t8 0 t8 0 t8 0 t8 0 t8 0 t8 0 t8 0" fill="none" stroke="#0B3D66"/><circle cx="26" cy="45" r="5" fill="#0B3D66"/><circle cx="40" cy="45" r="5" fill="#0B3D66"/><circle cx="86" cy="45" r="5" fill="#0B3D66"/>`,
+  portacontenedor:`<rect x="6" y="32" width="90" height="6" fill="#FFFFFF" stroke="#0B3D66" stroke-width="1.5"/><rect x="14" y="10" width="72" height="22" fill="none" stroke="#0B3D66" stroke-width="1.5" stroke-dasharray="4 3"/><rect x="6" y="26" width="6" height="8" fill="#FFFFFF"/><rect x="90" y="26" width="6" height="8" fill="#FFFFFF"/><circle cx="24" cy="44" r="5" fill="#0B3D66"/><circle cx="38" cy="44" r="5" fill="#0B3D66"/><circle cx="86" cy="44" r="5" fill="#0B3D66"/>`,
+  plataforma:`<rect x="6" y="30" width="90" height="8" fill="#FFFFFF" stroke="#0B3D66" stroke-width="1.5"/><rect x="88" y="18" width="8" height="12" fill="#FFFFFF" stroke="#0B3D66"/><circle cx="24" cy="44" r="5" fill="#0B3D66"/><circle cx="38" cy="44" r="5" fill="#0B3D66"/><circle cx="86" cy="44" r="5" fill="#0B3D66"/>`,
+  camabaja:`<path d="M6 24 H24 L30 34 H72 L78 24 H96" fill="none" stroke="#0B3D66" stroke-width="5"/><circle cx="16" cy="42" r="5" fill="#0B3D66"/><circle cx="84" cy="42" r="5" fill="#0B3D66"/><circle cx="96" cy="42" r="5" fill="#0B3D66"/>`,
+  dolly:`<rect x="34" y="28" width="40" height="8" fill="#FFFFFF" stroke="#0B3D66" stroke-width="1.5"/><path d="M34 32 L14 32" stroke="#0B3D66" stroke-width="3"/><circle cx="14" cy="32" r="3" fill="#3CE81E"/><circle cx="46" cy="44" r="6" fill="#0B3D66"/><circle cx="64" cy="44" r="6" fill="#0B3D66"/><rect x="50" y="18" width="12" height="10" fill="#FFFFFF"/>`,
+  tanque:`<rect x="8" y="12" width="82" height="24" rx="12" fill="#FFFFFF" stroke="#0B3D66" stroke-width="1.5"/><rect x="40" y="6" width="14" height="6" fill="#FFFFFF" stroke="#0B3D66"/><circle cx="26" cy="44" r="5" fill="#0B3D66"/><circle cx="40" cy="44" r="5" fill="#0B3D66"/><circle cx="86" cy="44" r="5" fill="#0B3D66"/>`,
+  isotanque:`<rect x="14" y="12" width="70" height="24" rx="12" fill="#FFFFFF" stroke="#0B3D66" stroke-width="1.5"/><rect x="6" y="8" width="88" height="30" fill="none" stroke="#0B3D66" stroke-width="1.5"/><circle cx="26" cy="44" r="5" fill="#0B3D66"/><circle cx="40" cy="44" r="5" fill="#0B3D66"/><circle cx="86" cy="44" r="5" fill="#0B3D66"/>`,
+  tolva:`<path d="M8 10 H92 V26 L70 40 H30 L8 26 Z" fill="#FFFFFF" stroke="#0B3D66" stroke-width="1.5"/><circle cx="26" cy="45" r="5" fill="#0B3D66"/><circle cx="40" cy="45" r="5" fill="#0B3D66"/><circle cx="86" cy="45" r="5" fill="#0B3D66"/>`,
+  gondola:`<path d="M10 12 H90 V36 H10 Z" fill="#FFFFFF" stroke="#0B3D66" stroke-width="1.5"/><path d="M10 12 L4 22" stroke="#0B3D66" stroke-width="2"/><circle cx="26" cy="44" r="5" fill="#0B3D66"/><circle cx="40" cy="44" r="5" fill="#0B3D66"/><circle cx="86" cy="44" r="5" fill="#0B3D66"/>`,
+  jaula:`<rect x="8" y="8" width="84" height="30" fill="none" stroke="#0B3D66" stroke-width="1.5"/><path d="M20 8 V38 M32 8 V38 M44 8 V38 M56 8 V38 M68 8 V38 M80 8 V38" stroke="#0B3D66"/><circle cx="26" cy="45" r="5" fill="#0B3D66"/><circle cx="40" cy="45" r="5" fill="#0B3D66"/><circle cx="86" cy="45" r="5" fill="#0B3D66"/>`,
+  motriz:`<path d="M20 12 H50 V38 H10 V22 Z" fill="#FFFFFF" stroke="#0B3D66" stroke-width="1.5"/><rect x="50" y="30" width="40" height="8" fill="#FFFFFF" stroke="#0B3D66"/><rect x="24" y="16" width="20" height="10" fill="#CFE6FF"/><circle cx="24" cy="44" r="6" fill="#0B3D66"/><circle cx="66" cy="44" r="6" fill="#0B3D66"/><circle cx="82" cy="44" r="6" fill="#0B3D66"/>`,
+  generico:`<rect x="10" y="14" width="80" height="22" fill="none" stroke="#0B3D66" stroke-width="2"/><circle cx="26" cy="44" r="5" fill="#0B3D66"/><circle cx="84" cy="44" r="5" fill="#0B3D66"/>`,
+};
+function familia(tipo=''){
+  const t=tipo.toLowerCase();
+  if(t.includes('refri')) return 'refrigerada'; if(t.includes('caja seca')) return 'caja'; if(t.includes('encortinado')) return 'encortinado';
+  if(t.includes('portacontenedor')) return 'portacontenedor'; if(t.includes('cama baja')||t.includes('lowboy')) return 'camabaja';
+  if(t.includes('dolly')) return 'dolly'; if(t.includes('isotanque')) return 'isotanque'; if(t.includes('tanque')) return 'tanque';
+  if(t.includes('tolva')) return 'tolva'; if(t.includes('gondola')||t.includes('góndola')) return 'gondola'; if(t.includes('jaula')) return 'jaula';
+  if(t.includes('camion')||t.includes('camión')||t.includes('tracto')) return 'motriz'; if(t.includes('plataforma')) return 'plataforma';
+  return 'generico';
+}
+function colorEstatus(e=''){ const s=e.toUpperCase(); if(s==='LIBRE') return 'var(--libre)'; if(s.startsWith('ASIGNADO')) return 'var(--asignado)'; if(s.startsWith('EN_TRANS')) return 'var(--transito)'; return 'var(--otro)'; }
+const bonito=s=>(s||'').replace(/_/g,' ').toLowerCase().replace(/^./,c=>c.toUpperCase());
+const fecha=d=>d?new Date(d).toLocaleString('es-MX',{dateStyle:'medium',timeStyle:'short'}):'—';
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* =====================================================================
+   ESTADO
+   ===================================================================== */
+let patios=[], zonas=[], equipos=[], planos={}, catalogos={};
+let patioActivo=null, filtroTipo='', busqueda='', arrastre=null, sesion=null;
+let editando=false, planoTmp=null, zonasTmp=null, vistaEntregados=false;
+const fuera=e=>CFG.FUERA.includes(e.operativo);
+const gpsViejo=e=>e.gpsFecha&&(Date.now()-new Date(e.gpsFecha))>48*3600e3;
+const gpsDisc=e=>e.gpsPatio&&e.gpsPatio!==e.patio&&!fuera(e);
+let filtroGps='';
+
+const $=s=>document.querySelector(s);
+const aviso=(msg,err=false)=>{const a=$('#aviso');a.textContent=msg;a.className='aviso'+(err?' error':'');a.style.display='block';clearTimeout(a._t);a._t=setTimeout(()=>a.style.display='none',3500)};
+const setConexion=(cls,txt)=>{const c=$('#conexion');c.className='conexion '+cls;c.querySelector('span').textContent=txt};
+const nombrePatio=id=>patios.find(p=>p.id==id)?.nombre||'—';
+const nombreZona=id=>zonas.find(z=>z.id==id)?.nombre||'';
+const planoDe=id=>planos[id]||{patio_id:id,columnas:32,filas:18,imagen_fondo:null};
+
+/* =====================================================================
+   ACCESO — la sesión viene del shell (index.html); sin sesión se regresa ahí
+   ===================================================================== */
+async function iniciar(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session){ location.href='index.html'; return; }
+  sesion=session; await cargar();
+}
+sb.auth.onAuthStateChange((_ev,s)=>{ if(!s && sesion){ sesion=null; location.href='index.html'; } });
+$('#salir').onclick=async()=>{ await sb.auth.signOut(); location.href='index.html'; };
+
+/* =====================================================================
+   DATOS
+   ===================================================================== */
+async function cargar(){
+  setConexion('','Cargando equipos…');
+  try{
+    const [p,z,pl,perfil,un,ca,eo]=await Promise.all([
+      sb.from('patios').select('id,nombre,clave,ciudad,lat,lng,radio_m').eq('activo',true).order('nombre'),
+      sb.from('zonas').select('id,patio_id,nombre,orden,x,y,ancho,alto,color').eq('activo',true).order('orden'),
+      sb.from('patio_planos').select('*'),
+      sb.from('perfiles').select('nombre,puesto').eq('id',sesion.user.id).maybeSingle(),
+      sb.from('unidades_negocio').select('id,nombre'),
+      sb.from('catalogo_adicionales').select('id,nombre'),
+      sb.from('estatus_operativo').select('clave,nombre'),
+    ]);
+    for(const r of [p,z,pl]) if(r.error) throw r.error;
+    patios=p.data; zonas=z.data.map(r=>({id:r.id,patio:r.patio_id,nombre:r.nombre,orden:r.orden,x:r.x,y:r.y,w:r.ancho,h:r.alto,color:r.color}));
+    planos={}; pl.data.forEach(r=>planos[r.patio_id]=r);
+    catalogos.un={}; (un.data||[]).forEach(r=>catalogos.un[r.id]=r.nombre);
+    catalogos.adic={}; (ca.data||[]).forEach(r=>catalogos.adic[r.id]=r.nombre);
+    catalogos.eo=(eo.data||[]).filter(r=>!CFG.FUERA.includes(r.clave));
+    equipos=[]; const PAG=1000;
+    for(let desde=0;;desde+=PAG){
+      const r=await sb.from('equipos')
+        .select('id,niv,placa,anio,n_ejes,patio_id,zona_id,estatus_asignacion,estatus_operativo,estatus_propiedad,cliente_actual,clasificacion,unidad_negocio_id,tipo_venta,ventana_verificacion,notas,fecha_alta,samsara_id,samsara_nombre,gps_lat,gps_lng,gps_fecha,gps_direccion,gps_velocidad,gps_patio_id,tipo:tipos_equipo(nombre),marca:marcas(nombre)')
+        .eq('activo',true).order('niv').range(desde,desde+PAG-1);
+      if(r.error) throw r.error;
+      equipos.push(...r.data.map(normalizar)); if(r.data.length<PAG) break;
+    }
+    $('#nombreUsuario').textContent=perfil.data?.nombre||sesion.user.email; $('#puestoUsuario').textContent=perfil.data?.puesto||'';
+    setConexion('ok',`Conectado · ${equipos.length} equipos`);
+    suscribir();
+    patioActivo=patios.find(p=>p.id===1)?.id??patios[0]?.id; render();
+  }catch(err){
+    console.error(err); setConexion('error','Error al leer la plataforma');
+    $('#plano').innerHTML=`<div style="color:#fff;padding:20px;line-height:1.6"><b>No se pudo leer la plataforma.</b><br>${esc(err.message||err)}${err.hint?'<br>'+esc(err.hint):''}</div>`;
+  }
+}
+function normalizar(r){
+  return { id:r.id, niv:r.niv, placa:r.placa||'', tipo:r.tipo?.nombre||'', marca:r.marca?.nombre||'', anio:r.anio||'', ejes:r.n_ejes||'',
+    patio:r.patio_id, zona:r.zona_id??null, estatus:r.estatus_asignacion||'', operativo:r.estatus_operativo||'', propiedad:r.estatus_propiedad||'',
+    cliente:r.cliente_actual||'', clasif:r.clasificacion||'', un:catalogos.un?.[r.unidad_negocio_id]||'', venta:r.tipo_venta||'',
+    verif:r.ventana_verificacion||'', notas:r.notas||'', alta:r.fecha_alta||'',
+    samsara:r.samsara_id||'', samsaraNombre:r.samsara_nombre||'', lat:r.gps_lat, lng:r.gps_lng, gpsFecha:r.gps_fecha, gpsDir:r.gps_direccion||'', gpsVel:r.gps_velocidad, gpsPatio:r.gps_patio_id??null };
+}
+function suscribir(){
+  sb.channel('mapa-patios').on('postgres_changes',{event:'UPDATE',schema:'core',table:'equipos'},payload=>{
+    const n=payload.new; const e=equipos.find(x=>x.id===n.id); if(!e) return;
+    const cambio=e.patio!==n.patio_id||e.zona!==(n.zona_id??null)||e.estatus!==(n.estatus_asignacion||'')||e.operativo!==(n.estatus_operativo||'');
+    e.patio=n.patio_id; e.zona=n.zona_id??null; e.estatus=n.estatus_asignacion||''; e.cliente=n.cliente_actual||''; e.operativo=n.estatus_operativo||'';
+    Object.assign(e,{lat:n.gps_lat,lng:n.gps_lng,gpsFecha:n.gps_fecha,gpsDir:n.gps_direccion||'',gpsVel:n.gps_velocidad,gpsPatio:n.gps_patio_id??null,samsara:n.samsara_id||''});
+    if(cambio && !editando) render(e.niv);
+  }).subscribe();
+}
+
+/* =====================================================================
+   MOVER — se actualiza de inmediato y queda en la bitácora central
+   ===================================================================== */
+async function mover(niv,patioDestino,zonaDestino){
+  const eq=equipos.find(e=>e.niv===niv); if(!eq) return;
+  if(fuera(eq)){ abrirReactivar(eq,patioDestino,zonaDestino); return; }
+  zonaDestino=zonaDestino??null; if(eq.patio===patioDestino && eq.zona===zonaDestino) return;
+  const antes={patio:eq.patio,zona:eq.zona}; eq.patio=patioDestino; eq.zona=zonaDestino; render(niv);
+  const r=await sb.rpc('mover_equipo',{p_niv:niv,p_patio_id:patioDestino,p_zona_id:zonaDestino});
+  if(r.error){ eq.patio=antes.patio; eq.zona=antes.zona; render(niv); aviso('No se guardó el movimiento: '+r.error.message,true); return; }
+  aviso(`${niv} ahora está en ${nombrePatio(patioDestino)}${zonaDestino?' · '+nombreZona(zonaDestino):''}`);
+}
+
+/* =====================================================================
+   RENDER
+   ===================================================================== */
+function render(resaltar){
+  const cont=$('#patios'); cont.innerHTML='';
+  for(const p of patios){
+    const n=equipos.filter(e=>e.patio==p.id&&!fuera(e)).length;
+    const d=document.createElement('div'); d.className='patio'+(p.id==patioActivo&&!vistaEntregados?' activo':'');
+    d.innerHTML=`<span>${esc(p.nombre)}</span><span class="n">${n}</span>`;
+    d.onclick=()=>{ if(editando){aviso('Termina o cancela la edición del plano primero');return;} patioActivo=p.id; vistaEntregados=false; document.body.classList.remove('vista-entregados'); render()};
+    d.ondragover=ev=>{ev.preventDefault();d.classList.add('drop')}; d.ondragleave=()=>d.classList.remove('drop');
+    d.ondrop=ev=>{ev.preventDefault();d.classList.remove('drop'); if(arrastre) mover(arrastre,p.id,null)};
+    cont.appendChild(d);
+  }
+  const sel=$('#fTipo'); if(sel.options.length===1){ [...new Set(equipos.map(e=>e.tipo).filter(Boolean))].sort().forEach(t=>sel.add(new Option(t,t))); }
+  const entregados=equipos.filter(fuera);
+  $('#cntEntregados').textContent=entregados.length; $('#btnEntregados').classList.toggle('activo',vistaEntregados);
+  if(vistaEntregados){
+    $('#tituloPatio').textContent='Entregados / fuera de patio';
+    $('#subPatio').textContent=`${entregados.length} equipos · ${entregados.filter(e=>e.operativo==='ENTREGADO').length} entregados · ${entregados.filter(e=>e.operativo==='RESIDUAL_PAGADO').length} residual pagado`;
+    const l=$('#eqEntregados'); l.innerHTML='';
+    for(const e of entregados) l.appendChild(avatar(e,e.niv===resaltar));
+    aplicarFiltro(); return;
+  }
+  const enPatio=equipos.filter(e=>e.patio==patioActivo&&!fuera(e));
+  $('#tituloPatio').textContent=nombrePatio(patioActivo);
+  $('#subPatio').textContent=`${enPatio.length} equipos · ${enPatio.filter(e=>e.estatus==='LIBRE').length} libres`;
+
+  const plano=editando?planoTmp:planoDe(patioActivo);
+  const zp=(editando?zonasTmp:zonas).filter(z=>z.patio==patioActivo);
+  const C=CFG.CELDA, el=$('#plano');
+  el.innerHTML=''; el.className='plano'+(editando?' editando':'')+(plano.imagen_fondo?' con-fondo':'');
+  el.style.width=(plano.columnas*C)+'px'; el.style.height=(plano.filas*C)+'px';
+  el.style.setProperty('--fondo',plano.imagen_fondo?`url("${plano.imagen_fondo}")`:'none');
+  for(const b of zp){
+    const lista=enPatio.filter(e=>e.zona===b.id);
+    const z=document.createElement('div'); z.className='zona'; z.dataset.id=b.id;
+    z.style.left=(b.x*C)+'px'; z.style.top=(b.y*C)+'px'; z.style.width=(b.w*C)+'px'; z.style.height=(b.h*C)+'px';
+    if(b.color) z.style.borderColor=b.color;
+    z.innerHTML=`<div class="zona-cab"><span class="nombre">${esc(b.nombre)}</span><span class="cnt">${lista.length}</span>
+      <span class="herr"><button title="Renombrar">✎</button><button title="Quitar zona">×</button></span></div><div class="equipos"></div><div class="asa"></div>`;
+    const [bRen,bDel]=z.querySelectorAll('.herr button');
+    bRen.onclick=ev=>{ev.stopPropagation();renombrarZona(b)}; bDel.onclick=ev=>{ev.stopPropagation();quitarZona(b.id)};
+    if(!editando){
+      z.ondragover=ev=>{ev.preventDefault();z.classList.add('drop')}; z.ondragleave=()=>z.classList.remove('drop');
+      z.ondrop=ev=>{ev.preventDefault();z.classList.remove('drop'); if(arrastre) mover(arrastre,patioActivo,b.id)};
+    } else { z.onpointerdown=ev=>iniciarMoverZona(ev,b,z); z.querySelector('.asa').onpointerdown=ev=>iniciarRedim(ev,b,z); }
+    const eqs=z.querySelector('.equipos');
+    if(!lista.length) eqs.innerHTML='<div class="vacio">Suelta aquí un equipo</div>';
+    for(const e of lista) eqs.appendChild(avatar(e,e.niv===resaltar));
+    el.appendChild(z);
+  }
+  // bandeja: sin zona
+  const sinZona=enPatio.filter(e=>e.zona===null||!zp.some(z=>z.id===e.zona));
+  const bj=$('#bandeja'), eqb=$('#eqBandeja'); eqb.innerHTML=''; $('#cntBandeja').textContent=sinZona.length;
+  if(!sinZona.length) eqb.innerHTML='<div class="vacio">Todos los equipos de este patio tienen zona</div>';
+  for(const e of sinZona) eqb.appendChild(avatar(e,e.niv===resaltar));
+  bj.ondragover=ev=>{ev.preventDefault();bj.classList.add('drop')}; bj.ondragleave=()=>bj.classList.remove('drop');
+  bj.ondrop=ev=>{ev.preventDefault();bj.classList.remove('drop'); if(arrastre) mover(arrastre,patioActivo,null)};
+  if(!zp.length && !editando) el.innerHTML='<div style="color:rgba(255,255,255,.6);padding:24px;max-width:520px;line-height:1.5">Este patio todavía no tiene zonas. Usa <b>Agregar zona</b> para crear las áreas reales del patio (filas, taller, lavado, entrega…) y luego <b>Editar plano</b> para acomodarlas con la forma que tiene el patio, incluso sobre una foto satelital.</div>';
+  aplicarFiltro();
+}
+function avatar(e,recien){
+  const d=document.createElement('div'); d.className='eq'+(recien?' recien':'')+(gpsDisc(e)?' gps-disc':''); d.draggable=!editando; d.tabIndex=0; d.dataset.niv=e.niv;
+  d.title=`${e.tipo} · ${e.marca} ${e.anio}\n${e.niv}${e.placa?' · '+e.placa:''}\n${bonito(e.estatus)}${e.cliente?' · '+e.cliente:''}`;
+  d.innerHTML=`${e.samsara?`<span class="gps${gpsViejo(e)?' viejo':''}" title="GPS Samsara${gpsDisc(e)?' · detectado en '+esc(nombrePatio(e.gpsPatio)):''}">◉</span>`:''}<span class="dot" style="background:${colorEstatus(e.estatus)}"></span><svg viewBox="0 0 104 52">${AV[familia(e.tipo)]}</svg><div class="eco">${esc(e.niv.slice(-8))}</div><div class="meta">${esc(fuera(e)?(e.cliente||bonito(e.operativo)):(e.tipo||'—'))}</div>`;
+  d.ondragstart=ev=>{arrastre=e.niv;d.classList.add('arrastrando');ev.dataTransfer.effectAllowed='move';ev.dataTransfer.setData('text/plain',e.niv)};
+  d.ondragend=()=>{arrastre=null;d.classList.remove('arrastrando')};
+  d.ondblclick=()=>ficha(e); d.onkeydown=ev=>{if(ev.key==='Enter') ficha(e)};
+  return d;
+}
+function aplicarFiltro(){
+  const q=busqueda.trim().toLowerCase();
+  document.querySelectorAll('.eq').forEach(el=>{
+    const e=equipos.find(x=>x.niv===el.dataset.niv);
+    const g=!filtroGps||(filtroGps==='con'&&e.samsara)||(filtroGps==='sin'&&!e.samsara)||(filtroGps==='disc'&&gpsDisc(e))||(filtroGps==='viejo'&&e.samsara&&(gpsViejo(e)||!e.gpsFecha));
+    const ok=g&&(!filtroTipo||e.tipo===filtroTipo)&&(!q||e.niv.toLowerCase().includes(q)||e.placa.toLowerCase().includes(q)||e.cliente.toLowerCase().includes(q));
+    el.classList.toggle('oculto',!ok);
+  });
+}
+
+/* =====================================================================
+   EDICIÓN DEL PLANO
+   ===================================================================== */
+$('#btnEditar').onclick=()=>{ if(editando) return; editando=true; planoTmp={...planoDe(patioActivo)}; zonasTmp=zonas.map(z=>({...z}));
+  $('#edCols').value=planoTmp.columnas; $('#edFilas').value=planoTmp.filas; const pa=patios.find(p=>p.id==patioActivo); $('#edCoord').value=pa.lat!=null?`${pa.lat}, ${pa.lng}`:''; $('#edRadio').value=pa.radio_m||400; $('#barraEdicion').classList.add('visible'); $('#btnEditar').classList.add('activo'); render(); };
+$('#edCancelar').onclick=()=>salirEdicion();
+function salirEdicion(){ editando=false; planoTmp=null; zonasTmp=null; $('#barraEdicion').classList.remove('visible'); $('#btnEditar').classList.remove('activo'); render(); }
+$('#edCols').onchange=ev=>{planoTmp.columnas=Math.max(8,+ev.target.value||32);render()};
+$('#edFilas').onchange=ev=>{planoTmp.filas=Math.max(6,+ev.target.value||18);render()};
+$('#edQuitarFondo').onclick=()=>{planoTmp.imagen_fondo=null;render()};
+$('#edFondo').onchange=async ev=>{
+  const f=ev.target.files[0]; if(!f) return; aviso('Subiendo imagen…');
+  const ruta=`${patioActivo}/fondo-${Date.now()}.${(f.name.split('.').pop()||'jpg').toLowerCase()}`;
+  const r=await sb.storage.from('planos-patio').upload(ruta,f,{upsert:true,contentType:f.type});
+  if(r.error){aviso('No se pudo subir la imagen: '+r.error.message,true);return}
+  planoTmp.imagen_fondo=sb.storage.from('planos-patio').getPublicUrl(ruta).data.publicUrl;
+  // ajusta la proporción del plano a la de la imagen
+  const img=new Image(); img.onload=()=>{ planoTmp.filas=Math.max(6,Math.round(planoTmp.columnas*img.height/img.width)); $('#edFilas').value=planoTmp.filas; render(); }; img.src=planoTmp.imagen_fondo;
+  ev.target.value='';
+};
+$('#edGuardar').onclick=async()=>{
+  $('#edGuardar').disabled=true;
+  const r1=await sb.from('patio_planos').upsert({patio_id:patioActivo,columnas:planoTmp.columnas,filas:planoTmp.filas,imagen_fondo:planoTmp.imagen_fondo,actualizado_en:new Date().toISOString()});
+  if(r1.error){aviso('No se guardó el plano: '+r1.error.message,true);$('#edGuardar').disabled=false;return}
+  const cambiadas=zonasTmp.filter(t=>{const o=zonas.find(z=>z.id===t.id);return o&&(o.x!==t.x||o.y!==t.y||o.w!==t.w||o.h!==t.h)});
+  for(const t of cambiadas){ const r=await sb.from('zonas').update({x:t.x,y:t.y,ancho:t.w,alto:t.h}).eq('id',t.id); if(r.error){aviso('Zona "'+t.nombre+'": '+r.error.message,true)} }
+  const pa=patios.find(p=>p.id==patioActivo); const m=$('#edCoord').value.trim().match(/^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/);
+  const coord={lat:m?+m[1]:null,lng:m?+m[2]:null,radio_m:+$('#edRadio').value||400};
+  if($('#edCoord').value.trim()&&!m) aviso('Coordenadas no válidas; usa el formato "lat, lng"',true);
+  else if(coord.lat!==pa.lat||coord.lng!==pa.lng||coord.radio_m!==pa.radio_m){ const r=await sb.from('patios').update(coord).eq('id',patioActivo); if(r.error) aviso('Coordenadas del patio: '+r.error.message,true); else Object.assign(pa,coord); }
+  planos[patioActivo]={...planoTmp}; zonasTmp.forEach(t=>{const o=zonas.find(z=>z.id===t.id); if(o) Object.assign(o,{x:t.x,y:t.y,w:t.w,h:t.h})});
+  $('#edGuardar').disabled=false; salirEdicion(); aviso('Plano guardado');
+};
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+function iniciarMoverZona(ev,b,el){
+  if(ev.target.closest('.asa,.herr')) return; ev.preventDefault(); el.setPointerCapture(ev.pointerId);
+  const C=CFG.CELDA, x0=ev.clientX, y0=ev.clientY, bx=b.x, by=b.y;
+  const mv=e=>{ b.x=clamp(bx+Math.round((e.clientX-x0)/C),0,planoTmp.columnas-b.w); b.y=clamp(by+Math.round((e.clientY-y0)/C),0,planoTmp.filas-b.h); el.style.left=(b.x*C)+'px'; el.style.top=(b.y*C)+'px'; };
+  const fin=()=>{el.removeEventListener('pointermove',mv);el.removeEventListener('pointerup',fin)};
+  el.addEventListener('pointermove',mv); el.addEventListener('pointerup',fin);
+}
+function iniciarRedim(ev,b,el){
+  ev.preventDefault(); ev.stopPropagation(); const asa=ev.currentTarget; asa.setPointerCapture(ev.pointerId);
+  const C=CFG.CELDA, x0=ev.clientX, y0=ev.clientY, bw=b.w, bh=b.h;
+  const mv=e=>{ b.w=clamp(bw+Math.round((e.clientX-x0)/C),3,planoTmp.columnas-b.x); b.h=clamp(bh+Math.round((e.clientY-y0)/C),2,planoTmp.filas-b.y); el.style.width=(b.w*C)+'px'; el.style.height=(b.h*C)+'px'; };
+  const fin=()=>{asa.removeEventListener('pointermove',mv);asa.removeEventListener('pointerup',fin)};
+  asa.addEventListener('pointermove',mv); asa.addEventListener('pointerup',fin);
+}
+
+/* =====================================================================
+   ZONAS
+   ===================================================================== */
+let zonaEnEdicion=null;
+$('#btnZona').onclick=()=>{zonaEnEdicion=null;$('#dlgZonaTitulo').textContent='Nueva zona';$('#zonaNombre').value='';$('#dlgZona').showModal()};
+function renombrarZona(b){zonaEnEdicion=b;$('#dlgZonaTitulo').textContent='Renombrar zona';$('#zonaNombre').value=b.nombre;$('#dlgZona').showModal()}
+$('#zonaCancelar').onclick=()=>$('#dlgZona').close();
+$('#zonaGuardar').onclick=async()=>{
+  const nombre=$('#zonaNombre').value.trim(); if(!nombre) return;
+  if(zonaEnEdicion){
+    const r=await sb.from('zonas').update({nombre}).eq('id',zonaEnEdicion.id); if(r.error){aviso(r.error.message,true);return}
+    zonas.find(z=>z.id===zonaEnEdicion.id).nombre=nombre; if(zonasTmp) zonasTmp.find(z=>z.id===zonaEnEdicion.id).nombre=nombre;
+  } else {
+    const plano=editando?planoTmp:planoDe(patioActivo); const existentes=(editando?zonasTmp:zonas).filter(z=>z.patio==patioActivo);
+    const w=8,h=5; let x=0,y=0; // primera posición libre en la cuadrícula
+    buscar: for(y=0;y<=plano.filas-h;y++) for(x=0;x<=plano.columnas-w;x++){ if(!existentes.some(z=>x<z.x+z.w&&x+w>z.x&&y<z.y+z.h&&y+h>z.y)) break buscar; }
+    const r=await sb.from('zonas').insert({patio_id:patioActivo,nombre,orden:existentes.length+1,x,y,ancho:w,alto:h}).select().single();
+    if(r.error){aviso('No se creó la zona: '+r.error.message,true);return}
+    const nz={id:r.data.id,patio:patioActivo,nombre,orden:existentes.length+1,x,y,w,h,color:null}; zonas.push(nz); if(zonasTmp) zonasTmp.push({...nz});
+  }
+  $('#dlgZona').close(); render();
+};
+async function quitarZona(id){
+  const n=equipos.filter(e=>e.zona===id).length;
+  if(!confirm(`¿Quitar la zona "${nombreZona(id)}"?${n?` Los ${n} equipos quedarán sin zona.`:''}`)) return;
+  const r=await sb.from('zonas').update({activo:false}).eq('id',id); if(r.error){aviso(r.error.message,true);return}
+  await sb.from('equipos').update({zona_id:null}).eq('zona_id',id);
+  equipos.forEach(e=>{if(e.zona===id) e.zona=null}); zonas=zonas.filter(z=>z.id!==id); if(zonasTmp) zonasTmp=zonasTmp.filter(z=>z.id!==id); render();
+}
+
+/* =====================================================================
+   FICHA COMPLETA DEL EQUIPO
+   ===================================================================== */
+const pill=(txt,color)=>`<span class="estado-pill" style="background:${color}">${esc(txt)}</span>`;
+async function ficha(e){
+  $('#fAvatar').innerHTML=AV[familia(e.tipo)]; $('#fNiv').textContent=e.niv;
+  $('#fSub').textContent=`${e.tipo} · ${e.marca} ${e.anio}${e.placa?' · Placa '+e.placa:''}`;
+  $('#fDatos').innerHTML=[['Tipo',e.tipo],['Marca',e.marca],['Año',e.anio],['Ejes',e.ejes],['Placa',e.placa],['Clasificación',bonito(e.clasif)],['Unidad de negocio',e.un],['Tipo de venta',bonito(e.venta)],['Verificación',e.verif],['Alta',e.alta],['Notas',e.notas]]
+    .filter(([,v])=>v).map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join('');
+  $('#fEstatus').innerHTML=`<dt>Asignación</dt><dd>${pill(bonito(e.estatus)||'—',colorEstatus(e.estatus))}</dd><dt>Operativo</dt><dd>${esc(bonito(e.operativo)||'—')}</dd><dt>Propiedad</dt><dd>${esc(bonito(e.propiedad)||'—')}</dd>${e.cliente?`<dt>Cliente</dt><dd>${esc(e.cliente)}</dd>`:''}<dt>Ubicación</dt><dd><b>${esc(nombrePatio(e.patio))}${e.zona?' · '+esc(nombreZona(e.zona)):''}</b></dd>`;
+  const sp=$('#fPatio'); sp.innerHTML=''; patios.forEach(p=>sp.add(new Option(p.nombre,p.id,false,p.id==e.patio)));
+  const llenarZonas=()=>{const sz=$('#fZona'); sz.innerHTML='<option value="">Sin zona</option>'; zonas.filter(z=>z.patio==sp.value).forEach(z=>sz.add(new Option(z.nombre,z.id,false,z.id==e.zona)))};
+  sp.onchange=llenarZonas; llenarZonas();
+  $('#fMover').onclick=()=>{mover(e.niv,+sp.value,$('#fZona').value?+$('#fZona').value:null);$('#dlgEq').close()};
+  $('#fCerrar').onclick=()=>$('#dlgEq').close();
+  $('#fRegresar').style.display=fuera(e)?'':'none'; $('#fBtnRegresar').onclick=()=>{$('#dlgEq').close();abrirReactivar(e,null,null)};
+  if(!e.samsara){ $('#fGps').className='nota'; $('#fGps').textContent='Este equipo no tiene GPS ligado en Samsara.'; }
+  else if(e.lat==null){ $('#fGps').className='nota'; $('#fGps').textContent=`Ligado a Samsara (${e.samsaraNombre||e.samsara}) pero todavía sin posición reportada.`; }
+  else {
+    const gm=`https://www.google.com/maps?q=${e.lat},${e.lng}`;
+    $('#fGps').className='';
+    $('#fGps').innerHTML=`<dl class="datos"><dt>Unidad Samsara</dt><dd>${esc(e.samsaraNombre||e.samsara)}</dd><dt>Último reporte</dt><dd>${fecha(e.gpsFecha)}${gpsViejo(e)?' <span class="estado-pill" style="background:#8A8F95">sin señal reciente</span>':''}</dd>${e.gpsDir?`<dt>Dirección</dt><dd>${esc(e.gpsDir)}</dd>`:''}<dt>Coordenadas</dt><dd><a href="${gm}" target="_blank" rel="noopener">${e.lat.toFixed(5)}, ${e.lng.toFixed(5)}</a>${e.gpsVel?` · ${e.gpsVel} km/h`:''}</dd><dt>Patio detectado</dt><dd>${e.gpsPatio?esc(nombrePatio(e.gpsPatio)):'ninguno (fuera de los patios con coordenadas)'}</dd></dl>
+      ${gpsDisc(e)?`<div class="alerta">El GPS lo ubica en <b>${esc(nombrePatio(e.gpsPatio))}</b> pero está registrado en <b>${esc(nombrePatio(e.patio))}</b>. <button class="btn chico" id="fGpsMover" style="height:30px;margin-left:6px">Mover a ${esc(nombrePatio(e.gpsPatio))}</button></div>`:''}
+      <iframe class="gps-mapa" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://maps.google.com/maps?q=${e.lat},${e.lng}&z=15&output=embed" title="Posición GPS"></iframe>`;
+    const b=$('#fGpsMover'); if(b) b.onclick=()=>{mover(e.niv,e.gpsPatio,null);$('#dlgEq').close()};
+  }
+  $('#fAdic').innerHTML='<span class="nota">Consultando…</span>'; $('#fLev').textContent='Consultando…'; $('#fFotos').className='nota'; $('#fFotos').textContent='Consultando…'; $('#fHist').textContent='Cargando…';
+  $('#dlgEq').showModal();
+
+  // adicionales del catálogo central
+  sb.from('equipo_adicionales').select('adicional_id,cantidad').eq('equipo_id',e.id).then(r=>{
+    const l=(r.data||[]).filter(a=>a.cantidad>0);
+    $('#fAdic').innerHTML=l.length?l.map(a=>`<span class="chip"><b>${a.cantidad}</b> ${esc(catalogos.adic[a.adicional_id]||'Adicional '+a.adicional_id)}</span>`).join(''):'<span class="nota">Sin adicionales registrados</span>';
+  });
+  // historial (todos los módulos)
+  sb.from('eventos_equipo').select('modulo,tipo,descripcion,ocurrido_en').eq('equipo_id',e.id).order('ocurrido_en',{ascending:false}).limit(30).then(r=>{
+    const l=r.data||[]; $('#fHist').innerHTML=l.length?l.map(m=>`<div>${esc(m.descripcion||bonito(m.tipo))}<br><small>${fecha(m.ocurrido_en)} · ${esc(bonito(m.tipo))} · ${esc(m.modulo)}</small></div>`).join(''):'Sin movimientos registrados';
+  });
+  // último levantamiento físico y fotos (proyecto de levantamientos)
+  try{
+    const r=await lev.rpc('ficha_niv',{p_niv:e.niv}); if(r.error) throw r.error; const d=r.data||{};
+    if(d.levantamiento||d.fecha){
+      const adic=(Array.isArray(d.adicionales)?d.adicionales:[]).map(a=>`<span class="chip"><b>${a.cantidad??''}</b> ${esc(a.tipo)}${a.marcaMedida?' · '+esc(a.marcaMedida):''}${a.condicion?' · '+esc(a.condicion):''}</span>`).join('');
+      $('#fLev').innerHTML=`<dl class="datos">${[['Levantamiento',d.levantamiento],['Fecha',fecha(d.fecha)],['Patio',d.patio],['Zona',d.zona],['Estatus físico',d.estatus_fisico],['Llantas',d.medida_llantas],['Capturó',d.capturado_por],['Observaciones',d.obs]].filter(([,v])=>v&&v!=='—').map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>${adic?`<div class="chips" style="margin-top:8px">${adic}</div>`:''}`;
+    } else $('#fLev').innerHTML='<span class="nota">Este equipo no aparece en ningún levantamiento físico.</span>';
+    const fotos=Array.isArray(d.fotos)?d.fotos:[];
+    if(fotos.length){ $('#fFotos').className='fotos'; $('#fFotos').innerHTML=fotos.map(f=>`<a href="${urlFoto(f.ruta)}" target="_blank" rel="noopener" title="${esc(f.angulo||'')} · ${fecha(f.fecha)}"><img loading="lazy" src="${urlFoto(f.ruta)}" alt="${esc(f.angulo||'Foto')}"><span>${esc(f.angulo||'Foto')}</span></a>`).join(''); }
+    else { $('#fFotos').className='nota'; $('#fFotos').textContent='Sin fotos en el repositorio de levantamientos.'; }
+  }catch(err){ $('#fLev').textContent='No se pudo consultar el levantamiento: '+(err.message||err); $('#fFotos').textContent='No se pudieron consultar las fotos.'; }
+}
+
+/* =====================================================================
+   REGRESAR A PATIO (reactivar un equipo entregado)
+   ===================================================================== */
+let reactEq=null;
+function abrirReactivar(e,patioId,zonaId){
+  reactEq=e; $('#reactInfo').innerHTML=`<b>${esc(e.niv)}</b> · ${esc(e.tipo)} · ${esc(e.marca)} ${esc(e.anio)}<br>Actualmente: ${esc(bonito(e.operativo))}${e.cliente?' · '+esc(e.cliente):''}`;
+  const sp=$('#reactPatio'); sp.innerHTML=''; patios.forEach(p=>sp.add(new Option(p.nombre,p.id,false,p.id==(patioId??patioActivo))));
+  const llenar=()=>{const sz=$('#reactZona'); sz.innerHTML='<option value="">Sin zona</option>'; zonas.filter(z=>z.patio==sp.value).forEach(z=>sz.add(new Option(z.nombre,z.id,false,z.id==zonaId)))};
+  sp.onchange=llenar; llenar();
+  const se=$('#reactEstatus'); se.innerHTML=''; catalogos.eo.forEach(r=>se.add(new Option(r.nombre,r.clave,false,r.clave==='PENDIENTE')));
+  $('#reactNota').value=''; $('#dlgReact').showModal();
+}
+$('#reactCancelar').onclick=()=>$('#dlgReact').close();
+$('#reactGuardar').onclick=async()=>{
+  const e=reactEq; const patioId=+$('#reactPatio').value, zonaId=$('#reactZona').value?+$('#reactZona').value:null, est=$('#reactEstatus').value, nota=$('#reactNota').value.trim()||null;
+  $('#reactGuardar').disabled=true;
+  const r=await sb.rpc('reactivar_equipo',{p_niv:e.niv,p_patio_id:patioId,p_zona_id:zonaId,p_estatus_operativo:est,p_nota:nota});
+  $('#reactGuardar').disabled=false;
+  if(r.error){aviso('No se pudo regresar el equipo: '+r.error.message,true);return}
+  Object.assign(e,{patio:patioId,zona:zonaId,operativo:est,estatus:'LIBRE',cliente:''});
+  $('#dlgReact').close(); aviso(`${e.niv} regresó a ${nombrePatio(patioId)}${zonaId?' · '+nombreZona(zonaId):''}`);
+  render(e.niv);
+};
+$('#btnEntregados').onclick=()=>{ if(editando){aviso('Termina o cancela la edición del plano primero');return;} vistaEntregados=true; document.body.classList.add('vista-entregados'); render(); };
+
+/* =====================================================================
+   CONTROLES
+   ===================================================================== */
+$('#q').oninput=ev=>{busqueda=ev.target.value;aplicarFiltro()};
+$('#fTipo').onchange=ev=>{filtroTipo=ev.target.value;aplicarFiltro()};
+$('#fGps').onchange=ev=>{filtroGps=ev.target.value;aplicarFiltro()};
+$('#btnSync').onclick=async()=>{
+  const b=$('#btnSync'); b.disabled=true; b.textContent='Consultando Samsara…';
+  const r=await sb.functions.invoke('samsara-sync',{body:{}});
+  b.disabled=false; b.textContent='Sincronizar GPS';
+  const d=r.data||{}; if(r.error||d.error){ aviso('Sincronización con error: '+(d.error||r.error?.message||'sin detalle'),true); return; }
+  aviso(`Samsara: ${d.trailers_samsara} trailers · ${d.equipos_ligados} ligados a equipos · ${d.posiciones} posiciones · ${d.discrepancias} en otro patio`);
+  await cargar();
+};
+$('#btnCompacto').onclick=()=>{document.body.classList.toggle('compacto');$('#btnCompacto').classList.toggle('activo')};
+
+iniciar();
+</script>
+</body>
+</html>
