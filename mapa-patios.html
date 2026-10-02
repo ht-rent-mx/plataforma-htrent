@@ -237,9 +237,11 @@ dialog textarea{width:100%;border:1px solid var(--borde);border-radius:6px;paddi
   <div class="nota" id="reactInfo"></div>
   <label for="reactPatio">Patio donde queda</label><select id="reactPatio"></select>
   <label for="reactZona">Zona</label><select id="reactZona"></select>
+  <label for="reactMotivo">Motivo de la devolución</label><select id="reactMotivo">
+    <option>DEVOLUCION</option><option>FIN DE CONTRATO</option><option>SINIESTRO</option><option>DACION DE PAGO</option><option>FALLA</option><option>CAMBIO DE EQUIPO</option><option>OTRO</option></select>
   <label for="reactEstatus">Nuevo estatus operativo</label><select id="reactEstatus"></select>
   <label for="reactNota">Nota (opcional)</label><textarea id="reactNota" placeholder="Ej. Devolución del cliente, llegó con daño en puerta"></textarea>
-  <p class="nota" style="margin:10px 0 0">Al regresarlo queda como <b>Libre</b>, sin cliente asignado, y el cambio se registra en la bitácora.</p>
+  <p class="nota" style="margin:10px 0 0">Al regresarlo queda como <b>Libre</b>, sin cliente asignado, y se registra la <b>devolución en Inventario de Operaciones</b> con el patio y el motivo elegidos.</p>
   <div class="pie"><button class="btn claro" id="reactCancelar">Cancelar</button><button class="btn" id="reactGuardar">Regresar a patio</button></div>
 </div></dialog>
 
@@ -638,17 +640,17 @@ function abrirReactivar(e,patioId,zonaId){
   const llenar=()=>{const sz=$('#reactZona'); sz.innerHTML='<option value="">Sin zona</option>'; zonas.filter(z=>z.patio==sp.value).forEach(z=>sz.add(new Option(z.nombre,z.id,false,z.id==zonaId)))};
   sp.onchange=llenar; llenar();
   const se=$('#reactEstatus'); se.innerHTML=''; catalogos.eo.forEach(r=>se.add(new Option(r.nombre,r.clave,false,r.clave==='PENDIENTE')));
-  $('#reactNota').value=''; $('#dlgReact').showModal();
+  $('#reactNota').value=''; $('#reactMotivo').value='DEVOLUCION'; $('#dlgReact').showModal();
 }
 $('#reactCancelar').onclick=()=>$('#dlgReact').close();
 $('#reactGuardar').onclick=async()=>{
   const e=reactEq; const patioId=+$('#reactPatio').value, zonaId=$('#reactZona').value?+$('#reactZona').value:null, est=$('#reactEstatus').value, nota=$('#reactNota').value.trim()||null;
   $('#reactGuardar').disabled=true;
-  const r=await sb.rpc('reactivar_equipo',{p_niv:e.niv,p_patio_id:patioId,p_zona_id:zonaId,p_estatus_operativo:est,p_nota:nota});
+  const r=await sb.rpc('reactivar_equipo',{p_niv:e.niv,p_patio_id:patioId,p_zona_id:zonaId,p_estatus_operativo:est,p_nota:nota,p_motivo:$('#reactMotivo').value});
   $('#reactGuardar').disabled=false;
   if(r.error){aviso('No se pudo regresar el equipo: '+r.error.message,true);return}
   Object.assign(e,{patio:patioId,zona:zonaId,operativo:est,estatus:'LIBRE',cliente:''});
-  $('#dlgReact').close(); aviso(`${e.niv} regresó a ${nombrePatio(patioId)}${zonaId?' · '+nombreZona(zonaId):''}`);
+  $('#dlgReact').close(); aviso(`${e.niv} regresó a ${nombrePatio(patioId)}${zonaId?' · '+nombreZona(zonaId):''} · ${r.data?.inventario||''}`);
   render(e.niv);
 };
 $('#btnEntregados').onclick=()=>{ if(editando){aviso('Termina o cancela la edición del plano primero');return;} vistaEntregados=true; document.body.classList.add('vista-entregados'); render(); };
