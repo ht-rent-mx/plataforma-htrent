@@ -79,7 +79,21 @@ section#vista{position:relative;overflow:auto;padding:18px 22px}
 /* ---------- Avatar ---------- */
 .eq{width:112px;background:#fff;border:1px solid var(--borde);border-radius:var(--r);padding:5px 6px 4px;cursor:grab;color:var(--tinta);position:relative;user-select:none;flex:none;box-shadow:0 1px 2px rgba(11,61,102,.08)}
 .eq:hover{border-color:var(--navy)} .eq:focus-visible{outline:2px solid var(--linea)}
-.eq.arrastrando{opacity:.4} .eq.oculto{display:none}
+.eq.arrastrando{opacity:.4} .eq.oculto,.plano .eq.en-plano.oculto{display:none}
+/* resultados de búsqueda */
+.buscar{position:relative}
+.resultados{position:absolute;top:40px;left:0;right:0;min-width:340px;background:#fff;border:1px solid var(--borde);border-radius:var(--r);box-shadow:0 8px 24px rgba(11,61,102,.18);z-index:40;max-height:360px;overflow:auto;display:none}
+.resultados.visible{display:block}
+.resultados button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--borde);background:#fff;padding:8px 12px;cursor:pointer;font:inherit;color:var(--tinta)}
+.resultados button:hover,.resultados button.sel{background:var(--lime-soft)}
+.resultados .r-niv{font-family:var(--mono);font-weight:700}
+.resultados .r-ubi{font-size:12.5px;color:var(--tinta-suave)}
+.resultados .r-ubi b{color:var(--ink)}
+.resultados .r-vacio{padding:10px 12px;color:var(--tinta-suave);font-size:13px}
+.patio.coincide{background:var(--lime-soft)} .patio.coincide .n{color:var(--lime-ink);font-weight:700}
+.eq.encontrado{outline:3px solid var(--lime-ink);outline-offset:3px;z-index:6;animation:encontrado 1.2s ease-out 3}
+@keyframes encontrado{0%{box-shadow:0 0 0 0 rgba(60,232,30,.8)}100%{box-shadow:0 0 0 18px rgba(60,232,30,0)}}
+@media (prefers-reduced-motion:reduce){.eq.encontrado{animation:none}}
 .eq svg{width:100%;height:36px;display:block}
 .eq .eco{font-family:var(--mono);font-weight:700;font-size:13px;line-height:1.1;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .eq .meta{font-size:11px;color:var(--tinta-suave);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -199,7 +213,7 @@ dialog.torre-dlg{width:min(600px,96vw)}
 <main>
 <div class="herramientas">
   <a class="migaja" href="index.html">← Volver a módulos</a>
-  <div class="buscar"><span>🔍</span><input id="q" placeholder="Buscar por NIV o placa" aria-label="Buscar"></div>
+  <div class="buscar"><span>🔍</span><input id="q" placeholder="Buscar por NIV, placa o cliente" aria-label="Buscar" autocomplete="off"><div class="resultados" id="resultados" role="listbox"></div></div>
   <div class="filtros"><select id="fTipo" aria-label="Filtrar por tipo"><option value="">Todos los tipos</option></select>
     <select id="fGps" aria-label="Filtrar por GPS"><option value="">GPS: todos</option><option value="con">Con GPS</option><option value="sin">Sin GPS</option><option value="disc">GPS en otro patio</option><option value="viejo">GPS sin señal (+48 h)</option></select>
     <button class="btn claro" id="btnSync" title="Consultar Samsara ahora">Sincronizar GPS</button></div>
@@ -570,7 +584,7 @@ function render(resaltar){
   const cont=$('#patios'); cont.innerHTML='';
   for(const p of patios){
     const n=equipos.filter(e=>e.patio==p.id&&!fuera(e)).length;
-    const d=document.createElement('div'); d.className='patio'+(p.id==patioActivo&&!vistaEntregados?' activo':'');
+    const d=document.createElement('div'); d.className='patio'+(p.id==patioActivo&&!vistaEntregados?' activo':''); d.dataset.id=p.id;
     d.innerHTML=`<span>${esc(p.nombre)}</span><span class="n">${n}</span>`;
     d.onclick=()=>{ if(editando){aviso('Termina o cancela la edición del plano primero');return;} patioActivo=p.id; vistaEntregados=false; document.body.classList.remove('vista-entregados'); render()};
     d.ondragover=ev=>{ev.preventDefault();d.classList.add('drop')}; d.ondragleave=()=>d.classList.remove('drop');
@@ -698,6 +712,10 @@ function aplicarFiltro(){
     });
     el.classList.toggle('oculto',!ok);
   });
+  // en la lista de patios marca dónde hay coincidencias (aunque no sea el patio abierto)
+  const hay=new Set(q.length>=2?equipos.filter(coincide).map(e=>fuera(e)?'fuera':String(e.patio)):[]);
+  document.querySelectorAll('#patios .patio').forEach(p=>p.classList.toggle('coincide',hay.has(p.dataset.id)));
+  $('#btnEntregados').classList.toggle('coincide',hay.has('fuera'));
 }
 
 /* =====================================================================
@@ -917,7 +935,47 @@ $('#btnEntregados').onclick=()=>{ if(editando){aviso('Termina o cancela la edici
 /* =====================================================================
    CONTROLES
    ===================================================================== */
-$('#q').oninput=ev=>{busqueda=ev.target.value;aplicarFiltro()};
+/* ---------- Búsqueda: dice dónde está el equipo y lo lleva ahí ---------- */
+const coincide=e=>{ const q=busqueda.trim().toLowerCase(); return !!q&&(e.niv.toLowerCase().includes(q)||e.placa.toLowerCase().includes(q)||e.cliente.toLowerCase().includes(q)); };
+function ubicacionTexto(e){
+  if(fuera(e)) return `<b>${esc(bonito(e.operativo))}</b>${e.cliente?' · '+esc(e.cliente):''} · fuera de patio`;
+  const t=torreDe(e);
+  const sitio=e.x!=null?'acomodado en el plano':(e.zona?'posición sugerida en su zona':'sin acomodar en el plano');
+  return `<b>${esc(nombrePatio(e.patio))}</b>${e.zona?' · Zona <b>'+esc(nombreZona(e.zona))+'</b>':''}${t.length>1?` · Torre: nivel <b>${e.nivel??'—'}</b> de ${t.length}`:''} · ${sitio}${e.or==='V'?' · vertical':''}`;
+}
+let resSel=0, resLista=[];
+function pintarResultados(){
+  const caja=$('#resultados'), q=busqueda.trim();
+  if(q.length<2){ caja.classList.remove('visible'); caja.innerHTML=''; resLista=[]; return; }
+  resLista=equipos.filter(coincide).sort((a,b)=>(a.niv.toLowerCase()===q.toLowerCase()||a.placa.toLowerCase()===q.toLowerCase()?-1:0)-(b.niv.toLowerCase()===q.toLowerCase()||b.placa.toLowerCase()===q.toLowerCase()?-1:0)).slice(0,12);
+  resSel=0;
+  caja.innerHTML=resLista.length
+    ? resLista.map((e,i)=>`<button type="button" role="option" data-niv="${esc(e.niv)}" class="${i===0?'sel':''}"><div><span class="r-niv">${esc(e.niv)}</span>${e.placa?' · '+esc(e.placa):''} <span class="r-ubi">${esc(e.tipo)}</span></div><div class="r-ubi">${ubicacionTexto(e)}</div></button>`).join('')
+      +(equipos.filter(coincide).length>12?`<div class="r-vacio">Hay más coincidencias; escribe más caracteres para afinar.</div>`:'')
+    : '<div class="r-vacio">Ningún equipo coincide con la búsqueda.</div>';
+  caja.querySelectorAll('button').forEach(b=>b.onmousedown=ev=>{ev.preventDefault(); irA(b.dataset.niv)});
+  caja.classList.add('visible');
+}
+function irA(niv){
+  const e=eqDe(niv); if(!e) return;
+  if(editando){ aviso('Termina o cancela la edición del plano primero'); return; }
+  $('#resultados').classList.remove('visible');
+  if(fuera(e)){ vistaEntregados=true; document.body.classList.add('vista-entregados'); }
+  else { vistaEntregados=false; document.body.classList.remove('vista-entregados'); patioActivo=e.patio; }
+  render();
+  const el=[...document.querySelectorAll('.eq')].find(x=>(x.dataset.nivs||x.dataset.niv).split(',').includes(niv));
+  if(el){ el.classList.remove('oculto'); el.classList.add('encontrado'); el.scrollIntoView({block:'center',inline:'center',behavior:'smooth'}); setTimeout(()=>el.classList.remove('encontrado'),4000); }
+  aviso(`${niv}: ${ubicacionTexto(e).replace(/<[^>]+>/g,'')}`);
+}
+$('#q').oninput=ev=>{busqueda=ev.target.value;aplicarFiltro();pintarResultados()};
+$('#q').onfocus=()=>pintarResultados();
+$('#q').onblur=()=>setTimeout(()=>$('#resultados').classList.remove('visible'),150);
+$('#q').onkeydown=ev=>{
+  const bs=[...$('#resultados').querySelectorAll('button')];
+  if(ev.key==='ArrowDown'||ev.key==='ArrowUp'){ if(!bs.length) return; ev.preventDefault(); resSel=(resSel+(ev.key==='ArrowDown'?1:-1)+bs.length)%bs.length; bs.forEach((b,i)=>b.classList.toggle('sel',i===resSel)); bs[resSel].scrollIntoView({block:'nearest'}); }
+  else if(ev.key==='Enter'){ if(resLista[resSel]){ ev.preventDefault(); irA(resLista[resSel].niv); } }
+  else if(ev.key==='Escape'){ $('#resultados').classList.remove('visible'); }
+};
 $('#fTipo').onchange=ev=>{filtroTipo=ev.target.value;aplicarFiltro()};
 $('#fGps').onchange=ev=>{filtroGps=ev.target.value;aplicarFiltro()};
 $('#btnSync').onclick=async()=>{
