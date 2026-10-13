@@ -152,6 +152,36 @@ body.vista-entregados .plano-envoltura{display:none} body.vista-entregados .entr
 body.vista-entregados #btnZona,body.vista-entregados #btnEditar{display:none}
 dialog textarea{width:100%;border:1px solid var(--borde);border-radius:6px;padding:8px 10px;min-height:60px;font:inherit}
 
+/* ---------- Acomodo libre en el plano, orientación y torres ---------- */
+.zona{z-index:1}
+.plano .eq.en-plano{position:absolute;z-index:3;margin:2px;padding:2px 3px;display:flex;flex-direction:column;justify-content:center;box-shadow:0 1px 3px rgba(11,61,102,.25)}
+.eq.en-plano svg{height:auto;flex:1;min-height:0}
+.eq.en-plano .eco{font-size:11px;text-align:center;margin:0}
+.eq.en-plano.or-V .eco{font-size:10px}
+.eq.en-plano .meta{display:none}
+.eq.en-plano .dot{top:3px;right:3px;width:7px;height:7px}
+.plano.z-chico .eq.en-plano .eco{display:none}
+.eq.provisional{border-style:dashed;opacity:.85}
+.eq.torre{box-shadow:3px -3px 0 -1px #fff,3px -3px 0 0 var(--navy),6px -6px 0 -1px #fff,6px -6px 0 0 var(--navy)}
+.pila-badge{position:absolute;left:-7px;bottom:-7px;background:var(--lime);color:var(--ink);border:1px solid var(--lime-ink);border-radius:10px;font:700 11px/1 var(--fuente);padding:3px 6px;cursor:pointer;z-index:2}
+.eq-herr{position:absolute;top:-11px;right:-9px;display:none;gap:3px;z-index:4}
+.eq.en-plano:hover .eq-herr,.eq.en-plano:focus .eq-herr,.eq.en-plano:focus-within .eq-herr{display:flex}
+.eq-herr button{width:22px;height:22px;border-radius:50%;border:1px solid var(--navy);background:#fff;color:var(--ink);font-size:13px;line-height:1;padding:0;cursor:pointer}
+.eq-herr button:hover{background:var(--lime-soft)}
+.eq.apilar-sobre{outline:3px solid var(--lime-ink);outline-offset:2px}
+.eq.apilar-sobre::after{content:'Apilar aquí';position:absolute;left:50%;top:-24px;transform:translateX(-50%);background:var(--lime-ink);color:#fff;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;white-space:nowrap;z-index:5}
+.plano.editando .eq{pointer-events:none;opacity:.3}
+.plano-ayuda{position:absolute;left:24px;top:24px;max-width:520px;color:var(--tinta-suave);line-height:1.5;z-index:2;pointer-events:none}
+.zoom{display:inline-flex;align-items:center;gap:4px} .zoom .btn{padding:0 11px} .zoom span{min-width:44px;text-align:center;font-size:13px;color:var(--tinta-suave);font-variant-numeric:tabular-nums}
+dialog.torre-dlg{width:min(600px,96vw)}
+.torre-lista{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.torre-fila{display:grid;grid-template-columns:30px 64px 1fr auto;gap:10px;align-items:center;border:1px solid var(--borde);border-radius:6px;padding:6px 8px}
+.torre-fila .nv{font-family:var(--fuente-cond);font-style:italic;font-weight:800;font-size:18px;color:var(--ink);text-align:center}
+.torre-fila svg{width:64px;height:32px}
+.torre-fila .eco{font-family:var(--mono);font-weight:700;font-size:13px}
+.torre-fila .acc{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end} .torre-fila .acc .btn{height:28px;padding:0 9px;font-size:12px}
+.seg{display:inline-flex;border:1px solid var(--borde);border-radius:6px;overflow:hidden} .seg button{border:0;background:#fff;padding:6px 12px;font:inherit;cursor:pointer;color:var(--tinta)} .seg button.activo{background:var(--navy);color:#fff}
+
 @media (max-width:820px){#cuerpo{grid-template-columns:1fr}aside{display:none}.filtros{display:none}}
 </style>
 </head>
@@ -183,14 +213,15 @@ dialog textarea{width:100%;border:1px solid var(--borde);border-radius:6px;paddi
     <div class="leyenda">
       <div><i style="background:var(--libre)"></i>Libre</div><div><i style="background:var(--asignado)"></i>Asignado</div>
       <div><i style="background:var(--transito)"></i>En tránsito</div><div><i style="background:var(--otro)"></i>Otro estatus</div>
-      <p style="margin:10px 0 0">Arrastra un equipo a otra zona o suéltalo sobre un patio de esta lista. Doble clic abre su ficha completa.</p>
+      <p style="margin:10px 0 0">Arrastra un equipo a cualquier punto del plano; suéltalo <b>encima de otro</b> para armar una torre. En una torre, <b>Shift + arrastrar</b> saca solo el de arriba. <b>⟳</b> o la tecla <b>R</b> lo gira (horizontal / vertical). Suéltalo sobre un patio de esta lista para trasladarlo. Doble clic abre su ficha.</p>
     </div>
   </aside>
   <section id="vista">
     <div class="titulo">
       <h1 id="tituloPatio">—</h1><span class="sub" id="subPatio"></span>
       <div class="acciones">
-        <button class="btn claro" id="btnCompacto" title="Avatares más pequeños">Vista compacta</button>
+        <span class="zoom"><button class="btn claro" id="zMenos" title="Alejar" aria-label="Alejar">−</button><span id="zVal">100%</span><button class="btn claro" id="zMas" title="Acercar" aria-label="Acercar">+</button></span>
+        <button class="btn claro" id="btnCompacto" title="Avatares más pequeños en las listas">Vista compacta</button>
         <button class="btn claro" id="btnZona">Agregar zona</button>
         <button class="btn claro" id="btnEditar">Editar plano</button>
       </div>
@@ -212,7 +243,7 @@ dialog textarea{width:100%;border:1px solid var(--borde);border-radius:6px;paddi
     </div>
     <div class="plano-envoltura">
       <div class="plano" id="plano"></div>
-      <div class="bandeja" id="bandeja"><div class="zona-cab"><span>Sin zona asignada</span><span class="cnt" id="cntBandeja">0</span></div><div class="equipos" id="eqBandeja"></div></div>
+      <div class="bandeja" id="bandeja"><div class="zona-cab"><span>Sin acomodar en el plano</span><span class="cnt" id="cntBandeja">0</span></div><div class="equipos" id="eqBandeja"></div></div>
     </div>
     <div class="entregados-lista" id="listaEntregados">
       <p class="entregados-ayuda">Equipos entregados a cliente o con residual pagado. No ocupan lugar en los patios. Si un cliente devuelve alguno, arrástralo a un patio de la lista de la izquierda o ábrelo con doble clic y usa <b>Regresar a patio</b>.</p>
@@ -245,6 +276,14 @@ dialog textarea{width:100%;border:1px solid var(--borde);border-radius:6px;paddi
   <div class="pie"><button class="btn claro" id="reactCancelar">Cancelar</button><button class="btn" id="reactGuardar">Regresar a patio</button></div>
 </div></dialog>
 
+<dialog id="dlgTorre" class="torre-dlg"><div class="dlg-cuerpo">
+  <h3>Torre de equipos</h3>
+  <div class="nota" id="torreInfo"></div>
+  <div class="torre-lista" id="torreLista"></div>
+  <p class="nota" style="margin:12px 0 0">Arriba está el último que se subió. <b>Bajar</b> lo saca de la torre y lo deja junto a ella en el plano.</p>
+  <div class="pie"><button class="btn claro" id="torreGirar">Girar torre</button><button class="btn" id="torreCerrar">Cerrar</button></div>
+</div></dialog>
+
 <dialog id="dlgEq" class="ficha">
   <div class="ficha-cab"><svg id="fAvatar" viewBox="0 0 104 52"></svg><div><h3 id="fNiv">—</h3><div class="sub" id="fSub"></div></div><button class="cerrar" id="fCerrar" aria-label="Cerrar">×</button></div>
   <div class="ficha-cuerpo">
@@ -256,6 +295,7 @@ dialog textarea{width:100%;border:1px solid var(--borde);border-radius:6px;paddi
           <div><label for="fZona" style="margin-top:0">Zona</label><select id="fZona"></select></div>
           <button class="btn" id="fMover">Mover</button>
         </div>
+        <div id="fAcomodo" style="margin-top:14px"></div>
         <div id="fRegresar" style="display:none;margin-top:12px"><button class="btn" id="fBtnRegresar">Regresar a patio</button> <span class="nota">Este equipo está fuera de patio.</span></div>
       </div>
       <div class="bloque" style="grid-column:1/-1"><h4>GPS (Samsara)</h4><div id="fGps" class="nota"></div></div>
@@ -284,7 +324,14 @@ const CFG = {
   CELDA: 28,
   // Estatus operativos que se consideran fuera de patio (no se dibujan en el plano)
   FUERA: ['ENTREGADO','RESIDUAL_PAGADO'],
+  // Familias que normalmente se apilan (las demás piden confirmación)
+  APILABLES: ['plataforma','portacontenedor','camabaja','dolly'],
+  // Altura sugerida de una torre; arriba de esto se pide confirmación
+  MAX_TORRE: 5,
+  ZOOMS: [0.6,0.75,0.9,1,1.25,1.5],
 };
+// Huella de un equipo en el plano (en celdas): H = horizontal, V = vertical
+const dims=or=>or==='V'?{w:2,h:4}:{w:4,h:2};
 const sb  = createClient(CFG.URL, CFG.KEY, { db: { schema: 'core' }, auth: { persistSession: true, autoRefreshToken: true } }); // misma llave y almacenamiento que el shell: hereda la sesión
 const lev = createClient(CFG.LEV_URL, CFG.LEV_KEY, { db: { schema: 'patio' }, auth: { persistSession: false, autoRefreshToken: false } });
 const urlFoto = ruta => `${CFG.LEV_URL}/storage/v1/object/public/${CFG.LEV_BUCKET}/${ruta}`;
@@ -332,6 +379,11 @@ const fuera=e=>CFG.FUERA.includes(e.operativo);
 const gpsViejo=e=>e.gpsFecha&&(Date.now()-new Date(e.gpsFecha))>48*3600e3;
 const gpsDisc=e=>e.gpsPatio&&e.gpsPatio!==e.patio&&!fuera(e);
 let filtroGps='';
+let ZOOM=1, provPos={};
+try{ const z=+localStorage.getItem('mapaZoom'); if(CFG.ZOOMS.includes(z)) ZOOM=z; }catch(_){}
+const cel=()=>CFG.CELDA*ZOOM;
+const eqDe=niv=>equipos.find(e=>e.niv===niv);
+const COLS_MAPA='id,patio_id,zona_id,estatus_asignacion,estatus_operativo,cliente_actual,mapa_x,mapa_y,mapa_orientacion,mapa_pila,mapa_nivel';
 
 const $=s=>document.querySelector(s);
 const aviso=(msg,err=false)=>{const a=$('#aviso');a.textContent=msg;a.className='aviso'+(err?' error':'');a.style.display='block';clearTimeout(a._t);a._t=setTimeout(()=>a.style.display='none',3500)};
@@ -375,7 +427,7 @@ async function cargar(){
     equipos=[]; const PAG=1000;
     for(let desde=0;;desde+=PAG){
       const r=await sb.from('equipos')
-        .select('id,niv,placa,anio,n_ejes,patio_id,zona_id,estatus_asignacion,estatus_operativo,estatus_propiedad,cliente_actual,clasificacion,unidad_negocio_id,tipo_venta,ventana_verificacion,notas,fecha_alta,samsara_id,samsara_nombre,gps_lat,gps_lng,gps_fecha,gps_direccion,gps_velocidad,gps_patio_id,tipo:tipos_equipo(nombre),marca:marcas(nombre)')
+        .select('id,niv,placa,anio,n_ejes,patio_id,zona_id,estatus_asignacion,estatus_operativo,estatus_propiedad,cliente_actual,clasificacion,unidad_negocio_id,tipo_venta,ventana_verificacion,notas,fecha_alta,samsara_id,samsara_nombre,gps_lat,gps_lng,gps_fecha,gps_direccion,gps_velocidad,gps_patio_id,mapa_x,mapa_y,mapa_orientacion,mapa_pila,mapa_nivel,tipo:tipos_equipo(nombre),marca:marcas(nombre)')
         .eq('activo',true).order('niv').range(desde,desde+PAG-1);
       if(r.error) throw r.error;
       equipos.push(...r.data.map(normalizar)); if(r.data.length<PAG) break;
@@ -394,34 +446,126 @@ function normalizar(r){
     patio:r.patio_id, zona:r.zona_id??null, estatus:r.estatus_asignacion||'', operativo:r.estatus_operativo||'', propiedad:r.estatus_propiedad||'',
     cliente:r.cliente_actual||'', clasif:r.clasificacion||'', un:catalogos.un?.[r.unidad_negocio_id]||'', venta:r.tipo_venta||'',
     verif:r.ventana_verificacion||'', notas:r.notas||'', alta:r.fecha_alta||'',
-    samsara:r.samsara_id||'', samsaraNombre:r.samsara_nombre||'', lat:r.gps_lat, lng:r.gps_lng, gpsFecha:r.gps_fecha, gpsDir:r.gps_direccion||'', gpsVel:r.gps_velocidad, gpsPatio:r.gps_patio_id??null };
+    samsara:r.samsara_id||'', samsaraNombre:r.samsara_nombre||'', lat:r.gps_lat, lng:r.gps_lng, gpsFecha:r.gps_fecha, gpsDir:r.gps_direccion||'', gpsVel:r.gps_velocidad, gpsPatio:r.gps_patio_id??null,
+    ...mapaDe(r) };
 }
+const mapaDe=r=>({ x:r.mapa_x==null?null:+r.mapa_x, y:r.mapa_y==null?null:+r.mapa_y, or:r.mapa_orientacion||'H', pila:r.mapa_pila||null, nivel:r.mapa_nivel??null });
+function aplicarFila(e,n){
+  Object.assign(e,{patio:n.patio_id,zona:n.zona_id??null,estatus:n.estatus_asignacion||'',cliente:n.cliente_actual||'',operativo:n.estatus_operativo||''},mapaDe(n));
+  if('gps_lat' in n) Object.assign(e,{lat:n.gps_lat,lng:n.gps_lng,gpsFecha:n.gps_fecha,gpsDir:n.gps_direccion||'',gpsVel:n.gps_velocidad,gpsPatio:n.gps_patio_id??null,samsara:n.samsara_id||''});
+}
+const firma=e=>[e.patio,e.zona,e.estatus,e.operativo,e.x,e.y,e.or,e.pila,e.nivel].join('|');
 function suscribir(){
   sb.channel('mapa-patios').on('postgres_changes',{event:'UPDATE',schema:'core',table:'equipos'},payload=>{
     const n=payload.new; const e=equipos.find(x=>x.id===n.id); if(!e) return;
-    const cambio=e.patio!==n.patio_id||e.zona!==(n.zona_id??null)||e.estatus!==(n.estatus_asignacion||'')||e.operativo!==(n.estatus_operativo||'');
-    e.patio=n.patio_id; e.zona=n.zona_id??null; e.estatus=n.estatus_asignacion||''; e.cliente=n.cliente_actual||''; e.operativo=n.estatus_operativo||'';
-    Object.assign(e,{lat:n.gps_lat,lng:n.gps_lng,gpsFecha:n.gps_fecha,gpsDir:n.gps_direccion||'',gpsVel:n.gps_velocidad,gpsPatio:n.gps_patio_id??null,samsara:n.samsara_id||''});
-    if(cambio && !editando) render(e.niv);
+    const antes=firma(e); aplicarFila(e,n);
+    if(firma(e)!==antes && !editando){ render(e.niv); if($('#dlgTorre').open) pintarTorre(); }
   }).subscribe();
+}
+// vuelve a leer de la base las filas afectadas por un acomodo (y las de sus torres)
+async function refrescar(ids,pilas=[]){
+  pilas=pilas.filter(p=>p&&!String(p).startsWith('local-'));
+  const todos=new Set(ids); equipos.forEach(m=>{ if(m.pila&&(pilas.includes(m.pila)||String(m.pila).startsWith('local-'))) todos.add(m.id) });
+  const qs=[]; if(todos.size) qs.push(sb.from('equipos').select(COLS_MAPA).in('id',[...todos]));
+  pilas.forEach(p=>qs.push(sb.from('equipos').select(COLS_MAPA).eq('mapa_pila',p)));
+  (await Promise.all(qs)).forEach(r=>(r.data||[]).forEach(n=>{const e=equipos.find(x=>x.id===n.id); if(e) aplicarFila(e,n)}));
 }
 
 /* =====================================================================
-   MOVER — se actualiza de inmediato y queda en la bitácora central
+   ACOMODO — posición libre en el plano, torres y orientación.
+   Todo se guarda de inmediato con core.acomodar_equipo, que además
+   deriva la zona (por dónde cae el centro del equipo) y deja el
+   movimiento en la bitácora central.
    ===================================================================== */
-async function mover(niv,patioDestino,zonaDestino){
-  const eq=equipos.find(e=>e.niv===niv); if(!eq) return;
-  if(fuera(eq)){ abrirReactivar(eq,patioDestino,zonaDestino); return; }
-  zonaDestino=zonaDestino??null; if(eq.patio===patioDestino && eq.zona===zonaDestino) return;
-  const antes={patio:eq.patio,zona:eq.zona}; eq.patio=patioDestino; eq.zona=zonaDestino; render(niv);
-  const r=await sb.rpc('mover_equipo',{p_niv:niv,p_patio_id:patioDestino,p_zona_id:zonaDestino});
-  if(r.error){ eq.patio=antes.patio; eq.zona=antes.zona; render(niv); aviso('No se guardó el movimiento: '+r.error.message,true); return; }
-  aviso(`${niv} ahora está en ${nombrePatio(patioDestino)}${zonaDestino?' · '+nombreZona(zonaDestino):''}`);
+function zonaEn(patio,x,y,or){
+  if(x==null) return null; const f=dims(or), cx=x+f.w/2, cy=y+f.h/2;
+  const zs=zonas.filter(z=>z.patio==patio&&cx>=z.x&&cx<z.x+z.w&&cy>=z.y&&cy<z.y+z.h).sort((a,b)=>(b.orden-a.orden)||(b.id-a.id));
+  return zs[0]?.id??null;
+}
+const torreDe=e=>e.pila?equipos.filter(m=>m.pila===e.pila).sort((a,b)=>(a.nivel??0)-(b.nivel??0)||a.niv.localeCompare(b.niv)):[e];
+// rectángulos ocupados en un patio (una torre ocupa un solo lugar)
+function ocupados(patio,excluir=[]){
+  const vistos=new Set(), out=[];
+  for(const e of equipos){
+    if(e.patio!=patio||fuera(e)||excluir.includes(e.niv)) continue;
+    const k=e.pila||e.niv; if(vistos.has(k)) continue;
+    const p=e.x!=null?{x:e.x,y:e.y}:provPos[e.niv]; if(!p) continue;
+    vistos.add(k); const f=dims(e.or); out.push({x:p.x,y:p.y,w:f.w,h:f.h});
+  }
+  return out;
+}
+function buscarLugar(rect,f,occ){
+  for(let y=Math.max(0,rect.y);y<=rect.y+rect.h-f.h;y++) for(let x=Math.max(0,rect.x);x<=rect.x+rect.w-f.w;x++)
+    if(!occ.some(o=>x<o.x+o.w&&x+f.w>o.x&&y<o.y+o.h&&y+f.h>o.y)) return {x,y};
+  return null;
+}
+
+async function acomodar(niv,o={}){
+  const e=eqDe(niv); if(!e) return false;
+  if(fuera(e)){ abrirReactivar(e,o.patio??null,null); return false; }
+  const grupo=(!o.solo&&e.pila)?torreDe(e):[e];
+  const pilaVieja=e.pila, antes={patio:e.patio,zona:e.zona};
+  let patioDest;
+  // cambio local inmediato (la base confirma después)
+  if(o.sobre){
+    const t=eqDe(o.sobre); const pila=t.pila||('local-'+t.niv); if(!t.pila){t.pila=pila;t.nivel=1}
+    let nv=Math.max(1,...equipos.filter(m=>m.pila===pila).map(m=>m.nivel||1));
+    grupo.forEach(m=>Object.assign(m,{patio:t.patio,zona:t.zona,x:t.x,y:t.y,or:t.or,pila,nivel:++nv}));
+    patioDest=t.patio;
+  } else {
+    const or=o.or??e.or, zona=zonaEn(o.patio,o.x,o.y,or); patioDest=o.patio;
+    if(o.solo&&pilaVieja){ e.pila=null; e.nivel=null; }
+    grupo.forEach(m=>Object.assign(m,{patio:o.patio,x:o.x,y:o.y,or,zona}));
+  }
+  render(niv);
+  const r=await sb.rpc('acomodar_equipo',{p_niv:niv,p_patio_id:patioDest,p_x:o.sobre?null:o.x,p_y:o.sobre?null:o.y,
+    p_orientacion:o.sobre?null:(o.or??null),p_sobre_niv:o.sobre||null,p_mover_pila:!o.solo});
+  const ids=grupo.map(m=>m.id); if(o.sobre) ids.push(eqDe(o.sobre).id);
+  await refrescar(ids,[pilaVieja,r.data?.pila]);
+  if(r.error){ render(); aviso('No se guardó el acomodo: '+r.error.message,true); return false; }
+  const n=grupo.length>1?`Torre de ${grupo.length} (${niv})`:niv;
+  if(o.sobre) aviso(`${n} apilado sobre ${o.sobre} · torre de ${torreDe(eqDe(o.sobre)).length}`);
+  else if(antes.patio!==e.patio) aviso(`${n} ahora está en ${nombrePatio(e.patio)}${e.zona?' · '+nombreZona(e.zona):''}`);
+  else if(antes.zona!==e.zona) aviso(`${n} → ${e.zona?nombreZona(e.zona):'fuera de zonas'}`);
+  else if(o.or) aviso(`${n} ${o.or==='V'?'en vertical':'en horizontal'}`);
+  render(niv); return true;
+}
+// mover a un patio / zona (desde la ficha, el GPS o la lista de patios): busca un lugar libre
+function mover(niv,patio,zona){
+  const e=eqDe(niv); if(!e) return;
+  if(patio==null) return;
+  if(!zona) return acomodar(niv,{patio,x:null,y:null});
+  const z=zonas.find(z=>z.id===zona), f=dims(e.or), occ=ocupados(patio,torreDe(e).map(m=>m.niv)), pl=planoDe(patio);
+  const p=buscarLugar({x:z.x,y:z.y+1,w:z.w,h:z.h-1},f,occ)||buscarLugar({x:0,y:0,w:pl.columnas,h:pl.filas},f,occ)||{x:z.x,y:z.y+1};
+  return acomodar(niv,{patio,x:p.x,y:p.y});
+}
+function girar(niv){
+  const e=eqDe(niv); if(!e||fuera(e)) return; const or=e.or==='V'?'H':'V';
+  const pos=e.x!=null?{x:e.x,y:e.y}:provPos[niv];
+  if(!pos) return acomodar(niv,{patio:e.patio,x:null,y:null,or});
+  const pl=planoDe(e.patio), f=dims(or);
+  return acomodar(niv,{patio:e.patio,x:clamp(pos.x,0,Math.max(0,pl.columnas-f.w)),y:clamp(pos.y,0,Math.max(0,pl.filas-f.h)),or});
+}
+async function apilar(a,sobre){
+  const t=eqDe(sobre), e=eqDe(a.niv); if(!t||!e) return;
+  const mov=a.solo?[e]:torreDe(e);
+  const nuevos=[...mov,...torreDe(t)];
+  const raros=[...new Set(nuevos.filter(m=>!CFG.APILABLES.includes(familia(m.tipo))).map(m=>m.tipo||'este tipo'))];
+  if(raros.length && !confirm(`${raros.join(', ')} normalmente no se apila. ¿Apilar de todos modos?`)) return;
+  if(nuevos.length>CFG.MAX_TORRE && !confirm(`La torre quedaría de ${nuevos.length} equipos (máximo sugerido ${CFG.MAX_TORRE}). ¿Continuar?`)) return;
+  return acomodar(a.niv,{sobre,solo:a.solo});
 }
 
 /* =====================================================================
    RENDER
    ===================================================================== */
+// agrupa equipos en torres (cada grupo ordenado de abajo hacia arriba)
+function grupos(lista){
+  const m=new Map(), out=[];
+  for(const e of lista){ if(e.pila){ if(!m.has(e.pila)){const g=[];m.set(e.pila,g);out.push(g)} m.get(e.pila).push(e) } else out.push([e]); }
+  out.forEach(g=>g.sort((a,b)=>(a.nivel??0)-(b.nivel??0)||a.niv.localeCompare(b.niv)));
+  return out;
+}
 function render(resaltar){
   const cont=$('#patios'); cont.innerHTML='';
   for(const p of patios){
@@ -430,7 +574,10 @@ function render(resaltar){
     d.innerHTML=`<span>${esc(p.nombre)}</span><span class="n">${n}</span>`;
     d.onclick=()=>{ if(editando){aviso('Termina o cancela la edición del plano primero');return;} patioActivo=p.id; vistaEntregados=false; document.body.classList.remove('vista-entregados'); render()};
     d.ondragover=ev=>{ev.preventDefault();d.classList.add('drop')}; d.ondragleave=()=>d.classList.remove('drop');
-    d.ondrop=ev=>{ev.preventDefault();d.classList.remove('drop'); if(arrastre) mover(arrastre,p.id,null)};
+    d.ondrop=ev=>{ev.preventDefault();d.classList.remove('drop'); const a=arrastre; if(!a) return; const e=eqDe(a.niv);
+      if(fuera(e)) return abrirReactivar(e,p.id,null);
+      if(e.patio==p.id) return aviso('El equipo ya está en '+p.nombre);
+      acomodar(a.niv,{patio:p.id,x:null,y:null,solo:a.solo}); };
     cont.appendChild(d);
   }
   const sel=$('#fTipo'); if(sel.options.length===1){ [...new Set(equipos.map(e=>e.tipo).filter(Boolean))].sort().forEach(t=>sel.add(new Option(t,t))); }
@@ -440,65 +587,158 @@ function render(resaltar){
     $('#tituloPatio').textContent='Entregados / fuera de patio';
     $('#subPatio').textContent=`${entregados.length} equipos · ${entregados.filter(e=>e.operativo==='ENTREGADO').length} entregados · ${entregados.filter(e=>e.operativo==='RESIDUAL_PAGADO').length} residual pagado`;
     const l=$('#eqEntregados'); l.innerHTML='';
-    for(const e of entregados) l.appendChild(avatar(e,e.niv===resaltar));
+    for(const e of entregados) l.appendChild(avatar([e],resaltar));
     aplicarFiltro(); return;
   }
   const enPatio=equipos.filter(e=>e.patio==patioActivo&&!fuera(e));
+  const gr=grupos(enPatio), torres=gr.filter(g=>g.length>1);
   $('#tituloPatio').textContent=nombrePatio(patioActivo);
-  $('#subPatio').textContent=`${enPatio.length} equipos · ${enPatio.filter(e=>e.estatus==='LIBRE').length} libres`;
+  $('#subPatio').textContent=`${enPatio.length} equipos · ${enPatio.filter(e=>e.estatus==='LIBRE').length} libres${torres.length?` · ${torres.length} torre${torres.length>1?'s':''}`:''}`;
 
   const plano=editando?planoTmp:planoDe(patioActivo);
   const zp=(editando?zonasTmp:zonas).filter(z=>z.patio==patioActivo);
-  const C=CFG.CELDA, el=$('#plano');
-  el.innerHTML=''; el.className='plano'+(editando?' editando':'')+(plano.imagen_fondo?' con-fondo':'');
+  const C=cel(), el=$('#plano');
+  el.innerHTML=''; el.className='plano'+(editando?' editando':'')+(plano.imagen_fondo?' con-fondo':'')+(ZOOM<0.8?' z-chico':'');
+  el.style.setProperty('--celda',C+'px');
   el.style.width=(plano.columnas*C)+'px'; el.style.height=(plano.filas*C)+'px';
   el.style.setProperty('--fondo',plano.imagen_fondo?`url("${plano.imagen_fondo}")`:'none');
   for(const b of zp){
-    const lista=enPatio.filter(e=>e.zona===b.id);
     const z=document.createElement('div'); z.className='zona'; z.dataset.id=b.id;
     z.style.left=(b.x*C)+'px'; z.style.top=(b.y*C)+'px'; z.style.width=(b.w*C)+'px'; z.style.height=(b.h*C)+'px';
     if(b.color) z.style.borderColor=b.color;
-    z.innerHTML=`<div class="zona-cab"><span class="nombre">${esc(b.nombre)}</span><span class="cnt">${lista.length}</span>
-      <span class="herr"><button title="Renombrar">✎</button><button title="Quitar zona">×</button></span></div><div class="equipos"></div><div class="asa"></div>`;
+    z.innerHTML=`<div class="zona-cab"><span class="nombre">${esc(b.nombre)}</span><span class="cnt">${enPatio.filter(e=>e.zona===b.id).length}</span>
+      <span class="herr"><button title="Renombrar">✎</button><button title="Quitar zona">×</button></span></div><div class="asa"></div>`;
     const [bRen,bDel]=z.querySelectorAll('.herr button');
     bRen.onclick=ev=>{ev.stopPropagation();renombrarZona(b)}; bDel.onclick=ev=>{ev.stopPropagation();quitarZona(b.id)};
-    if(!editando){
-      z.ondragover=ev=>{ev.preventDefault();z.classList.add('drop')}; z.ondragleave=()=>z.classList.remove('drop');
-      z.ondrop=ev=>{ev.preventDefault();z.classList.remove('drop'); if(arrastre) mover(arrastre,patioActivo,b.id)};
-    } else { z.onpointerdown=ev=>iniciarMoverZona(ev,b,z); z.querySelector('.asa').onpointerdown=ev=>iniciarRedim(ev,b,z); }
-    const eqs=z.querySelector('.equipos');
-    if(!lista.length) eqs.innerHTML='<div class="vacio">Suelta aquí un equipo</div>';
-    for(const e of lista) eqs.appendChild(avatar(e,e.niv===resaltar));
+    if(editando){ z.onpointerdown=ev=>iniciarMoverZona(ev,b,z); z.querySelector('.asa').onpointerdown=ev=>iniciarRedim(ev,b,z); }
     el.appendChild(z);
   }
-  // bandeja: sin zona
-  const sinZona=enPatio.filter(e=>e.zona===null||!zp.some(z=>z.id===e.zona));
-  const bj=$('#bandeja'), eqb=$('#eqBandeja'); eqb.innerHTML=''; $('#cntBandeja').textContent=sinZona.length;
-  if(!sinZona.length) eqb.innerHTML='<div class="vacio">Todos los equipos de este patio tienen zona</div>';
-  for(const e of sinZona) eqb.appendChild(avatar(e,e.niv===resaltar));
+  // equipos: fijos (con posición), sugeridos (tienen zona pero aún no posición) y sin acomodar
+  const fijos=[], sugeridos=[], sinAcomodo=[];
+  for(const g of gr){ const b=g[0]; if(b.x!=null) fijos.push(g); else if(b.zona&&zp.some(z=>z.id===b.zona)) sugeridos.push(g); else sinAcomodo.push(g); }
+  provPos={};
+  const occ=fijos.map(g=>({x:g[0].x,y:g[0].y,...dims(g[0].or)}));
+  for(const g of sugeridos){
+    const z=zp.find(z=>z.id===g[0].zona), f=dims(g[0].or);
+    const p=buscarLugar({x:z.x,y:z.y+1,w:z.w,h:z.h-1},f,occ)||{x:z.x,y:z.y+1};
+    occ.push({x:p.x,y:p.y,...f}); g.forEach(m=>provPos[m.niv]=p);
+  }
+  const pintar=(g,p,prov)=>{ const f=dims(g[0].or), a=avatar(g,resaltar,{plano:true,prov});
+    a.style.left=(p.x*C)+'px'; a.style.top=(p.y*C)+'px'; a.style.width=(f.w*C-4)+'px'; a.style.height=(f.h*C-4)+'px'; el.appendChild(a); };
+  fijos.forEach(g=>pintar(g,{x:g[0].x,y:g[0].y},false));
+  sugeridos.forEach(g=>pintar(g,provPos[g[0].niv],true));
+  if(!zp.length && !fijos.length && !editando){
+    const h=document.createElement('div'); h.className='plano-ayuda';
+    h.innerHTML='Este patio todavía no tiene zonas ni equipos acomodados. Arrastra equipos desde <b>Sin acomodar</b> a cualquier punto del plano, o usa <b>Agregar zona</b> y <b>Editar plano</b> para dibujar las áreas reales del patio (filas, taller, lavado…), incluso sobre una foto satelital.';
+    el.appendChild(h);
+  }
+  prepararDrop(el);
+  // bandeja: sin acomodar
+  const bj=$('#bandeja'), eqb=$('#eqBandeja'); eqb.innerHTML='';
+  $('#cntBandeja').textContent=sinAcomodo.reduce((s,g)=>s+g.length,0);
+  if(!sinAcomodo.length) eqb.innerHTML='<div class="vacio">Todos los equipos de este patio están acomodados en el plano</div>';
+  for(const g of sinAcomodo) eqb.appendChild(avatar(g,resaltar));
   bj.ondragover=ev=>{ev.preventDefault();bj.classList.add('drop')}; bj.ondragleave=()=>bj.classList.remove('drop');
-  bj.ondrop=ev=>{ev.preventDefault();bj.classList.remove('drop'); if(arrastre) mover(arrastre,patioActivo,null)};
-  if(!zp.length && !editando) el.innerHTML='<div style="color:rgba(255,255,255,.6);padding:24px;max-width:520px;line-height:1.5">Este patio todavía no tiene zonas. Usa <b>Agregar zona</b> para crear las áreas reales del patio (filas, taller, lavado, entrega…) y luego <b>Editar plano</b> para acomodarlas con la forma que tiene el patio, incluso sobre una foto satelital.</div>';
+  bj.ondrop=ev=>{ev.preventDefault();bj.classList.remove('drop'); const a=arrastre; if(a) acomodar(a.niv,{patio:patioActivo,x:null,y:null,solo:a.solo})};
   aplicarFiltro();
 }
-function avatar(e,recien){
-  const d=document.createElement('div'); d.className='eq'+(recien?' recien':'')+(gpsDisc(e)?' gps-disc':''); d.draggable=!editando; d.tabIndex=0; d.dataset.niv=e.niv;
-  d.title=`${e.tipo} · ${e.marca} ${e.anio}\n${e.niv}${e.placa?' · '+e.placa:''}\n${bonito(e.estatus)}${e.cliente?' · '+e.cliente:''}`;
-  d.innerHTML=`${e.samsara?`<span class="gps${gpsViejo(e)?' viejo':''}" title="GPS Samsara${gpsDisc(e)?' · detectado en '+esc(nombrePatio(e.gpsPatio)):''}">◉</span>`:''}<span class="dot" style="background:${colorEstatus(e.estatus)}"></span><svg viewBox="0 0 104 52">${AV[familia(e.tipo)]}</svg><div class="eco">${esc(e.niv.slice(-8))}</div><div class="meta">${esc(fuera(e)?(e.cliente||bonito(e.operativo)):(e.tipo||'—'))}</div>`;
-  d.ondragstart=ev=>{arrastre=e.niv;d.classList.add('arrastrando');ev.dataTransfer.effectAllowed='move';ev.dataTransfer.setData('text/plain',e.niv)};
+// soltar sobre el plano: en un punto libre se coloca; encima de otro equipo se apila
+function prepararDrop(el){
+  let marcado=null; const limpiar=()=>{ marcado?.classList.remove('apilar-sobre'); marcado=null; };
+  el.ondragover=ev=>{
+    if(editando||!arrastre) return; ev.preventDefault();
+    const t=ev.target.closest('.eq'); const ok=t&&el.contains(t)&&!t.dataset.nivs.split(',').some(n=>arrastre.nivs.includes(n));
+    if((ok?t:null)!==marcado){ limpiar(); if(ok){ t.classList.add('apilar-sobre'); marcado=t; } }
+  };
+  el.ondragleave=ev=>{ if(!el.contains(ev.relatedTarget)) limpiar(); };
+  el.ondrop=ev=>{
+    if(editando||!arrastre) return; ev.preventDefault(); const a=arrastre, t=marcado; limpiar();
+    const e=eqDe(a.niv); if(fuera(e)) return abrirReactivar(e,patioActivo,null);
+    if(t) return apilar(a,t.dataset.niv);
+    const r=el.getBoundingClientRect(), C=cel(), f=dims(a.or), pl=planoDe(patioActivo);
+    const x=clamp(Math.round((ev.clientX-r.left-a.gx)/C*2)/2,0,Math.max(0,pl.columnas-f.w));
+    const y=clamp(Math.round((ev.clientY-r.top-a.gy)/C*2)/2,0,Math.max(0,pl.filas-f.h));
+    if(!a.solo&&e.x===x&&e.y===y) return;
+    acomodar(a.niv,{patio:patioActivo,x,y,solo:a.solo});
+  };
+}
+function avatar(g,resaltar,opt={}){
+  if(!Array.isArray(g)) g=[g];
+  const e=g[g.length-1], n=g.length, enPlano=!!opt.plano, vert=enPlano&&e.or==='V';
+  const d=document.createElement('div');
+  d.className='eq'+(enPlano?' en-plano or-'+e.or:'')+(opt.prov?' provisional':'')+(n>1?' torre':'')+(resaltar&&g.some(m=>m.niv===resaltar)?' recien':'')+(g.some(gpsDisc)?' gps-disc':'');
+  d.draggable=!editando; d.tabIndex=0; d.dataset.niv=e.niv; d.dataset.nivs=g.map(m=>m.niv).join(',');
+  d.title=n>1
+    ? `Torre de ${n} equipos (de arriba hacia abajo):\n${g.slice().reverse().map(m=>`${m.nivel??''}. ${m.niv} · ${m.tipo}`).join('\n')}\nShift + arrastrar saca solo el de arriba`
+    : `${e.tipo} · ${e.marca} ${e.anio}\n${e.niv}${e.placa?' · '+e.placa:''}\n${bonito(e.estatus)}${e.cliente?' · '+e.cliente:''}`+(opt.prov?'\nPosición sugerida dentro de su zona: arrástralo para fijarla':'');
+  const svg=vert?`<svg viewBox="0 0 52 104" preserveAspectRatio="xMidYMid meet"><g transform="translate(52 0) rotate(90)">${AV[familia(e.tipo)]}</g></svg>`:`<svg viewBox="0 0 104 52" preserveAspectRatio="xMidYMid meet">${AV[familia(e.tipo)]}</svg>`;
+  d.innerHTML=`${e.samsara?`<span class="gps${gpsViejo(e)?' viejo':''}" title="GPS Samsara${gpsDisc(e)?' · detectado en '+esc(nombrePatio(e.gpsPatio)):''}">◉</span>`:''}<span class="dot" style="background:${colorEstatus(e.estatus)}"></span>${svg}<div class="eco">${esc(e.niv.slice(vert?-5:-8))}</div><div class="meta">${esc(fuera(e)?(e.cliente||bonito(e.operativo)):(e.tipo||'—'))}</div>`
+    +(n>1?`<button class="pila-badge" title="Ver la torre">×${n}</button>`:'')
+    +(enPlano?`<span class="eq-herr"><button data-a="girar" title="Girar (${e.or==='V'?'pasar a horizontal':'pasar a vertical'}) · tecla R">⟳</button>${n>1?'<button data-a="torre" title="Ver la torre">≡</button>':''}</span>`:'');
+  d.ondragstart=ev=>{
+    const r=d.getBoundingClientRect(), f=dims(e.or), C=cel();
+    arrastre={niv:e.niv,nivs:g.map(m=>m.niv),solo:ev.shiftKey&&n>1,or:e.or,
+      gx:enPlano?ev.clientX-r.left:f.w*C/2, gy:enPlano?ev.clientY-r.top:f.h*C/2};
+    d.classList.add('arrastrando'); ev.dataTransfer.effectAllowed='move'; ev.dataTransfer.setData('text/plain',e.niv);
+  };
   d.ondragend=()=>{arrastre=null;d.classList.remove('arrastrando')};
-  d.ondblclick=()=>ficha(e); d.onkeydown=ev=>{if(ev.key==='Enter') ficha(e)};
+  d.ondblclick=ev=>{ if(ev.target.closest('button')) return; ficha(e); };
+  d.onkeydown=ev=>{ if(ev.key==='Enter') ficha(e); else if(enPlano&&(ev.key==='r'||ev.key==='R')){ev.preventDefault();girar(e.niv)} };
+  d.onclick=ev=>{ const b=ev.target.closest('button'); if(!b) return; ev.stopPropagation();
+    if(b.dataset.a==='girar') girar(e.niv); else abrirTorre(e.pila); };
   return d;
 }
 function aplicarFiltro(){
   const q=busqueda.trim().toLowerCase();
   document.querySelectorAll('.eq').forEach(el=>{
-    const e=equipos.find(x=>x.niv===el.dataset.niv);
-    const g=!filtroGps||(filtroGps==='con'&&e.samsara)||(filtroGps==='sin'&&!e.samsara)||(filtroGps==='disc'&&gpsDisc(e))||(filtroGps==='viejo'&&e.samsara&&(gpsViejo(e)||!e.gpsFecha));
-    const ok=g&&(!filtroTipo||e.tipo===filtroTipo)&&(!q||e.niv.toLowerCase().includes(q)||e.placa.toLowerCase().includes(q)||e.cliente.toLowerCase().includes(q));
+    const ok=(el.dataset.nivs||el.dataset.niv).split(',').some(niv=>{
+      const e=eqDe(niv); if(!e) return false;
+      const g=!filtroGps||(filtroGps==='con'&&e.samsara)||(filtroGps==='sin'&&!e.samsara)||(filtroGps==='disc'&&gpsDisc(e))||(filtroGps==='viejo'&&e.samsara&&(gpsViejo(e)||!e.gpsFecha));
+      return g&&(!filtroTipo||e.tipo===filtroTipo)&&(!q||e.niv.toLowerCase().includes(q)||e.placa.toLowerCase().includes(q)||e.cliente.toLowerCase().includes(q));
+    });
     el.classList.toggle('oculto',!ok);
   });
 }
+
+/* =====================================================================
+   TORRES
+   ===================================================================== */
+let torreActual=null;
+function abrirTorre(pila){ if(!pila) return; torreActual=pila; pintarTorre(); if(!$('#dlgTorre').open) $('#dlgTorre').showModal(); }
+function pintarTorre(){
+  const g=equipos.filter(m=>m.pila===torreActual&&!fuera(m)).sort((a,b)=>(a.nivel??0)-(b.nivel??0)||a.niv.localeCompare(b.niv));
+  if(g.length<2){ if($('#dlgTorre').open) $('#dlgTorre').close(); return; }
+  const b=g[0];
+  $('#torreInfo').innerHTML=`<b>${g.length} equipos</b> · ${esc(nombrePatio(b.patio))}${b.zona?' · '+esc(nombreZona(b.zona)):''} · ${b.or==='V'?'vertical':'horizontal'}`;
+  $('#torreLista').innerHTML=g.slice().reverse().map((m,i)=>`<div class="torre-fila"><span class="nv">${g.length-i}</span><svg viewBox="0 0 104 52">${AV[familia(m.tipo)]}</svg>
+    <div><div class="eco">${esc(m.niv)}</div><div class="nota">${esc(m.tipo)} · ${esc(m.marca)} ${esc(m.anio)} · ${esc(bonito(m.estatus))}</div></div>
+    <div class="acc"><button class="btn claro" data-a="sube" data-niv="${esc(m.niv)}" ${i===0?'disabled':''} title="Subir un nivel">↑</button><button class="btn claro" data-a="baja" data-niv="${esc(m.niv)}" ${i===g.length-1?'disabled':''} title="Bajar un nivel">↓</button><button class="btn claro" data-a="sacar" data-niv="${esc(m.niv)}">Bajar</button><button class="btn claro" data-a="ficha" data-niv="${esc(m.niv)}">Ficha</button></div></div>`).join('');
+  $('#torreLista').querySelectorAll('button').forEach(bt=>bt.onclick=()=>{
+    const niv=bt.dataset.niv;
+    if(bt.dataset.a==='sube') reordenar(niv,+1); else if(bt.dataset.a==='baja') reordenar(niv,-1);
+    else if(bt.dataset.a==='sacar') bajarDeTorre(niv);
+    else { $('#dlgTorre').close(); ficha(eqDe(niv)); }
+  });
+}
+async function reordenar(niv,delta){
+  const g=equipos.filter(m=>m.pila===torreActual).sort((a,b)=>(a.nivel??0)-(b.nivel??0)||a.niv.localeCompare(b.niv));
+  const i=g.findIndex(m=>m.niv===niv), j=i+delta; if(j<0||j>=g.length) return;
+  [g[i],g[j]]=[g[j],g[i]]; g.forEach((m,k)=>m.nivel=k+1); render(); pintarTorre();
+  const r=await sb.rpc('ordenar_pila',{p_pila:torreActual,p_nivs:g.map(m=>m.niv)});
+  if(r.error){ aviso('No se guardó el orden: '+r.error.message,true); await refrescar(g.map(m=>m.id),[torreActual]); render(); pintarTorre(); }
+}
+async function bajarDeTorre(niv){
+  const e=eqDe(niv), base=torreDe(e)[0], f=dims(e.or), pl=planoDe(e.patio);
+  const pos=base.x!=null?{x:base.x,y:base.y}:provPos[base.niv];
+  const occ=ocupados(e.patio,[]);
+  let p=null;
+  if(pos) for(let r=2;r<=12&&!p;r+=2) p=buscarLugar({x:pos.x-r-f.w,y:pos.y-r,w:2*r+f.w+dims(base.or).w,h:2*r+f.h+dims(base.or).h},f,occ);
+  p=p||buscarLugar({x:0,y:0,w:pl.columnas,h:pl.filas},f,occ);
+  const ok=await acomodar(niv,{patio:e.patio,x:p?p.x:null,y:p?p.y:null,solo:true});
+  if(ok) pintarTorre();
+}
+$('#torreCerrar').onclick=()=>$('#dlgTorre').close();
+$('#torreGirar').onclick=async()=>{ const g=equipos.filter(m=>m.pila===torreActual); if(g.length){ await girar(g[0].niv); pintarTorre(); } };
 
 /* =====================================================================
    EDICIÓN DEL PLANO
@@ -531,19 +771,25 @@ $('#edGuardar').onclick=async()=>{
   if($('#edCoord').value.trim()&&!m) aviso('Coordenadas no válidas; usa el formato "lat, lng"',true);
   else if(coord.lat!==pa.lat||coord.lng!==pa.lng||coord.radio_m!==pa.radio_m){ const r=await sb.from('patios').update(coord).eq('id',patioActivo); if(r.error) aviso('Coordenadas del patio: '+r.error.message,true); else Object.assign(pa,coord); }
   planos[patioActivo]={...planoTmp}; zonasTmp.forEach(t=>{const o=zonas.find(z=>z.id===t.id); if(o) Object.assign(o,{x:t.x,y:t.y,w:t.w,h:t.h})});
+  // las zonas pudieron moverse: recalcula en qué zona cae cada equipo acomodado
+  if(cambiadas.length){
+    const rz=await sb.rpc('mapa_recalcular_zonas',{p_patio_id:patioActivo});
+    if(rz.error) aviso('Zonas de los equipos: '+rz.error.message,true);
+    else { const r=await sb.from('equipos').select(COLS_MAPA).eq('patio_id',patioActivo); (r.data||[]).forEach(n=>{const e=equipos.find(x=>x.id===n.id); if(e) aplicarFila(e,n)}); }
+  }
   $('#edGuardar').disabled=false; salirEdicion(); aviso('Plano guardado');
 };
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 function iniciarMoverZona(ev,b,el){
   if(ev.target.closest('.asa,.herr')) return; ev.preventDefault(); el.setPointerCapture(ev.pointerId);
-  const C=CFG.CELDA, x0=ev.clientX, y0=ev.clientY, bx=b.x, by=b.y;
+  const C=cel(), x0=ev.clientX, y0=ev.clientY, bx=b.x, by=b.y;
   const mv=e=>{ b.x=clamp(bx+Math.round((e.clientX-x0)/C),0,planoTmp.columnas-b.w); b.y=clamp(by+Math.round((e.clientY-y0)/C),0,planoTmp.filas-b.h); el.style.left=(b.x*C)+'px'; el.style.top=(b.y*C)+'px'; };
   const fin=()=>{el.removeEventListener('pointermove',mv);el.removeEventListener('pointerup',fin)};
   el.addEventListener('pointermove',mv); el.addEventListener('pointerup',fin);
 }
 function iniciarRedim(ev,b,el){
   ev.preventDefault(); ev.stopPropagation(); const asa=ev.currentTarget; asa.setPointerCapture(ev.pointerId);
-  const C=CFG.CELDA, x0=ev.clientX, y0=ev.clientY, bw=b.w, bh=b.h;
+  const C=cel(), x0=ev.clientX, y0=ev.clientY, bw=b.w, bh=b.h;
   const mv=e=>{ b.w=clamp(bw+Math.round((e.clientX-x0)/C),3,planoTmp.columnas-b.x); b.h=clamp(bh+Math.round((e.clientY-y0)/C),2,planoTmp.filas-b.y); el.style.width=(b.w*C)+'px'; el.style.height=(b.h*C)+'px'; };
   const fin=()=>{asa.removeEventListener('pointermove',mv);asa.removeEventListener('pointerup',fin)};
   asa.addEventListener('pointermove',mv); asa.addEventListener('pointerup',fin);
@@ -583,6 +829,18 @@ async function quitarZona(id){
    FICHA COMPLETA DEL EQUIPO
    ===================================================================== */
 const pill=(txt,color)=>`<span class="estado-pill" style="background:${color}">${esc(txt)}</span>`;
+function pintarAcomodo(e){
+  const c=$('#fAcomodo'); if(fuera(e)){ c.innerHTML=''; return; }
+  const t=torreDe(e), estado=e.x!=null?'':(provPos[e.niv]?'Posición sugerida dentro de su zona (aún sin fijar)':'Sin acomodar en el plano');
+  c.innerHTML=`<label style="margin:0 0 6px">Acomodo en el plano</label>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <div class="seg" role="group" aria-label="Orientación"><button data-or="H" class="${e.or==='H'?'activo':''}">▭ Horizontal</button><button data-or="V" class="${e.or==='V'?'activo':''}">▯ Vertical</button></div>
+      ${t.length>1?`<span class="nota">Nivel <b>${e.nivel??'—'}</b> de ${t.length} en torre</span><button class="btn claro" id="fVerTorre" style="height:30px">Ver torre</button>`:''}
+      ${estado?`<span class="nota">${estado}</span>`:''}
+    </div>`;
+  c.querySelectorAll('.seg button').forEach(b=>b.onclick=async()=>{ if(b.dataset.or===e.or) return; await girar(e.niv); pintarAcomodo(e); });
+  const v=$('#fVerTorre'); if(v) v.onclick=()=>{ $('#dlgEq').close(); abrirTorre(e.pila); };
+}
 async function ficha(e){
   $('#fAvatar').innerHTML=AV[familia(e.tipo)]; $('#fNiv').textContent=e.niv;
   $('#fSub').textContent=`${e.tipo} · ${e.marca} ${e.anio}${e.placa?' · Placa '+e.placa:''}`;
@@ -594,6 +852,7 @@ async function ficha(e){
   sp.onchange=llenarZonas; llenarZonas();
   $('#fMover').onclick=()=>{mover(e.niv,+sp.value,$('#fZona').value?+$('#fZona').value:null);$('#dlgEq').close()};
   $('#fCerrar').onclick=()=>$('#dlgEq').close();
+  pintarAcomodo(e);
   $('#fRegresar').style.display=fuera(e)?'':'none'; $('#fBtnRegresar').onclick=()=>{$('#dlgEq').close();abrirReactivar(e,null,null)};
   if(!e.samsara){ $('#fGps').className='nota'; $('#fGps').textContent='Este equipo no tiene GPS ligado en Samsara.'; }
   else if(e.lat==null){ $('#fGps').className='nota'; $('#fGps').textContent=`Ligado a Samsara (${e.samsaraNombre||e.samsara}) pero todavía sin posición reportada.`; }
@@ -670,6 +929,12 @@ $('#btnSync').onclick=async()=>{
   await cargar();
 };
 $('#btnCompacto').onclick=()=>{document.body.classList.toggle('compacto');$('#btnCompacto').classList.toggle('activo')};
+function zoom(paso){
+  const i=clamp(CFG.ZOOMS.indexOf(ZOOM)+paso,0,CFG.ZOOMS.length-1); ZOOM=CFG.ZOOMS[i];
+  try{ localStorage.setItem('mapaZoom',ZOOM); }catch(_){}
+  $('#zVal').textContent=Math.round(ZOOM*100)+'%'; if(patios.length) render();
+}
+$('#zMenos').onclick=()=>zoom(-1); $('#zMas').onclick=()=>zoom(+1); zoom(0);
 
 iniciar();
 </script>
