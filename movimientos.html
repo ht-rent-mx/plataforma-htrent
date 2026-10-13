@@ -209,7 +209,7 @@ label>span.lbl{margin-bottom:5px}
    Vive sobre core: equipos, patios, fotos, eventos y adicionales.
    Captura en campo con cola local: si no hay señal, se guarda y sube después.
    ===================================================================== */
-const APP_VERSION = 'v5 · plataforma · 8 oct 2026';
+const APP_VERSION = 'v6 · plataforma · 13 oct 2026';
 
 const SUPABASE_URL  = 'https://ahfjstuwekcuxshclprl.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFoZmpzdHV3ZWtjdXhzaGNscHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwNDg2MjYsImV4cCI6MjEwMzYyNDYyNn0.lf1uw8WHPRy21GuYlK9NzeI5JgJK2be1LrODq22CodM';
@@ -596,6 +596,7 @@ async function forzarActualizacion(){
 
 /* ======================= FICHA DE MOVIMIENTO ======================== */
 function nuevoMovimiento(tipo){
+  if(!S.patioId){ S.tab='sesion'; pintar(); nota('Primero elige el patio en el que estás'); return; }
   const m = nuevoMov({tipo_mov:tipo, patio_id:S.patioId});
   S.movimientos.unshift(m); S.movId=m.id;
   pintarMov(); $('#sheetMov').classList.add('open'); document.body.style.overflow='hidden';
@@ -632,7 +633,7 @@ function pintarMov(){
     <h2 class="sec">Movimiento</h2>
     <div class="card">
       <div class="grid2">
-        <label><span class="lbl">Patio</span><select id="mPatio">${opcionesPatio(m.patio_id||S.patioId)}</select></label>
+        <label><span class="lbl">Patio (el de tu sesión)</span><input id="mPatio" value="${esc(nombrePatio(S.patioId))}" readonly style="background:var(--bg2,#eef1f5);font-weight:600"></label>
         <label><span class="lbl">Fecha y hora</span><input type="datetime-local" id="mFecha" value="${esc(paraInput(m.fecha))}"></label>
       </div>
       ${es==='entrada' ? `
@@ -861,8 +862,8 @@ function tomarGPS(){
 async function guardarMov(){
   const m = movActual(); if(!m) return;
   if(!m.equipo_id){ nota('Primero elige el equipo'); return; }
-  m.patio_id = $('#mPatio').value;
-  if(!m.patio_id){ nota('Falta el patio'); return; }
+  m.patio_id = S.patioId;              // el patio del movimiento es siempre el de la sesión
+  if(!m.patio_id){ nota('Falta el patio: elígelo en Sesión'); return; }
   if($('#mFecha').value) m.fecha = new Date($('#mFecha').value).toISOString();
   if(m.tipo_mov==='entrada'){ m.origen_tipo=$('#mOrigenTipo').value; m.origen_nombre=$('#mOrigenNombre').value.trim(); }
   if(m.tipo_mov==='salida'){
