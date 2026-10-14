@@ -209,7 +209,7 @@ label>span.lbl{margin-bottom:5px}
    Vive sobre core: equipos, patios, fotos, eventos y adicionales.
    Captura en campo con cola local: si no hay señal, se guarda y sube después.
    ===================================================================== */
-const APP_VERSION = 'v6 · plataforma · 13 oct 2026';
+const APP_VERSION = 'v7 · plataforma · 14 oct 2026';
 
 const SUPABASE_URL  = 'https://ahfjstuwekcuxshclprl.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFoZmpzdHV3ZWtjdXhzaGNscHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwNDg2MjYsImV4cCI6MjEwMzYyNDYyNn0.lf1uw8WHPRy21GuYlK9NzeI5JgJK2be1LrODq22CodM';
@@ -301,7 +301,7 @@ const store = {
 
 /* --------------------------- ESTADO --------------------------------- */
 const S = { tab:'capturar', yo:null, patioId:'', equipos:[], patios:[], movimientos:[], fotos:[],
-            busca:'', movId:null };
+            busca:'', movId:null, borrador:null };
 const nuevoMov = o => Object.assign({
   id:uid(), equipo_id:'', niv:'', tipo_mov:'entrada', fecha:new Date().toISOString(),
   patio_id:'', patio_destino_id:'', origen_tipo:'', origen_nombre:'', destino_tipo:'', destino_nombre:'',
@@ -309,8 +309,19 @@ const nuevoMov = o => Object.assign({
   gps_lat:null, gps_lng:null, dirty:true
 }, o||{});
 const fotosDe = id => S.fotos.filter(f=>f.movId===id);
-const pendientes = () => S.movimientos.filter(m=>m.dirty).length + S.fotos.filter(f=>!f.ruta).length;
+/* Solo cuenta lo que se registró con "Registrar movimiento"; el borrador abierto no es pendiente */
+const esBorrador = id => !!(S.borrador && S.borrador.id===id);
+const pendientes = () => S.movimientos.filter(m=>m.dirty).length
+                       + S.fotos.filter(f=>!f.ruta && !esBorrador(f.movId) && S.movimientos.some(m=>m.id===f.movId)).length;
 const equipoDe = id => S.equipos.find(e=>e.id===id);
+/* Un movimiento está completo cuando trae lo que exige "Registrar movimiento" */
+const completo = m => !!(m && m.equipo_id && (
+     (m.tipo_mov==='entrada'  && m.origen_tipo)
+  || (m.tipo_mov==='salida'   && String(m.destino_nombre||'').trim())
+  || (m.tipo_mov==='traspaso' && m.patio_destino_id && String(m.patio_destino_id)!==String(m.patio_id))));
+/* Dónde está el equipo: patio físico si lo hay; si no, su ubicación de inventario mientras no esté fuera */
+const FUERA = ['ENTREGADO','RESIDUAL_PAGADO','EN_TRANSITO','SUBASTA_RB'];
+const ubic = e => !e ? null : (e.patio_fisico_id || (FUERA.includes(e.estatus) ? null : e.patio_id) || null);
 
 /* ============================ CONEXIÓN ============================== */
 let SB = null, CORE = null, SESION = null;
@@ -390,6 +401,7 @@ async function sincronizar(){
   try{
     await subirMovimientos();
     await subirFotos();
+    await repararSubidos();
     SYNC.ultimo = stamp();
     if(SYNC.fallos.length) SYNC.error = `No subió: ${SYNC.fallos[0]}${SYNC.fallos.length>1?` (y ${SYNC.fallos.length-1} más)`:''}`;
   }catch(err){
@@ -398,9 +410,7 @@ async function sincronizar(){
   }
   SYNC.corriendo=false; pintar();
 }
-async function subirMovimientos(){
-  for(const m of S.movimientos.filter(x=>x.dirty && x.equipo_id)){
-    const fila = {
+const filaDe = m => ({
       id:m.id, equipo_id:m.equipo_id, tipo_mov:m.tipo_mov, fecha:m.fecha,
       patio_id: m.patio_id ? Number(m.patio_id) : null,
       patio_destino_id: m.patio_destino_id ? Number(m.patio_destino_id) : null,
@@ -409,23 +419,37 @@ async function subirMovimientos(){
       operador:m.operador||null, placas_tractor:m.placas_tractor||null, carta_porte:m.carta_porte||null,
       condicion:m.condicion||null, adicionales:m.adicionales, obs:m.obs||null,
       registrado_por:S.yo.id, gps_lat:m.gps_lat, gps_lng:m.gps_lng
-    };
-    const { error } = await CORE.from('movimientos').insert(fila);
+});
+async function subirMovimientos(){
+  for(const m of S.movimientos.filter(x=>x.dirty && completo(x))){
+    const { error } = await CORE.from('movimientos').insert(filaDe(m));
     if(error){
       if((error.message||'').includes('Failed to fetch')) throw error;
-      if(String(error.code)==='23505'){            // ya estaba arriba: se da por bueno
-        m.dirty=false; await store.put('movimientos', m); continue;
+      if(String(error.code)==='23505'){            // ya estaba arriba (p. ej. vacío): se completa con los datos reales
+        m.dirty=false; m.reparado=false; await store.put('movimientos', m); continue;
       }
       SYNC.fallos.push(`${m.niv}: ${error.message}`); continue;
     }
-    m.dirty=false; await store.put('movimientos', m);
+    m.dirty=false; m.reparado=true; await store.put('movimientos', m);
     aplicarLocal(m);
+  }
+}
+/* Versiones anteriores subían el movimiento antes de "Registrar" y llegaba vacío al servidor.
+   Si este dispositivo conserva los datos reales, se mandan una vez para completarlo. */
+async function repararSubidos(){
+  for(const m of S.movimientos.filter(x=>!x.dirty && !x.reparado && completo(x))){
+    const { data, error } = await CORE.rpc('completar_movimiento', { p: filaDe(m) });
+    if(error){
+      if((error.message||'').includes('Failed to fetch')) throw error;
+      return;                                       // el servidor aún no tiene la función: se reintenta después
+    }
+    m.reparado = true; await store.put('movimientos', m);
   }
 }
 async function subirFotos(){
   for(const f of S.fotos.filter(x=>!x.ruta)){
     const padre = S.movimientos.find(m=>m.id===f.movId);
-    if(!padre){ SYNC.fallos.push('foto suelta'); continue; }
+    if(!padre) continue;                            // foto de un movimiento aún no registrado: no se sube
     if(padre.dirty) continue;                       // primero sube su movimiento
     const rec = await store.get('fotos', f.id);
     if(!rec || !rec.blob) continue;
@@ -453,9 +477,10 @@ async function subirFotos(){
 /* la ubicación local se refresca al momento; el servidor hace lo mismo por su cuenta */
 async function aplicarLocal(m){
   const e = equipoDe(m.equipo_id); if(!e) return;
-  if(m.tipo_mov==='salida')        e.patio_fisico_id = null;
-  else if(m.tipo_mov==='traspaso') e.patio_fisico_id = Number(m.patio_destino_id)||null;
-  else                             e.patio_fisico_id = Number(m.patio_id)||null;
+  if(m.tipo_mov==='salida')        { e.patio_fisico_id = null;
+    e.estatus = ({Cliente:'ENTREGADO','Otro patio':'EN_TRANSITO',Taller:'EN_TRANSITO',Venta:'RESIDUAL_PAGADO',Subasta:'SUBASTA_RB'})[m.destino_tipo] || e.estatus; }
+  else if(m.tipo_mov==='traspaso') { e.patio_fisico_id = null; e.estatus = 'EN_TRANSITO'; }   // viaja: llega con su entrada
+  else                             { e.patio_fisico_id = Number(m.patio_id)||null; e.patio_id = e.patio_fisico_id; e.estatus = 'DISPONIBLE'; }
   if(m.tipo_mov==='salida' && m.destino_tipo==='Cliente') e.cliente = m.destino_nombre;
   if(m.tipo_mov==='entrada') e.cliente = '';
   await store.put('equipos', e);
@@ -530,7 +555,7 @@ function vistaBuscar(){
   const q = norm(S.busca);
   const res = q.length>=3 ? S.equipos.filter(e=>norm(e.niv).includes(q)||norm(e.placa).includes(q)).slice(0,25) : [];
   const g = {};
-  S.equipos.forEach(e=>{ const k = e.patio_fisico_id ? nombrePatio(e.patio_fisico_id) : '(fuera de patio)'; g[k]=(g[k]||0)+1; });
+  S.equipos.forEach(e=>{ const k = ubic(e) ? nombrePatio(ubic(e)) : '(fuera de patio)'; g[k]=(g[k]||0)+1; });
   $('#view-buscar').innerHTML = `
     <div class="buscador" style="margin-top:12px"><input id="qBuscar" placeholder="NIV o placas" value="${esc(S.busca)}"></div>
     ${q.length>=3
@@ -544,10 +569,10 @@ function vistaBuscar(){
   el.oninput = e => { S.busca=e.target.value; const p=e.target.selectionStart; vistaBuscar(); const n=$('#qBuscar'); n.focus(); n.setSelectionRange(p,p); };
 }
 function itemEquipo(e){
-  return `<button class="item ${e.patio_fisico_id?'entrada':'salida'}" onclick="verUnidad('${e.id}')">
+  return `<button class="item ${ubic(e)?'entrada':'salida'}" onclick="verUnidad('${e.id}')">
     <div class="niv">${esc(e.niv)}</div>
     <div class="meta">${esc([e.tipo,e.marca,e.anio,e.placa].filter(Boolean).join(' · '))}</div>
-    <div class="foot"><span class="tag ${e.patio_fisico_id?'t-ent':'t-sal'}">${esc(e.patio_fisico_id?nombrePatio(e.patio_fisico_id):e.estatus||'fuera de patio')}</span>
+    <div class="foot"><span class="tag ${ubic(e)?'t-ent':'t-sal'}">${esc(ubic(e)?nombrePatio(ubic(e)):e.estatus||'fuera de patio')}</span>
       ${e.cliente?`<span class="count">${esc(e.cliente)}</span>`:''}</div></button>`;
 }
 function vistaSesion(){
@@ -597,14 +622,25 @@ async function forzarActualizacion(){
 /* ======================= FICHA DE MOVIMIENTO ======================== */
 function nuevoMovimiento(tipo){
   if(!S.patioId){ S.tab='sesion'; pintar(); nota('Primero elige el patio en el que estás'); return; }
+  if(S.borrador) descartarBorrador();
   const m = nuevoMov({tipo_mov:tipo, patio_id:S.patioId});
-  S.movimientos.unshift(m); S.movId=m.id;
+  S.borrador = m; S.movId = m.id;               // no entra al listado ni se sube hasta registrarlo
   pintarMov(); $('#sheetMov').classList.add('open'); document.body.style.overflow='hidden';
 }
-const movActual = () => S.movimientos.find(m=>m.id===S.movId);
-function cerrarMov(){
+const movActual = () => S.borrador;
+async function descartarBorrador(){
+  const b = S.borrador; if(!b) return;
+  const suyas = S.fotos.filter(f=>f.movId===b.id);
+  S.fotos = S.fotos.filter(f=>f.movId!==b.id);
+  S.borrador = null;
+  for(const f of suyas){ try{ await store.del('fotos', f.id); }catch(e){} }
+}
+async function cerrarMov(){
   const m = movActual();
-  if(m && m.dirty && !m.equipo_id) S.movimientos = S.movimientos.filter(x=>x.id!==m.id);
+  if(m && (m.equipo_id || fotosDe(m.id).length)){
+    if(!(await preguntar('Este movimiento no se ha registrado.\nSi sales ahora se descarta junto con sus fotos y no aparecerá en la lista.','Descartar'))) return;
+  }
+  await descartarBorrador();
   $('#sheetMov').classList.remove('open'); document.body.style.overflow=''; S.movId=null; pintar();
 }
 function pintarMov(){
@@ -620,7 +656,7 @@ function pintarMov(){
         <div class="row"><div style="flex:1">
           <div class="mono" style="font-size:16px;font-weight:700">${esc(e.niv)}</div>
           <div class="hint">${esc([e.tipo,e.marca,e.anio,e.placa].filter(Boolean).join(' · '))||'Sin datos en el padrón'}</div>
-          <div class="hint">${e.patio_fisico_id ? 'El sistema lo tiene en <b>'+esc(nombrePatio(e.patio_fisico_id))+'</b>'
+          <div class="hint">${ubic(e) ? 'El sistema lo tiene en <b>'+esc(nombrePatio(ubic(e)))+'</b>'
             : 'Sin patio físico · '+esc(e.estatus||'')}${e.cliente?' · '+esc(e.cliente):''}</div>
         </div><button class="btn claro chico" onclick="quitarEquipo()">Cambiar</button></div>
         ${avisoUbicacion(m,e)}`
@@ -682,13 +718,13 @@ function pintarMov(){
 }
 const paraInput = iso => { const d=new Date(iso); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,16); };
 function avisoUbicacion(m,e){
-  const aqui = Number(m.patio_id||S.patioId);
-  if(m.tipo_mov==='entrada' && e.patio_fisico_id)
-    return `<div class="banner b-warn" style="margin-bottom:0">El sistema ya lo tiene en <b>${esc(nombrePatio(e.patio_fisico_id))}</b>. Al registrar la entrada aquí, se corrige su ubicación.</div>`;
-  if(m.tipo_mov!=='entrada' && !e.patio_fisico_id)
+  const aqui = Number(m.patio_id||S.patioId), u = Number(ubic(e))||null;
+  if(m.tipo_mov==='entrada' && u && u !== aqui)
+    return `<div class="banner b-warn" style="margin-bottom:0">El sistema lo tiene en <b>${esc(nombrePatio(u))}</b>. Al registrar la entrada aquí, se corrige su ubicación en Inventario y en el Mapa.</div>`;
+  if(m.tipo_mov!=='entrada' && !u)
     return `<div class="banner b-warn" style="margin-bottom:0">El sistema no lo tiene en ningún patio (${esc(e.estatus||'fuera')}). Revisa si falta registrar su entrada.</div>`;
-  if(m.tipo_mov!=='entrada' && e.patio_fisico_id && e.patio_fisico_id !== aqui)
-    return `<div class="banner b-warn" style="margin-bottom:0">El sistema lo tiene en <b>${esc(nombrePatio(e.patio_fisico_id))}</b>, no en ${esc(nombrePatio(aqui))}.</div>`;
+  if(m.tipo_mov!=='entrada' && u && u !== aqui)
+    return `<div class="banner b-warn" style="margin-bottom:0">El sistema lo tiene en <b>${esc(nombrePatio(u))}</b>, no en ${esc(nombrePatio(aqui))}.</div>`;
   return '';
 }
 function buscarEquipo(v){
@@ -696,9 +732,9 @@ function buscarEquipo(v){
   if(q.length<3){ cont.innerHTML=''; return; }
   const res = S.equipos.filter(e=>norm(e.niv).includes(q)||norm(e.placa).includes(q)).slice(0,6);
   cont.innerHTML = res.length ? res.map(e=>`
-      <button class="item ${e.patio_fisico_id?'entrada':'salida'}" style="margin-top:6px" onclick="elegirEquipo('${e.id}')">
+      <button class="item ${ubic(e)?'entrada':'salida'}" style="margin-top:6px" onclick="elegirEquipo('${e.id}')">
         <div class="niv">${esc(e.niv)}</div>
-        <div class="meta">${esc([e.tipo,e.marca,e.patio_fisico_id?nombrePatio(e.patio_fisico_id):e.estatus].filter(Boolean).join(' · '))}</div>
+        <div class="meta">${esc([e.tipo,e.marca,ubic(e)?nombrePatio(ubic(e)):e.estatus].filter(Boolean).join(' · '))}</div>
       </button>`).join('')
     : `<div class="banner b-warn">Ese NIV no está en el padrón. Si es un equipo nuevo, primero hay que darlo de alta en el inventario de la plataforma.</div>`;
 }
@@ -877,8 +913,10 @@ async function guardarMov(){
   }
   m.operador=$('#mOperador').value.trim(); m.placas_tractor=$('#mPlacas').value.trim().toUpperCase();
   m.carta_porte=$('#mCarta').value.trim(); m.condicion=$('#mCondicion').value; m.obs=$('#mObs').value.trim();
-  m.dirty=true;
+  if(!completo(m)){ nota('Faltan datos del movimiento'); return; }
+  m.dirty=true; m.reparado=true;
   await store.put('movimientos', m);
+  S.movimientos.unshift(m); S.borrador=null;    // a partir de aquí sí es parte del listado
   await aplicarLocal(m);
   $('#sheetMov').classList.remove('open'); document.body.style.overflow=''; S.movId=null;
   pintar(); nota('Movimiento registrado'); pedirSync();
@@ -905,7 +943,7 @@ async function verUnidad(equipoId){
       <div class="mono" style="font-size:17px;font-weight:700">${esc(e.niv||'')}</div>
       <div class="hint">${esc([e.tipo,e.marca,e.anio,e.placa].filter(Boolean).join(' · '))}</div>
       <table class="mini" style="margin-top:10px">
-        <tr><td>Dónde está</td><td style="font-family:var(--sans)">${esc(e.patio_fisico_id?nombrePatio(e.patio_fisico_id):(e.estatus||'—'))}</td></tr>
+        <tr><td>Dónde está</td><td style="font-family:var(--sans)">${esc(ubic(e)?nombrePatio(ubic(e)):(e.estatus||'—'))}</td></tr>
         ${e.cliente?`<tr><td>Cliente</td><td style="font-family:var(--sans)">${esc(e.cliente)}</td></tr>`:''}
         <tr><td>Movimientos</td><td>${movs.length}</td></tr>
       </table>
@@ -939,8 +977,15 @@ $$('nav.tabs button').forEach(b=>b.onclick=()=>{
   const ka = await store.get('kv','adicionales'); CAT.adicionales = (ka&&ka.v)||[];
   S.patios      = await store.all('patios');
   S.equipos     = await store.all('equipos');
-  S.movimientos = (await store.all('movimientos')).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
-  S.fotos       = (await store.all('fotos')).map(f=>({id:f.id, movId:f.movId, angulo:f.angulo, thumb:f.thumb, ruta:f.ruta||'', ts:f.ts}));
+  const todosMov = await store.all('movimientos');
+  const todasFotos = await store.all('fotos');
+  // Lo que nunca se registró (versiones anteriores lo guardaban igual) sale del listado y del dispositivo
+  for(const m of todosMov.filter(x=>!completo(x))){ try{ await store.del('movimientos', m.id); }catch(e){} }
+  S.movimientos = todosMov.filter(completo).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+  const vivos = new Set(S.movimientos.map(m=>m.id));
+  for(const f of todasFotos.filter(f=>!vivos.has(f.movId))){ try{ await store.del('fotos', f.id); }catch(e){} }
+  S.fotos = todasFotos.filter(f=>vivos.has(f.movId))
+                      .map(f=>({id:f.id, movId:f.movId, angulo:f.angulo, thumb:f.thumb, ruta:f.ruta||'', ts:f.ts}));
   if(!S.patioId) S.tab='sesion';
   pintar();
   if('serviceWorker' in navigator && location.protocol.startsWith('http')){
