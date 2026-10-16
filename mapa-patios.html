@@ -174,7 +174,19 @@ dialog textarea{width:100%;border:1px solid var(--borde);border-radius:6px;paddi
 .eq.en-plano.or-V .eco{font-size:10px}
 .eq.en-plano .meta{display:none}
 .eq.en-plano .dot{top:3px;right:3px;width:7px;height:7px}
-.plano.z-chico .eq.en-plano .eco{display:none}
+/* NIV siempre visible: con zoom chico solo se reduce la letra */
+.plano.z-chico .eq.en-plano{padding:1px 2px}
+.plano.z-chico .eq.en-plano .eco{font-size:9px;letter-spacing:-.2px}
+.plano.z-chico .eq.en-plano.or-V .eco{font-size:8px;letter-spacing:-.4px}
+/* NIV completo al pasar el mouse o seleccionar el equipo */
+.eq.en-plano::before{content:attr(data-etq);position:absolute;left:50%;top:calc(100% + 9px);transform:translateX(-50%);background:var(--ink);color:#fff;font:700 11px/1 var(--mono);padding:4px 7px;border-radius:4px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .12s;z-index:7}
+.eq.en-plano:hover,.eq.en-plano:focus-visible{z-index:8}
+.eq.en-plano:hover::before,.eq.en-plano:focus-visible::before{opacity:1}
+.eq.en-plano.arrastrando::before{opacity:0}
+/* Etiqueta que acompaña al cursor mientras se arrastra */
+#chipArrastre{position:fixed;left:0;top:0;z-index:1000;pointer-events:none;display:none;background:var(--ink);color:#fff;border:2px solid var(--lime);border-radius:6px;padding:5px 9px;font:600 12px/1.25 var(--fuente);box-shadow:0 3px 10px rgba(11,61,102,.35);white-space:nowrap}
+#chipArrastre b{font-family:var(--mono);font-size:13px;display:block}
+#chipArrastre.visible{display:block}
 .eq.provisional{border-style:dashed;opacity:.85}
 .eq.torre{box-shadow:3px -3px 0 -1px #fff,3px -3px 0 0 var(--navy),6px -6px 0 -1px #fff,6px -6px 0 0 var(--navy)}
 .pila-badge{position:absolute;left:-7px;bottom:-7px;background:var(--lime);color:var(--ink);border:1px solid var(--lime-ink);border-radius:10px;font:700 11px/1 var(--fuente);padding:3px 6px;cursor:pointer;z-index:2}
@@ -676,12 +688,20 @@ function prepararDrop(el){
     acomodar(a.niv,{patio:patioActivo,x,y,solo:a.solo});
   };
 }
+// Etiqueta con el NIV que sigue al cursor mientras se arrastra un equipo
+const chipArr=document.createElement('div'); chipArr.id='chipArrastre'; document.body.appendChild(chipArr);
+const ponerChip=(x,y)=>{ if(x||y) chipArr.style.transform=`translate(${x+16}px,${y+18}px)`; };
+function mostrarChip(html,ev){ chipArr.innerHTML=html; ponerChip(ev.clientX,ev.clientY); chipArr.classList.add('visible'); }
+function ocultarChip(){ chipArr.classList.remove('visible'); }
+document.addEventListener('dragover',ev=>{ if(chipArr.classList.contains('visible')) ponerChip(ev.clientX,ev.clientY); });
+document.addEventListener('drop',ocultarChip);
 function avatar(g,resaltar,opt={}){
   if(!Array.isArray(g)) g=[g];
   const e=g[g.length-1], n=g.length, enPlano=!!opt.plano, vert=enPlano&&e.or==='V';
   const d=document.createElement('div');
   d.className='eq'+(enPlano?' en-plano or-'+e.or:'')+(opt.prov?' provisional':'')+(n>1?' torre':'')+(resaltar&&g.some(m=>m.niv===resaltar)?' recien':'')+(g.some(gpsDisc)?' gps-disc':'');
   d.draggable=!editando; d.tabIndex=0; d.dataset.niv=e.niv; d.dataset.nivs=g.map(m=>m.niv).join(',');
+  d.dataset.etq=e.niv+(n>1?` · torre ×${n}`:'');
   d.title=n>1
     ? `Torre de ${n} equipos (de arriba hacia abajo):\n${g.slice().reverse().map(m=>`${m.nivel??''}. ${m.niv} · ${m.tipo}`).join('\n')}\nShift + arrastrar saca solo el de arriba`
     : `${e.tipo} · ${e.marca} ${e.anio}\n${e.niv}${e.placa?' · '+e.placa:''}\n${bonito(e.estatus)}${e.cliente?' · '+e.cliente:''}`+(opt.prov?'\nPosición sugerida dentro de su zona: arrástralo para fijarla':'');
@@ -694,8 +714,10 @@ function avatar(g,resaltar,opt={}){
     arrastre={niv:e.niv,nivs:g.map(m=>m.niv),solo:ev.shiftKey&&n>1,or:e.or,
       gx:enPlano?ev.clientX-r.left:f.w*C/2, gy:enPlano?ev.clientY-r.top:f.h*C/2};
     d.classList.add('arrastrando'); ev.dataTransfer.effectAllowed='move'; ev.dataTransfer.setData('text/plain',e.niv);
+    mostrarChip(arrastre.solo||n===1?`<b>${esc(e.niv)}</b>${esc(e.tipo||'')}${arrastre.solo?' · solo el de arriba':''}`
+      :`<b>${esc(e.niv)}</b>Torre de ${n} equipos`, ev);
   };
-  d.ondragend=()=>{arrastre=null;d.classList.remove('arrastrando')};
+  d.ondragend=()=>{arrastre=null;d.classList.remove('arrastrando');ocultarChip()};
   d.ondblclick=ev=>{ if(ev.target.closest('button')) return; ficha(e); };
   d.onkeydown=ev=>{ if(ev.key==='Enter') ficha(e); else if(enPlano&&(ev.key==='r'||ev.key==='R')){ev.preventDefault();girar(e.niv)} };
   d.onclick=ev=>{ const b=ev.target.closest('button'); if(!b) return; ev.stopPropagation();
