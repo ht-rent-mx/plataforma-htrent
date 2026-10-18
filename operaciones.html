@@ -362,9 +362,11 @@ const SUPABASE_URL  = 'https://ahfjstuwekcuxshclprl.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFoZmpzdHV3ZWtjdXhzaGNscHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwNDg2MjYsImV4cCI6MjEwMzYyNDYyNn0.lf1uw8WHPRy21GuYlK9NzeI5JgJK2be1LrODq22CodM';
 const BUCKET_FOTOS = 'fotos-equipos';
 const BUCKET_ADJ   = 'operaciones-adjuntos';
+const BUCKET_GASTOS = 'gastos-adjuntos';
 
 const db   = createClient(SUPABASE_URL, SUPABASE_ANON, { db:{ schema:'operaciones' } });
 const core = db.schema('core');
+const inv  = db.schema('inventario');
 
 /* ============================ utilidades ============================ */
 const $ = id => document.getElementById(id);
@@ -828,7 +830,14 @@ async function abrirOrden(id, silencioso = false){
   S.cotOrden = cs.data || [];
   abrirPanel(`${ord.folio_txt} · ${ord.niv}`, 'orden');
   const fotos = fo.data || [];
-  const acumEquipo = (await db.rpc('acumulado_equipo', { p_equipo: ord.equipo_id })).data || 0;
+  const [acR, fiR, faR] = await Promise.all([
+    db.rpc('acumulado_equipo', { p_equipo: ord.equipo_id }),
+    fichaInventario(ord.niv),
+    db.rpc('facturas_orden', { p_orden: ord.id })
+  ]);
+  const acumEquipo = acR.data || 0;
+  const facturas = faR.data || [];
+  const facturadoVivo = facturas.filter(f => !['rechazada','cancelada'].includes(f.estado)).reduce((a, f) => a + Number(f.subtotal), 0);
 
   const pasos = ['abierta','cotizacion','por_autorizar','autorizada','en_proceso','terminada','entregada'];
   const iActual = pasos.indexOf(ord.estatus);
@@ -901,6 +910,7 @@ async function abrirOrden(id, silencioso = false){
       </dl>
       <div id="oEdicion"></div>
     </div>
+    ${htmlFicha(fiR, true)}
     ${acc}
     <div class="bloque">
       <div class="importes">
@@ -912,6 +922,7 @@ async function abrirOrden(id, silencioso = false){
       ${S.cotOrden.length ? S.cotOrden.map(c => tarjetaCot(c)).join('') : `<p class="sub" style="margin-bottom:8px">${ord.requiere_cotizacion ? 'Sin cotizaciones todavía. El trabajo no puede iniciar hasta que una esté autorizada.' : 'Esta orden se marcó sin costo; no requiere cotización.'}</p>`}
       ${formCot}
     </div>
+    ${bloqueFacturas(ord, facturas, facturadoVivo)}
     <div class="bloque">
       <h3>Fotos</h3>
       <div class="etapas" id="oEtapas">${Object.entries(ETAPAS).map(([k, v]) => `<button data-etapa="${k}" aria-pressed="${k === S.etapaFoto}">${v} <span class="sub" style="display:inline">${fotos.filter(f => f.etapa === k).length}</span></button>`).join('')}</div>
@@ -957,6 +968,7 @@ async function abrirOrden(id, silencioso = false){
     if(await mover(ord.id, 'en_proceso', n, lineaId, !!fuera)) abrirOrden(ord.id, true);
   };
   if($('oEditar')) $('oEditar').onclick = () => formEditar(ord);
+  enlazarFacturas(ord, facturadoVivo);
 
   if($('cMonto')){
     const regla = () => {
@@ -1098,6 +1110,152 @@ function verFoto(src, txt){ if(!src) return; $('visorImg').src = src; $('visorTx
 function cerrarVisor(){ $('visor').classList.remove('on'); $('visorImg').src = ''; }
 $('visorCerrar').onclick = cerrarVisor;
 
+/* ============================ FICHA DE INVENTARIO ============================ */
+const COLS_FICHA = 'niv,placa,anio,tipo,marca,unidad_negocio,clasificacion_nombre,n_ejes,llantas,eje_retractil,patio,patio_fisico,estatus_operativo,estatus_asignacion,estatus_propiedad,tipo_venta,cliente_actual,asesor,area_comercial,folio_venta,fecha_venta,entrega_inmediata,status_reparacion,gps_dispositivo,gps_fecha,gps_direccion,comentarios,notas,total_fotos';
+async function fichaInventario(niv){
+  if(!niv) return { data:null };
+  return inv.from('v_inventario').select(COLS_FICHA).eq('niv', niv).maybeSingle();
+}
+const siNo = v => v === true ? 'Sí' : v === false ? 'No' : (v || '');
+function htmlFicha(res, conCabecera){
+  const f = res && res.data;
+  if(!f) return res && res.error ? `<div class="bloque"><h3>Ficha del equipo</h3><p class="sub">No se pudo leer el inventario: ${esc(errTxt(res.error))}</p></div>` : '';
+  const filas = [
+    ['Tipo', [f.tipo, f.marca, f.anio].filter(Boolean).join(' · ')],
+    ['Placa', f.placa], ['Ejes · llantas', [f.n_ejes, f.llantas].filter(Boolean).join(' · ')],
+    ['Eje retráctil', siNo(f.eje_retractil)], ['Producto', f.clasificacion_nombre], ['Unidad de negocio', f.unidad_negocio],
+    ['Patio registrado', f.patio], ['Patio físico', f.patio_fisico],
+    ['Estatus operativo', f.estatus_operativo], ['Asignación', f.estatus_asignacion], ['Propiedad', [f.estatus_propiedad, f.tipo_venta].filter(Boolean).join(' · ')],
+    ['Cliente', f.cliente_actual], ['Asesor', [f.asesor, f.area_comercial].filter(Boolean).join(' · ')],
+    ['Venta', [f.folio_venta, f.fecha_venta ? fecha(f.fecha_venta) : ''].filter(Boolean).join(' · ')],
+    ['Entrega inmediata', siNo(f.entrega_inmediata)], ['Estatus de reparación', f.status_reparacion],
+    ['GPS', [f.gps_dispositivo, f.gps_direccion, f.gps_fecha ? fechaHora(f.gps_fecha) : ''].filter(Boolean).join(' · ')],
+    ['Comentarios', [f.comentarios, f.notas].filter(Boolean).join(' · ')]
+  ].filter(([, v]) => v !== null && v !== undefined && String(v).trim() !== '');
+  const dl = `<dl class="datos">${filas.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>`;
+  return conCabecera
+    ? `<details class="bloque"><summary style="cursor:pointer"><b style="color:var(--ink)">Ficha del equipo en Inventario</b> <span class="sub" style="display:inline">· ${esc(f.estatus_asignacion || '')}${f.cliente_actual ? ' · ' + esc(f.cliente_actual) : ''}</span></summary><div style="margin-top:12px">${dl}</div></details>`
+    : `<div style="margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)"><div class="eyebrow" style="margin-bottom:8px">Ficha en Inventario</div>${dl}</div>`;
+}
+async function mostrarFicha(cont, niv){
+  let caja = cont.querySelector('.ficha-inv');
+  if(!caja){ caja = document.createElement('div'); caja.className = 'ficha-inv'; cont.appendChild(caja); }
+  caja.innerHTML = '<p class="sub" style="margin-top:8px">Cargando ficha del inventario…</p>';
+  const r = await fichaInventario(niv);
+  caja.innerHTML = htmlFicha(r, false) || '<p class="sub" style="margin-top:8px">Este equipo no está en Inventario de Operaciones.</p>';
+}
+
+/* ============================ FACTURAS ============================ */
+const EST_FACT = { en_proceso:['En autorización',''], devuelta:['Devuelta para corrección','mal'], autorizada:['Autorizada · va a pagos','ok'],
+  enviada:['Enviada a pagos','ok'], rechazada:['Rechazada','mal'], cancelada:['Cancelada','gris'] };
+function bloqueFacturas(ord, facturas, facturadoVivo){
+  const aut = Number(ord.autorizado_sin_iva) || 0;
+  if(!aut && !facturas.length) return '';
+  const resta = aut - facturadoVivo;
+  const lista = facturas.map(f => {
+    const [txt, cls] = EST_FACT[f.estado] || [f.estado, ''];
+    return `<div class="cot ${f.estado === 'autorizada' || f.estado === 'enviada' ? 'autorizada' : f.estado === 'en_proceso' ? 'pendiente' : 'rechazada'}">
+      <div class="fila1"><span class="monto">${pesos(f.subtotal)}</span><span class="sub">antes de IVA · ${pesos(f.total)} total</span><span class="sp"></span><span class="sello ${cls}">${txt}</span></div>
+      <div style="font-size:14px"><b>${esc(f.folio)}</b> · factura ${esc(f.factura_numero || '')} · ${esc(f.proveedor || '')}</div>
+      <div class="meta">${f.directa ? 'Coincidió con lo autorizado: pasó directo a pagos' : 'Excedió lo autorizado: sigue la ruta normal de autorización'}
+        ${f.en_turno ? ' · le toca a ' + esc(f.en_turno) : ''}${f.fecha_pago ? ' · pago programado ' + fecha(f.fecha_pago) : ''} · enviada por ${esc(f.enviada_por || '')} ${hace(f.creado)}</div>
+    </div>`;
+  }).join('');
+  const puede = puedeEscribir() && aut > 0 && ord.estatus !== 'cancelada';
+  return `<div class="bloque">
+    <div class="importes">
+      <div><div class="g">${pesos0(facturadoVivo)}</div><div class="t">facturado sin IVA</div></div>
+      <div><div class="v">${pesos(aut)}</div><div class="t">autorizado sin IVA</div></div>
+      <div><div class="v" style="color:${resta < -Number(S.params.tolerancia_factura ?? 1) ? 'var(--red)' : 'inherit'}">${pesos(resta)}</div><div class="t">por facturar</div></div>
+    </div>
+    <h3>Facturas</h3>
+    ${lista || '<p class="sub" style="margin-bottom:8px">Sin facturas todavía.</p>'}
+    ${puede ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-weight:600;color:var(--navy)">+ Enviar factura a pagos</summary>
+      <div class="campos" style="margin-top:10px">
+        <label class="soltar campo" id="fxXmlLbl"><b>XML de la factura (obligatorio)</b><span>Se leen proveedor, RFC, folio, importes y folio fiscal.</span><input type="file" accept=".xml,text/xml,application/xml" id="fxXml"></label>
+        <label class="soltar campo" id="fxPdfLbl"><b>PDF de la factura</b><span>Opcional, recomendado.</span><input type="file" accept="application/pdf" id="fxPdf"></label>
+        <label class="campo ancho"><span class="lbl">Nota para pagos</span><input id="fxNota" placeholder="Opcional"></label>
+      </div>
+      <div class="regla" id="fxRegla">Carga el XML para comparar la factura contra lo autorizado (${pesos(resta)} por facturar sin IVA).</div>
+      <div class="acciones" style="margin-top:10px"><button class="btn navy" id="fxEnviar" disabled>Enviar factura</button>
+        <a class="btn claro chico" href="gastos.html" target="_blank" style="text-decoration:none">Abrir Autorización de facturas</a></div>
+    </details>` : ''}
+  </div>`;
+}
+function leerCFDI(texto){
+  const doc = new DOMParser().parseFromString(texto, 'application/xml');
+  if(doc.getElementsByTagName('parsererror').length) throw new Error('El archivo no es un XML válido.');
+  const q = n => doc.getElementsByTagNameNS('*', n)[0];
+  const c = q('Comprobante'); if(!c) throw new Error('El XML no es una factura CFDI.');
+  const at = (el, a) => el?.getAttribute(a) || '';
+  const em = q('Emisor'), tfd = q('TimbreFiscalDigital');
+  const imp = [...c.children].find(x => x.localName === 'Impuestos');
+  const tras = imp ? [...imp.getElementsByTagNameNS('*', 'Traslado')].filter(t => at(t, 'Impuesto') === '002') : [];
+  const iva = tras.reduce((a, t) => a + (+at(t, 'Importe') || 0), 0);
+  const tasa = tras.find(t => at(t, 'TasaOCuota'));
+  const subtotal = (+at(c, 'SubTotal') || 0) - (+at(c, 'Descuento') || 0);
+  const serie = at(c, 'Serie'), folio = at(c, 'Folio'), uuidF = at(tfd, 'UUID').toUpperCase();
+  const conceptos = [...doc.getElementsByTagNameNS('*', 'Concepto')].map(x => at(x, 'Descripcion').trim()).filter(Boolean);
+  return {
+    numero: serie && folio ? `${serie}-${folio}` : (folio || serie || uuidF.slice(-8)),
+    fecha: at(c, 'Fecha').slice(0, 10), proveedor: at(em, 'Nombre'), rfc: at(em, 'Rfc').toUpperCase(), uuid: uuidF,
+    subtotal: +subtotal.toFixed(2), iva: +iva.toFixed(2),
+    ivaPct: tasa ? +((+at(tasa, 'TasaOCuota')) * 100).toFixed(2) : (subtotal ? +(iva / subtotal * 100).toFixed(2) : 0),
+    retenciones: +(+at(imp, 'TotalImpuestosRetenidos') || 0).toFixed(2),
+    total: +(+at(c, 'Total') || 0).toFixed(2), moneda: at(c, 'Moneda') || 'MXN', tipoComp: at(c, 'TipoDeComprobante'),
+    concepto: conceptos.length ? conceptos[0].slice(0, 160) + (conceptos.length > 1 ? ` (y ${conceptos.length - 1} concepto${conceptos.length > 2 ? 's' : ''} más)` : '') : ''
+  };
+}
+function enlazarFacturas(ord, facturadoVivo){
+  if(!$('fxXml')) return;
+  let cfdi = null, xmlTexto = null, xmlFile = null;
+  const aut = Number(ord.autorizado_sin_iva) || 0, tol = Number(S.params.tolerancia_factura ?? 1);
+  $('fxXml').onchange = async () => {
+    const f = $('fxXml').files[0]; cfdi = null; $('fxEnviar').disabled = true;
+    if(!f) return;
+    try{
+      xmlTexto = await f.text(); xmlFile = f; cfdi = leerCFDI(xmlTexto);
+      if(cfdi.tipoComp && cfdi.tipoComp !== 'I') throw new Error('El XML no es una factura de ingreso (tipo ' + cfdi.tipoComp + ').');
+      if(!cfdi.uuid) throw new Error('El XML no está timbrado (no trae folio fiscal).');
+    }catch(err){ $('fxRegla').className = 'regla ger'; $('fxRegla').textContent = err.message; cfdi = null; return; }
+    $('fxXmlLbl').classList.add('tiene');
+    $('fxXmlLbl').querySelector('span').textContent = `${cfdi.proveedor} · ${cfdi.rfc} · factura ${cfdi.numero} · ${fecha(cfdi.fecha)}`;
+    const nuevo = facturadoVivo + cfdi.subtotal, directa = nuevo <= aut + tol;
+    $('fxRegla').className = 'regla' + (directa ? '' : ' ger');
+    $('fxRegla').innerHTML = `Factura de <b>&nbsp;${pesos(cfdi.subtotal)}</b>&nbsp;antes de IVA (${pesos(cfdi.total)} total). Facturado con esta: ${pesos(nuevo)} de ${pesos(aut)} autorizados. `
+      + (directa ? '<b>&nbsp;Coincide con lo autorizado: pasa directo a pagos.</b>'
+                 : `<b>&nbsp;Excede lo autorizado por ${pesos(nuevo - aut)}:</b>&nbsp;irá a la ruta normal de Autorización de facturas.`);
+    $('fxEnviar').disabled = false;
+  };
+  $('fxPdf').onchange = () => { const f = $('fxPdf').files[0]; $('fxPdfLbl').classList.toggle('tiene', !!f); if(f) $('fxPdfLbl').querySelector('span').textContent = f.name; };
+  $('fxEnviar').onclick = async () => {
+    if(!cfdi){ nota('Carga el XML de la factura'); return; }
+    $('fxEnviar').disabled = true; nota('Enviando factura…', 20000);
+    const datos = { concepto: cfdi.concepto || ord.descripcion, proveedor: cfdi.proveedor, rfc: cfdi.rfc, factura_numero: cfdi.numero,
+      factura_fecha: cfdi.fecha || null, factura_uuid: cfdi.uuid, subtotal: cfdi.subtotal, iva_pct: cfdi.ivaPct, iva: cfdi.iva,
+      retenciones: cfdi.retenciones, total: cfdi.total, xml_datos: cfdi, nota: $('fxNota').value.trim() || null };
+    const { data, error } = await db.rpc('enviar_factura', { p_orden: ord.id, p_datos: datos });
+    if(error){
+      $('fxEnviar').disabled = false;
+      nota(String(error.message || '').includes('solicitudes_uuid_unico') ? 'Esa factura ya está registrada con el mismo folio fiscal.' : errTxt(error), 8000);
+      return;
+    }
+    const r = data[0];
+    const subir = [{ clase:'xml', file:new Blob([xmlTexto], { type:'application/xml' }), nombre:xmlFile.name }];
+    if($('fxPdf').files[0]) subir.push({ clase:'pdf', file:$('fxPdf').files[0], nombre:$('fxPdf').files[0].name });
+    let fallas = 0;
+    for(const a of subir){
+      const ruta = `${r.solicitud_id}/${a.clase}-${Date.now()}-${a.nombre.replace(/[^\w.\-]/g, '_')}`;
+      const up = await db.storage.from(BUCKET_GASTOS).upload(ruta, a.file, { upsert:false });
+      if(up.error){ fallas++; continue; }
+      const ad = await db.rpc('adjuntar_factura', { p_solicitud: r.solicitud_id, p_clase: a.clase, p_nombre: a.nombre, p_ruta: ruta, p_bytes: a.file.size });
+      if(ad.error) fallas++;
+    }
+    nota(`${r.folio}: ${r.directa ? 'autorizada, entra al siguiente reporte a pagos' : 'excede lo autorizado, quedó en la ruta normal de autorización'}${fallas ? `. Ojo: ${fallas} archivo(s) no se adjuntaron; súbelos desde Autorización de facturas` : ''}`, 9000);
+    await refrescar(); abrirOrden(ord.id, true);
+  };
+}
+
 /* ============================ BUSCADOR DE EQUIPO ============================ */
 function buscadorEquipo(cont, alElegir, inicial = null){
   cont.innerHTML = `<input id="bqEq" placeholder="Escribe NIV o placa (mínimo 3 caracteres)" spellcheck="false" autocomplete="off" style="text-transform:uppercase">
@@ -1170,6 +1328,7 @@ function nuevaOrden(pre = {}){
     $('nFotosLbl').querySelector('span').textContent = n ? `${n} foto(s) lista(s) para subir al crear la orden` : 'Opcional.'; };
   buscadorEquipo($('nEquipo'), e => {
     equipo = e;
+    mostrarFicha($('nEquipo'), e.niv);
     const asignado = (e.estatus_asignacion || '').toUpperCase() === 'ASIGNADO';
     $('nPri').value = asignado ? 'ticket' : 'sin_asignar';
     $('nPriPista').textContent = asignado ? 'Sugerido: el equipo está asignado a cliente.' : 'Sugerido: el equipo está libre.';
@@ -1278,7 +1437,7 @@ function nuevaRevision(){
   };
   $('rFotos').onchange = () => { const n = $('rFotos').files.length; $('rFotosLbl').classList.toggle('tiene', n > 0);
     $('rFotosLbl').querySelector('span').textContent = n ? `${n} foto(s) lista(s)` : 'Frente, costados, interior y cada falla.'; };
-  buscadorEquipo($('rEquipo'), e => { equipo = e; const p = e.patio_fisico_id || e.patio_id; if(p) $('rPatio').value = p; });
+  buscadorEquipo($('rEquipo'), e => { equipo = e; mostrarFicha($('rEquipo'), e.niv); const p = e.patio_fisico_id || e.patio_id; if(p) $('rPatio').value = p; });
   $('rCancelar').onclick = cerrarPanel;
   $('rGuardar').onclick = async () => {
     if(!equipo){ nota('Elige el equipo'); return; }

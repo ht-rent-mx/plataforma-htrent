@@ -811,3 +811,23 @@ where not exists (select 1 from core.rol_modulos where rol='operaciones_consulta
 insert into core.perfil_roles(perfil_id, rol)
 select id, 'operaciones_consulta' from core.perfiles where correo = 'cesar.valadez@htrent.mx'
 on conflict do nothing;
+
+-- =====================================================================
+-- Facturas enlazadas con Autorización de gastos y facturas (2026-10-18)
+-- Regla (Rogelio Morejón): si la factura (antes de IVA, sumada a las ya
+-- facturadas de la orden) no pasa lo autorizado en la orden + tolerancia,
+-- entra autorizada directo al siguiente reporte a pagos. Si lo pasa, sigue
+-- la ruta normal de gastos (jefe inmediato y autorizador final).
+-- =====================================================================
+create table if not exists operaciones.facturas(
+  solicitud_id uuid primary key references gastos.solicitudes(id),
+  orden_id uuid not null references operaciones.ordenes(id),
+  subtotal numeric(12,2) not null,
+  autorizado_orden numeric(12,2) not null,
+  facturado_previo numeric(12,2) not null,
+  directa boolean not null,
+  creado_por uuid not null default auth.uid() references core.perfiles(id),
+  creado_en timestamptz not null default now()
+);
+-- + parámetro tolerancia_factura (1 peso) y funciones operaciones.enviar_factura(p_orden, p_datos jsonb),
+--   operaciones.adjuntar_factura(...) y operaciones.facturas_orden(p_orden), aplicadas en la base.
