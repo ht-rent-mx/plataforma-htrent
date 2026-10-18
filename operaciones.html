@@ -1,0 +1,1473 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B3D66">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>Operaciones y taller · Plataforma HT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Saira:ital,wght@1,700;1,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="ht.css?v=2026-09-25b">
+<style>
+/* =====================================================================
+   Módulo Operaciones y taller · complementa ht.css
+   ===================================================================== */
+#app{display:none}
+.barra .marca{font-size:22px}
+.modtit{font-family:var(--display);font-style:italic;font-weight:700;font-size:15px;color:var(--lime);text-transform:uppercase;letter-spacing:.03em}
+.campana{position:relative;background:transparent;border:1px solid var(--edge);color:#fff;border-radius:var(--r);width:40px;height:36px;display:grid;place-items:center}
+.campana svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8}
+.campana .n{position:absolute;top:-7px;right:-7px;background:var(--lime);color:#0A2A0E;font-size:11px;font-weight:700;border-radius:999px;min-width:19px;height:19px;display:grid;place-items:center;padding:0 5px}
+.campana .n:empty{display:none}
+.pestanas{overflow-x:auto;flex-wrap:nowrap}
+.pestana{white-space:nowrap}
+.cab-sec{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.cab-sec h1{margin:0;flex:1}
+.cifras{margin-bottom:16px}
+.cifra{cursor:pointer}
+.cifra.on{background:var(--lime-soft)}
+.cifra.mal .n{color:var(--red)}
+
+/* tarjetas de orden */
+.lista{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.ot{display:flex;flex-direction:column;justify-content:flex-start;background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--edge);border-radius:var(--r);padding:12px 14px;text-align:left;width:100%;cursor:pointer}
+.ot:hover{border-color:var(--navy)}
+.ot.ticket{border-left-color:var(--amber)}
+.ot.sin_asignar{border-left-color:var(--navy)}
+.ot .fila1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ot .folio{font-family:var(--mono);font-weight:700;font-size:13px;color:var(--muted)}
+.ot .niv{font-family:var(--mono);font-weight:700;font-size:15px;color:var(--ink);word-break:break-all}
+.ot .desc{font-size:14px;margin-top:4px;color:var(--text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ot .meta{font-size:12.5px;color:var(--muted);margin-top:6px;display:flex;gap:10px;flex-wrap:wrap}
+.ot .meta b{color:var(--text);font-weight:600}
+.sp{flex:1}
+.est{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 8px;border-radius:3px;white-space:nowrap;background:var(--pend);color:var(--text)}
+.est.abierta,.est.cotizacion{background:var(--pend);color:var(--muted)}
+.est.por_autorizar{background:var(--amber-soft);color:#7A5200;border:1px solid var(--amber)}
+.est.autorizada{background:#E7EDF4;color:var(--navy);border:1px solid var(--navy)}
+.est.en_proceso{background:var(--navy);color:#fff}
+.est.terminada{background:var(--lime-soft);color:var(--lime-ink);border:1px solid var(--lime)}
+.est.entregada{background:var(--lime);color:#0A2A0E}
+.est.cancelada{background:var(--red-soft);color:var(--red);border:1px solid var(--red)}
+.pri{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 8px;border-radius:3px}
+.pri.ticket{background:var(--amber);color:#2B1B00}
+.pri.sin_asignar{background:var(--pend);color:var(--muted)}
+
+/* tablero del taller */
+.lineas{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:22px}
+.linea-box{background:var(--surface);border:2px solid var(--line);border-radius:var(--r);min-height:170px;display:flex;flex-direction:column}
+.linea-box.prioritaria{border-top:6px solid var(--amber)}
+.linea-box.general{border-top:6px solid var(--navy)}
+.linea-box .cab{padding:10px 12px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
+.linea-box .cab b{font-family:var(--display);font-style:italic;font-weight:800;font-size:18px;color:var(--ink)}
+.linea-box .cab span{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.linea-box .cuerpo{padding:12px;flex:1;display:flex;flex-direction:column;gap:6px}
+.linea-box.libre .cuerpo{align-items:center;justify-content:center;color:var(--muted);font-size:14px;background:repeating-linear-gradient(135deg,var(--bg) 0 10px,var(--surface) 10px 20px)}
+.linea-box .niv{font-family:var(--mono);font-weight:700;font-size:15px;color:var(--ink);word-break:break-all;cursor:pointer}
+.linea-box .acciones{margin-top:auto}
+.colas{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.cola h3{display:flex;align-items:center;gap:8px}
+.cola .c{font-size:12px;background:var(--pend);padding:1px 8px;border-radius:10px;font-weight:600}
+.en-cola{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;margin-bottom:8px}
+.en-cola .fila1{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.en-cola .niv{font-family:var(--mono);font-weight:700;cursor:pointer;color:var(--ink)}
+.en-cola .meta{font-size:12.5px;color:var(--muted);margin-top:3px}
+.en-cola .acciones{margin-top:8px}
+.tenue{opacity:.62}
+
+/* cotizaciones */
+.cot{border:1px solid var(--line);border-left:5px solid var(--pend);border-radius:var(--r);padding:10px 12px;margin-bottom:8px;background:var(--surface)}
+.cot.pendiente{border-left-color:var(--amber)}
+.cot.autorizada{border-left-color:var(--lime)}
+.cot.rechazada,.cot.cancelada{border-left-color:var(--red);opacity:.8}
+.cot .fila1{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.cot .monto{font-family:var(--display);font-style:italic;font-weight:800;font-size:20px;color:var(--ink)}
+.cot .meta{font-size:12.5px;color:var(--muted);margin-top:4px}
+.cot .just{margin-top:6px;padding:6px 10px;background:var(--bg);border-radius:var(--r);font-size:13.5px}
+.regla{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:var(--r);font-size:13.5px;margin-top:10px;border-left:5px solid var(--navy);background:#E7EDF4}
+.regla.ger{border-left-color:var(--amber);background:var(--amber-soft);color:#5A3D00}
+.regla b{font-variant-numeric:tabular-nums}
+
+/* fotos */
+.etapas{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px}
+.etapas button{padding:6px 12px;border-radius:var(--r);background:var(--bg);font-weight:600;font-size:13px;color:var(--muted);border:1px solid var(--line)}
+.etapas button[aria-pressed="true"]{background:var(--navy);color:#fff;border-color:var(--navy)}
+.galeria{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}
+.galeria .ft{position:relative;aspect-ratio:1;border-radius:var(--r);overflow:hidden;border:1px solid var(--line);background:var(--bg);cursor:zoom-in}
+.galeria .ft img{width:100%;height:100%;object-fit:cover}
+.galeria .ft span{position:absolute;left:0;right:0;bottom:0;background:rgba(8,24,38,.7);color:#fff;font-size:10.5px;padding:2px 5px}
+.subir{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;aspect-ratio:1;border:2px dashed var(--edge);border-radius:var(--r);cursor:pointer;color:var(--navy);font-size:12px;font-weight:600;text-align:center;padding:6px;margin:0}
+.subir svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:1.6}
+.subir input{display:none}
+
+/* checklist de revisión */
+.checks{display:grid;gap:8px}
+.chk{border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;background:var(--surface)}
+.chk .fila1{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.chk .fila1 b{flex:1;font-size:14px;min-width:140px}
+.tri{display:inline-flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.tri button{padding:6px 11px;font-size:12.5px;font-weight:700;background:var(--surface);color:var(--muted)}
+.tri button+button{border-left:1px solid var(--line)}
+.tri button[aria-pressed="true"][data-v="ok"]{background:var(--lime);color:#0A2A0E}
+.tri button[aria-pressed="true"][data-v="falla"]{background:var(--red);color:#fff}
+.tri button[aria-pressed="true"][data-v="na"]{background:var(--pend);color:var(--text)}
+.chk input{margin-top:8px;display:none}
+.chk.falla input{display:block}
+
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips label{margin:0;display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--line);border-radius:999px;font-size:13px;background:var(--surface);cursor:pointer}
+.chips input{width:auto;margin:0}
+.chips label:has(input:checked){background:var(--navy);color:#fff;border-color:var(--navy)}
+
+.resultados-eq{margin-top:6px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);max-height:260px;overflow-y:auto}
+.resultados-eq button{display:block;width:100%;text-align:left;padding:9px 12px;background:var(--surface);border-bottom:1px solid var(--line)}
+.resultados-eq button:hover{background:var(--lime-soft)}
+.resultados-eq .niv{font-family:var(--mono);font-weight:700}
+.resultados-eq small{display:block;color:var(--muted);font-size:12px}
+.eq-elegido{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--lime);background:var(--lime-soft);border-radius:var(--r)}
+.eq-elegido .niv{font-family:var(--mono);font-weight:700;font-size:15px}
+
+/* avisos */
+.avisos{position:fixed;top:70px;right:16px;width:min(400px,calc(100vw - 32px));max-height:70vh;overflow-y:auto;background:var(--surface);border:2px solid var(--edge);border-radius:var(--r);z-index:30;display:none;box-shadow:0 12px 32px rgba(5,15,30,.25)}
+.avisos.on{display:block}
+.avisos .cab{display:flex;align-items:center;padding:10px 12px;background:var(--navy);color:#fff;position:sticky;top:0}
+.avisos .cab b{flex:1}
+.avisos .cab button{background:transparent;color:#C8D6E5;font-size:12.5px;text-decoration:underline}
+.aviso-it{display:block;width:100%;text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--surface);font-size:13.5px}
+.aviso-it.nuevo{background:var(--lime-soft)}
+.aviso-it small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
+
+/* config */
+.tabla-conf td input,.tabla-conf td select{padding:6px 8px;font-size:13.5px}
+.conf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+
+/* visor */
+.visor{position:fixed;inset:0;background:#081826;z-index:60;display:none;flex-direction:column}
+.visor.on{display:flex}
+.visor .top{display:flex;align-items:center;gap:10px;padding:12px 14px;color:#fff;background:var(--navy);border-bottom:4px solid var(--lime);font-size:13px}
+.visor .top span{flex:1}
+.visor .top button{background:transparent;border:1px solid var(--edge);color:#fff;border-radius:var(--r);width:34px;height:34px;font-size:17px}
+.visor .img{flex:1;display:flex;align-items:center;justify-content:center;padding:8px;overflow:auto}
+.visor img{max-width:100%;max-height:100%;object-fit:contain}
+
+.nota:empty{display:none}
+.dialogo{position:fixed;inset:0;background:rgba(5,15,30,.55);z-index:50;display:none;align-items:center;justify-content:center;padding:16px}
+.dialogo.on{display:flex}
+.dialogo .caja{background:var(--surface);border:2px solid var(--edge);border-radius:var(--r);width:min(460px,100%);padding:18px}
+.dialogo .caja h3{font-size:17px}
+.dialogo .caja p{font-size:14px;color:var(--muted)}
+.dialogo .caja textarea{min-height:90px;margin-top:10px}
+.dialogo .acciones{justify-content:flex-end;margin-top:14px}
+
+@media (max-width:900px){
+  .lineas{grid-template-columns:1fr 1fr}
+  .colas{grid-template-columns:1fr}
+}
+@media (max-width:520px){
+  .lineas{grid-template-columns:1fr}
+  .rotulo{display:none}
+  .lista{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div id="sinAcceso" style="display:none;min-height:100%;place-items:center;padding:24px;background:var(--navy)">
+  <div class="placa"><div class="cinta"></div><div class="placa-cuerpo">
+    <div class="marca">Plataforma <span>HT</span></div>
+    <p class="aviso" id="msgSinAcceso" style="margin-top:20px"></p>
+    <a class="btn ancho navy" style="display:block;text-align:center;text-decoration:none" href="index.html">Ir al inicio</a>
+  </div></div>
+</div>
+
+<div id="app">
+  <header>
+    <div class="cinta"></div>
+    <div class="barra">
+      <div>
+        <div class="marca">Plataforma <span>HT</span></div>
+        <div class="modtit">Operaciones y taller</div>
+      </div>
+      <div class="quien">
+        <b id="nombreUsuario">—</b><br>
+        <span class="eyebrow" id="rolUsuario"></span>
+      </div>
+      <button class="campana" id="btnAvisos" aria-label="Avisos">
+        <svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        <span class="n" id="nAvisos"></span>
+      </button>
+      <button class="salir" id="salir">Salir</button>
+    </div>
+  </header>
+
+  <main>
+    <a class="migaja" href="index.html">← Volver a módulos</a>
+    <div class="pestanas" role="tablist" id="tabs">
+      <button class="pestana" data-tab="ordenes" aria-selected="true">Órdenes <span class="c" id="cOrdenes">0</span></button>
+      <button class="pestana" data-tab="taller" aria-selected="false">Taller</button>
+      <button class="pestana" data-tab="autorizar" aria-selected="false">Por autorizar <span class="c" id="cAutorizar">0</span></button>
+      <button class="pestana" data-tab="revisiones" aria-selected="false">Revisión de llegada</button>
+      <button class="pestana" data-tab="config" aria-selected="false" id="tabConfig" hidden>Configuración</button>
+    </div>
+
+    <!-- ======================= ÓRDENES ======================= -->
+    <section id="secOrdenes">
+      <div class="cifras" id="cifrasOrdenes"></div>
+      <div class="filtros">
+        <input id="fBuscar" placeholder="NIV, placa, folio, cliente o descripción" spellcheck="false">
+        <select id="fEstatus">
+          <option value="activas">Activas</option>
+          <option value="abierta">Abiertas</option>
+          <option value="cotizacion">En cotización</option>
+          <option value="por_autorizar">Por autorizar</option>
+          <option value="autorizada">Autorizadas (en espera)</option>
+          <option value="en_proceso">En proceso</option>
+          <option value="terminada">Terminadas</option>
+          <option value="entregada">Entregadas</option>
+          <option value="cancelada">Canceladas</option>
+          <option value="todas">Todas</option>
+        </select>
+        <select id="fTipo"><option value="">Reparación y adecuación</option><option value="reparacion">Reparación</option><option value="adecuacion">Adecuación</option></select>
+        <select id="fPrioridad"><option value="">Toda prioridad</option><option value="ticket">Con ticket</option><option value="sin_asignar">Sin asignar</option></select>
+        <select id="fPatio"><option value="">Todos los patios</option></select>
+        <button class="btn" id="btnNuevaOrden" hidden>+ Nueva orden</button>
+      </div>
+      <div class="lista" id="listaOrdenes"><p class="cargando">Cargando órdenes…</p></div>
+    </section>
+
+    <!-- ======================= TALLER ======================= -->
+    <section id="secTaller" hidden>
+      <div class="cab-sec">
+        <h1>Líneas del taller</h1>
+        <select id="tPatio" style="width:auto"></select>
+      </div>
+      <p class="vacio" id="tSinLineas" hidden style="padding-top:0">Este patio no tiene líneas configuradas.</p>
+      <div class="lineas" id="tLineas"></div>
+      <div class="colas">
+        <div class="cola">
+          <h3>Con ticket · prioridad <span class="c" id="cTicket">0</span></h3>
+          <p class="sub" style="margin:-6px 0 10px">Equipos asignados a cliente. Van a las líneas prioritarias.</p>
+          <div id="colaTicket"></div>
+        </div>
+        <div class="cola">
+          <h3>Recuperados sin asignar por reparar <span class="c" id="cSinAsignar">0</span></h3>
+          <p class="sub" style="margin:-6px 0 10px">Sin cliente todavía. Van a la línea general.</p>
+          <div id="colaSinAsignar"></div>
+        </div>
+      </div>
+      <section>
+        <h2>Trabajando en taller externo</h2>
+        <div id="colaExterno"></div>
+      </section>
+      <section>
+        <h2>Aún sin autorizar</h2>
+        <p class="sub" style="margin:-6px 0 10px">No pueden entrar a línea hasta que su cotización esté autorizada.</p>
+        <div id="colaEspera"></div>
+      </section>
+    </section>
+
+    <!-- ======================= POR AUTORIZAR ======================= -->
+    <section id="secAutorizar" hidden>
+      <div class="franja" id="franjaRegla"><p></p></div>
+      <div class="filtros">
+        <select id="aVer" style="width:auto">
+          <option value="mias">Las que me tocan</option>
+          <option value="todas">Todas las pendientes</option>
+          <option value="resueltas">Resueltas (30 días)</option>
+        </select>
+      </div>
+      <div id="listaAutorizar"><p class="cargando">Cargando…</p></div>
+    </section>
+
+    <!-- ======================= REVISIONES ======================= -->
+    <section id="secRevisiones" hidden>
+      <div class="cab-sec">
+        <h1>Revisión fisicomecánica</h1>
+        <button class="btn" id="btnNuevaRevision" hidden>+ Nueva revisión</button>
+      </div>
+      <p class="sub" style="margin-bottom:14px">Cómo llega cada equipo al patio. Si necesita trabajo, de aquí sale su orden.</p>
+      <div id="listaRevisiones"><p class="cargando">Cargando…</p></div>
+    </section>
+
+    <!-- ======================= CONFIGURACIÓN ======================= -->
+    <section id="secConfig" hidden>
+      <div class="conf-grid">
+        <div class="bloque">
+          <h3>Regla de autorización</h3>
+          <div class="campos" id="confParametros"></div>
+          <p class="pista" id="confParamPista" style="font-size:12.5px;color:var(--muted);margin-top:8px"></p>
+          <div class="acciones" style="margin-top:12px"><button class="btn chico navy" id="guardarParametros">Guardar regla</button></div>
+        </div>
+        <div class="bloque">
+          <h3>Autorizadores</h3>
+          <div id="confAutorizadores"></div>
+        </div>
+      </div>
+      <div class="bloque">
+        <h3>Líneas del taller</h3>
+        <div class="resultados" id="confLineas"></div>
+      </div>
+      <div class="bloque">
+        <h3>Talleres y proveedores</h3>
+        <div class="resultados" id="confTalleres"></div>
+      </div>
+      <div class="bloque">
+        <h3>Tipos de trabajo</h3>
+        <div class="resultados" id="confTipos"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- panel lateral -->
+<div class="telon" id="telon"></div>
+<aside class="panel" id="panel" aria-hidden="true">
+  <div class="panel-cab"><h3 id="panelTitulo">—</h3><button class="cerrar" id="cerrarPanel" aria-label="Cerrar">×</button></div>
+  <div class="panel-cuerpo" id="panelCuerpo"></div>
+  <div class="panel-pie" id="panelPie"></div>
+</aside>
+
+<div class="avisos" id="avisos">
+  <div class="cab"><b>Avisos</b><button id="leerTodos">Marcar todo como leído</button></div>
+  <div id="listaAvisos"></div>
+</div>
+
+<div class="visor" id="visor">
+  <div class="top"><span id="visorTxt"></span><button id="visorCerrar" aria-label="Cerrar">×</button></div>
+  <div class="img"><img id="visorImg" alt=""></div>
+</div>
+
+<div class="dialogo" id="dialogo">
+  <div class="caja">
+    <h3 id="dTitulo"></h3>
+    <p id="dTexto"></p>
+    <div id="dExtra"></div>
+    <textarea id="dCampo" placeholder=""></textarea>
+    <p class="aviso" id="dError"></p>
+    <div class="acciones">
+      <button class="btn claro" id="dCancelar">Cancelar</button>
+      <button class="btn" id="dAceptar">Aceptar</button>
+    </div>
+  </div>
+</div>
+
+<div class="nota" id="nota"></div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const SUPABASE_URL  = 'https://ahfjstuwekcuxshclprl.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFoZmpzdHV3ZWtjdXhzaGNscHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwNDg2MjYsImV4cCI6MjEwMzYyNDYyNn0.lf1uw8WHPRy21GuYlK9NzeI5JgJK2be1LrODq22CodM';
+const BUCKET_FOTOS = 'fotos-equipos';
+const BUCKET_ADJ   = 'operaciones-adjuntos';
+
+const db   = createClient(SUPABASE_URL, SUPABASE_ANON, { db:{ schema:'operaciones' } });
+const core = db.schema('core');
+
+/* ============================ utilidades ============================ */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pesos = n => (Number(n)||0).toLocaleString('es-MX',{style:'currency',currency:'MXN'});
+const pesos0 = n => (Number(n)||0).toLocaleString('es-MX',{style:'currency',currency:'MXN',maximumFractionDigits:0});
+const fecha = d => d ? new Date(d.length===10 ? d+'T12:00:00' : d).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+const fechaHora = d => d ? new Date(d).toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '—';
+const hace = d => {
+  if(!d) return '';
+  const m = Math.round((Date.now()-new Date(d))/60000);
+  if(m < 60) return `hace ${Math.max(m,1)} min`;
+  const h = Math.round(m/60); if(h < 48) return `hace ${h} h`;
+  return `hace ${Math.round(h/24)} días`;
+};
+const uuid = () => crypto.randomUUID ? crypto.randomUUID() :
+  'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return (c==='x'?r:(r&3|8)).toString(16);});
+const errTxt = e => {
+  const m = (e && (e.message || e.error_description)) || String(e||'');
+  if(m.includes('Failed to fetch')) return 'Sin conexión. Inténtalo de nuevo.';
+  return m.replace(/^.*?ERROR:\s*/,'');
+};
+let notaT;
+function nota(txt, ms=3500){ const n=$('nota'); n.textContent=txt; n.classList.add('on'); clearTimeout(notaT); notaT=setTimeout(()=>n.classList.remove('on'), ms); }
+
+const ESTATUS = {
+  abierta:'Abierta', cotizacion:'En cotización', por_autorizar:'Por autorizar', autorizada:'Autorizada',
+  en_proceso:'En proceso', terminada:'Terminada', entregada:'Entregada', cancelada:'Cancelada'
+};
+const ACTIVAS = ['abierta','cotizacion','por_autorizar','autorizada','en_proceso','terminada'];
+const PRIORIDAD = { ticket:'Con ticket', sin_asignar:'Sin asignar' };
+const TIPO = { reparacion:'Reparación', adecuacion:'Adecuación' };
+const ETAPAS = { condicion:'Condición', avance:'Avance', terminado:'Terminado', entrega:'Entrega' };
+const PUNTOS = [
+  ['llantas','Llantas y rines'],['frenos','Frenos'],['luces','Luces'],['electrico','Sistema eléctrico'],
+  ['suspension','Suspensión'],['chasis','Chasis / estructura'],['piso','Piso'],['puertas','Puertas y herrajes'],
+  ['lamina','Lámina y pintura'],['patines','Patines / king pin'],['placas','Placas y engomado'],['adicionales','Adicionales']
+];
+const PUNTO_TRABAJO = { llantas:'llantas', frenos:'frenos', luces:'electrica', electrico:'electrica', suspension:'suspension',
+  chasis:'estructural', piso:'piso', puertas:'puertas', lamina:'lamina', patines:'mecanica' };
+
+/* ============================ estado ============================ */
+const S = {
+  yo:null, nivel:null, aut:null, config:false, admin:false,
+  patios:[], talleres:[], tipos:[], lineas:[], params:{}, personal:[],
+  ordenes:[], cotPend:[], revisiones:[], avisos:[],
+  tab:'ordenes', ordenAbierta:null, etapaFoto:'condicion'
+};
+const puedeEscribir = () => S.nivel === 'escritura' || S.nivel === 'admin';
+
+/* ============================ arranque ============================ */
+async function iniciar(){
+  const { data:{ session } } = await db.auth.getSession();
+  if(!session){ location.href = 'index.html'; return; }
+  S.yo = { id: session.user.id, correo: session.user.email };
+
+  const [perfil, nivel, aut, conf, adm] = await Promise.all([
+    core.from('perfiles').select('nombre,puesto').eq('id', S.yo.id).maybeSingle(),
+    core.rpc('nivel_modulo', { p_modulo:'operaciones' }),
+    db.rpc('mi_nivel_autorizacion'),
+    db.rpc('puede_configurar'),
+    core.rpc('es_admin')
+  ]);
+  S.yo.nombre = perfil.data?.nombre || S.yo.correo;
+  S.nivel = nivel.data || null;
+  if(!S.nivel){
+    $('msgSinAcceso').textContent = nivel.error ? 'No se pudo validar tu acceso: ' + errTxt(nivel.error)
+      : 'Tu usuario no tiene acceso al módulo de Operaciones y taller. Pídele a un administrador que te asigne el rol.';
+    $('sinAcceso').style.display = 'grid';
+    return;
+  }
+  S.aut = aut.data || null;
+  S.config = !!conf.data;
+  S.admin = !!adm.data;
+
+  $('app').style.display = 'flex';
+  $('nombreUsuario').textContent = S.yo.nombre;
+  $('rolUsuario').textContent = [
+    S.nivel === 'lectura' ? 'Solo consulta' : (S.nivel === 'admin' ? 'Administrador' : 'Captura'),
+    S.aut === 'gerencia' ? 'Autoriza: gerencia' : S.aut === 'jefatura' ? 'Autoriza: jefatura' : ''
+  ].filter(Boolean).join(' · ');
+  $('btnNuevaOrden').hidden = !puedeEscribir();
+  $('btnNuevaRevision').hidden = !puedeEscribir();
+  $('tabConfig').hidden = !S.config;
+
+  await cargarCatalogos();
+  await Promise.all([cargarOrdenes(), cargarCotizaciones(), cargarAvisos()]);
+  pintarTodo();
+  escucharAvisos();
+  setInterval(async () => { if(document.visibilityState === 'visible'){ await refrescar(); } }, 60000);
+
+  const q = new URLSearchParams(location.search);
+  if(q.get('orden')) abrirOrden(q.get('orden'));
+  if(q.get('tab')) cambiarTab(q.get('tab'));
+}
+
+async function cargarCatalogos(){
+  const [pa, ta, ti, li, pr, pe] = await Promise.all([
+    core.from('patios').select('id,nombre,es_local').eq('activo', true).order('nombre'),
+    db.from('talleres').select('*').order('nombre'),
+    db.from('tipos_trabajo').select('*').order('orden'),
+    db.from('lineas').select('*').order('patio_id').order('numero'),
+    db.from('parametros').select('*'),
+    db.rpc('personal')
+  ]);
+  if(ta.error){ nota('No se pudieron leer los catálogos: ' + errTxt(ta.error), 8000); }
+  S.patios = pa.data || [];
+  S.talleres = ta.data || [];
+  S.tipos = ti.data || [];
+  S.lineas = li.data || [];
+  S.params = Object.fromEntries((pr.data||[]).map(p => [p.clave, Number(p.valor)]));
+  S.personal = pe.data || [];
+
+  $('fPatio').innerHTML = '<option value="">Todos los patios</option>' + S.patios.map(p => `<option value="${p.id}">${esc(p.nombre)}</option>`).join('');
+  const conLineas = [...new Set(S.lineas.filter(l=>l.activo).map(l => l.patio_id))];
+  const opcT = S.patios.filter(p => conLineas.includes(p.id));
+  $('tPatio').innerHTML = (opcT.length ? opcT : S.patios).map(p => `<option value="${p.id}">${esc(p.nombre)}</option>`).join('');
+}
+
+const limite = () => S.params.limite_autorizacion ?? 15000;
+const tasaIva = () => S.params.iva ?? 0.16;
+
+async function cargarOrdenes(){
+  const { data, error } = await db.from('v_ordenes').select('*').order('creado_en', { ascending:false }).limit(1000);
+  if(error){ $('listaOrdenes').innerHTML = `<p class="vacio">No se pudieron leer las órdenes: ${esc(errTxt(error))}</p>`; return; }
+  S.ordenes = data || [];
+}
+async function cargarCotizaciones(){
+  const desde = new Date(Date.now() - 30*864e5).toISOString();
+  const { data, error } = await db.from('v_cotizaciones').select('*')
+    .or(`estatus.eq.pendiente,resuelto_en.gte."${desde}"`).order('creado_en', { ascending:true }).limit(500);
+  if(!error) S.cotPend = data || [];
+}
+async function cargarRevisiones(){
+  const { data, error } = await db.from('v_revisiones').select('*').order('creado_en', { ascending:false }).limit(150);
+  if(error){ $('listaRevisiones').innerHTML = `<p class="vacio">No se pudieron leer las revisiones: ${esc(errTxt(error))}</p>`; return; }
+  S.revisiones = data || [];
+}
+async function refrescar(){
+  await Promise.all([cargarOrdenes(), cargarCotizaciones(), cargarAvisos()]);
+  pintarTodo();
+  if(S.ordenAbierta && $('panel').classList.contains('on') && $('panel').dataset.tipo === 'orden'){
+    const enEdicion = $('panelCuerpo').querySelector('input:focus, textarea:focus, select:focus');
+    if(!enEdicion) abrirOrden(S.ordenAbierta, true);
+  }
+}
+function pintarTodo(){
+  pintarOrdenes(); pintarTaller(); pintarAutorizar(); pintarAvisos();
+  if(S.tab === 'revisiones') pintarRevisiones();
+  if(S.tab === 'config') pintarConfig();
+}
+
+/* ============================ pestañas ============================ */
+const SECCIONES = { ordenes:'secOrdenes', taller:'secTaller', autorizar:'secAutorizar', revisiones:'secRevisiones', config:'secConfig' };
+async function cambiarTab(t){
+  if(!SECCIONES[t] || (t === 'config' && !S.config)) return;
+  S.tab = t;
+  document.querySelectorAll('#tabs .pestana').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
+  Object.entries(SECCIONES).forEach(([k, id]) => $(id).hidden = k !== t);
+  if(t === 'revisiones'){ await cargarRevisiones(); pintarRevisiones(); }
+  if(t === 'config') pintarConfig();
+}
+$('tabs').addEventListener('click', e => { const b = e.target.closest('.pestana'); if(b) cambiarTab(b.dataset.tab); });
+
+/* ============================ ÓRDENES ============================ */
+let filtroCifra = null;
+function pintarOrdenes(){
+  const act = S.ordenes.filter(o => ACTIVAS.includes(o.estatus));
+  $('cOrdenes').textContent = act.length;
+  const cif = [
+    ['abiertas', 'abiertas o en cotización', act.filter(o => ['abierta','cotizacion'].includes(o.estatus)).length],
+    ['por_autorizar', 'por autorizar', act.filter(o => o.estatus === 'por_autorizar').length],
+    ['autorizada', 'listas para línea', act.filter(o => o.estatus === 'autorizada').length],
+    ['en_proceso', 'en proceso', act.filter(o => o.estatus === 'en_proceso').length],
+    ['terminada', 'terminadas sin liberar', act.filter(o => o.estatus === 'terminada').length],
+    ['atrasadas', 'atrasadas', act.filter(o => o.atrasada).length]
+  ];
+  $('cifrasOrdenes').innerHTML = cif.map(([k, t, n]) =>
+    `<div class="cifra ${filtroCifra===k?'on':''} ${k==='atrasadas'&&n?'mal':''}" data-k="${k}"><div class="n">${n}</div><div class="t">${t}</div></div>`).join('');
+
+  const q = $('fBuscar').value.trim().toLowerCase();
+  const est = $('fEstatus').value, tipo = $('fTipo').value, pri = $('fPrioridad').value, patio = $('fPatio').value;
+  let lista = S.ordenes.filter(o => {
+    if(filtroCifra){
+      if(filtroCifra === 'abiertas' && !['abierta','cotizacion'].includes(o.estatus)) return false;
+      if(filtroCifra === 'atrasadas' && !o.atrasada) return false;
+      if(!['abiertas','atrasadas'].includes(filtroCifra) && o.estatus !== filtroCifra) return false;
+    } else if(est === 'activas'){ if(!ACTIVAS.includes(o.estatus)) return false; }
+    else if(est !== 'todas' && o.estatus !== est) return false;
+    if(tipo && o.tipo !== tipo) return false;
+    if(pri && o.prioridad !== pri) return false;
+    if(patio && String(o.patio_id) !== patio) return false;
+    if(q){
+      const h = [o.niv, o.placa, o.folio_txt, o.cliente, o.cliente_actual, o.descripcion, o.responsable, o.taller].join(' ').toLowerCase();
+      if(!h.includes(q)) return false;
+    }
+    return true;
+  });
+  // primero lo que urge: tickets, atrasadas y por autorizar
+  const peso = o => (o.prioridad === 'ticket' ? 0 : 10) + (o.atrasada ? -5 : 0);
+  lista.sort((a, b) => peso(a) - peso(b) || new Date(a.creado_en) - new Date(b.creado_en));
+  if(!lista.length){
+    $('listaOrdenes').innerHTML = `<p class="vacio">${S.ordenes.length ? 'Ninguna orden coincide con los filtros.' : 'Todavía no hay órdenes. Crea la primera con “+ Nueva orden” o desde una revisión de llegada.'}</p>`;
+    return;
+  }
+  $('listaOrdenes').innerHTML = lista.map(tarjetaOrden).join('');
+}
+function tarjetaOrden(o){
+  const donde = o.linea ? o.linea : (o.taller ? o.taller : (o.patio || ''));
+  return `<button class="ot ${o.prioridad}" data-orden="${o.id}">
+    <div class="fila1"><span class="folio">${o.folio_txt}</span><span class="est ${o.estatus}">${ESTATUS[o.estatus]}</span>
+      <span class="pri ${o.prioridad}">${PRIORIDAD[o.prioridad]}</span><span class="sp"></span>
+      ${o.atrasada ? '<span class="sello mal">Atrasada</span>' : ''}</div>
+    <div class="niv" style="margin-top:6px">${esc(o.niv)}</div>
+    <div class="desc">${TIPO[o.tipo]} · ${esc(o.descripcion)}</div>
+    <div class="meta">
+      ${donde ? `<span>${esc(donde)}</span>` : ''}
+      ${o.cotizado_sin_iva ? `<span><b>${pesos0(o.cotizado_sin_iva)}</b> sin IVA</span>` : ''}
+      ${o.fecha_compromiso ? `<span>Compromiso <b>${fecha(o.fecha_compromiso)}</b></span>` : ''}
+      ${o.responsable ? `<span>${esc(o.responsable)}</span>` : ''}
+      ${o.fotos ? `<span>${o.fotos} foto${o.fotos>1?'s':''}</span>` : ''}
+    </div>
+  </button>`;
+}
+['fBuscar','fEstatus','fTipo','fPrioridad','fPatio'].forEach(id => $(id).addEventListener('input', () => { filtroCifra = null; pintarOrdenes(); }));
+$('cifrasOrdenes').addEventListener('click', e => {
+  const c = e.target.closest('.cifra'); if(!c) return;
+  filtroCifra = filtroCifra === c.dataset.k ? null : c.dataset.k; pintarOrdenes();
+});
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-orden]');
+  if(b && !e.target.closest('[data-accion]')) abrirOrden(b.dataset.orden);
+});
+
+/* ============================ TALLER ============================ */
+function pintarTaller(){
+  const patio = Number($('tPatio').value);
+  const lineas = S.lineas.filter(l => l.activo && l.patio_id === patio).sort((a,b) => a.numero - b.numero);
+  $('tSinLineas').hidden = !!lineas.length;
+  const enLinea = id => S.ordenes.find(o => o.estatus === 'en_proceso' && o.linea_id === id);
+  const libres = lineas.filter(l => !enLinea(l.id));
+
+  $('tLineas').innerHTML = lineas.map(l => {
+    const o = enLinea(l.id);
+    return `<div class="linea-box ${l.uso} ${o ? '' : 'libre'}">
+      <div class="cab"><b>${esc(l.nombre)}</b><span class="sp"></span><span>${l.uso === 'prioritaria' ? 'Con ticket' : 'Sin asignar'}</span></div>
+      <div class="cuerpo">${o ? `
+        <div class="fila1" style="display:flex;gap:6px;align-items:center"><span class="folio" style="font-family:var(--mono);font-size:12px;color:var(--muted)">${o.folio_txt}</span><span class="pri ${o.prioridad}">${PRIORIDAD[o.prioridad]}</span></div>
+        <div class="niv" data-orden="${o.id}">${esc(o.niv)}</div>
+        <div style="font-size:13px">${esc(o.descripcion)}</div>
+        <div class="sub">Entró ${hace(o.fecha_inicio)}${o.responsable ? ' · ' + esc(o.responsable) : ''}${o.fecha_compromiso ? ' · compromiso ' + fecha(o.fecha_compromiso) : ''}</div>
+        ${puedeEscribir() ? `<div class="acciones"><button class="btn chico" data-accion="terminar" data-id="${o.id}">Terminar</button>
+          <button class="btn chico claro" data-accion="sacar" data-id="${o.id}">Sacar de línea</button></div>` : ''}`
+      : 'Libre'}</div></div>`;
+  }).join('');
+
+  const cola = S.ordenes.filter(o => o.estatus === 'autorizada');
+  const tickets = cola.filter(o => o.prioridad === 'ticket');
+  const sinAsig = cola.filter(o => o.prioridad === 'sin_asignar');
+  const orden = (a, b) => (a.fecha_requerida || '9999') .localeCompare(b.fecha_requerida || '9999') || new Date(a.creado_en) - new Date(b.creado_en);
+  tickets.sort(orden); sinAsig.sort(orden);
+  $('cTicket').textContent = tickets.length; $('cSinAsignar').textContent = sinAsig.length;
+
+  const botones = o => {
+    if(!puedeEscribir()) return '';
+    const propias = libres.filter(l => (l.uso === 'prioritaria') === (o.prioridad === 'ticket'));
+    const otras = libres.filter(l => !propias.includes(l));
+    return `<div class="acciones">${propias.map(l => `<button class="btn chico" data-accion="alinea" data-id="${o.id}" data-linea="${l.id}">→ ${esc(l.nombre)}</button>`).join('')}
+      ${otras.map(l => `<button class="btn chico claro" data-accion="alinea" data-forzar="1" data-id="${o.id}" data-linea="${l.id}">→ ${esc(l.nombre)}*</button>`).join('')}
+      <button class="btn chico claro" data-accion="externo" data-id="${o.id}">Taller externo</button></div>`;
+  };
+  const item = (o, conBotones = true) => `<div class="en-cola ${conBotones ? '' : 'tenue'}">
+    <div class="fila1"><span class="folio" style="font-family:var(--mono);font-size:12px;color:var(--muted)">${o.folio_txt}</span>
+      <span class="niv" data-orden="${o.id}">${esc(o.niv)}</span><span class="est ${o.estatus}">${ESTATUS[o.estatus]}</span>
+      ${o.atrasada ? '<span class="sello mal">Atrasada</span>' : ''}</div>
+    <div class="meta">${esc(o.patio || 'Sin patio')} · ${TIPO[o.tipo]} · ${esc(o.descripcion)}${o.cliente || o.cliente_actual ? ' · ' + esc(o.cliente || o.cliente_actual) : ''}
+      ${o.fecha_requerida ? ' · se requiere ' + fecha(o.fecha_requerida) : ''} · autorizado ${pesos0(o.autorizado_sin_iva)}</div>
+    ${conBotones ? botones(o) : ''}</div>`;
+
+  $('colaTicket').innerHTML = tickets.map(o => item(o)).join('') || '<p class="vacio">Sin equipos con ticket en espera.</p>';
+  $('colaSinAsignar').innerHTML = sinAsig.map(o => item(o)).join('') || '<p class="vacio">Sin recuperados en espera.</p>';
+
+  const externos = S.ordenes.filter(o => o.estatus === 'en_proceso' && !o.linea_id);
+  $('colaExterno').innerHTML = externos.map(o => `<div class="en-cola">
+      <div class="fila1"><span class="folio" style="font-family:var(--mono);font-size:12px;color:var(--muted)">${o.folio_txt}</span>
+        <span class="niv" data-orden="${o.id}">${esc(o.niv)}</span><span class="sp"></span><span class="sub">${esc(o.taller || 'Sin taller')}</span></div>
+      <div class="meta">${esc(o.descripcion)} · desde ${fecha(o.fecha_inicio)}${o.fecha_compromiso ? ' · compromiso ' + fecha(o.fecha_compromiso) : ''}</div>
+      ${puedeEscribir() ? `<div class="acciones"><button class="btn chico" data-accion="terminar" data-id="${o.id}">Terminar</button></div>` : ''}
+    </div>`).join('') || '<p class="vacio">Nada en talleres externos.</p>';
+
+  const espera = S.ordenes.filter(o => ['abierta','cotizacion','por_autorizar'].includes(o.estatus));
+  $('colaEspera').innerHTML = espera.map(o => item(o, false)).join('') || '<p class="vacio">Todo lo abierto ya está autorizado.</p>';
+}
+$('tPatio').addEventListener('change', pintarTaller);
+
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-accion]'); if(!b) return;
+  e.stopPropagation();
+  const id = b.dataset.id, acc = b.dataset.accion;
+  if(acc === 'alinea'){
+    const forzar = !!b.dataset.forzar;
+    let motivo = null;
+    if(forzar){
+      motivo = await pedirTexto('Usar línea fuera de su regla',
+        'Las líneas 1 a 3 son para equipos con ticket y la 4 para recuperados sin asignar. Escribe por qué este equipo va a esta línea.', 'Motivo', true);
+      if(motivo === null) return;
+    }
+    await mover(id, 'en_proceso', motivo, Number(b.dataset.linea), forzar);
+  }
+  if(acc === 'externo'){
+    const o = S.ordenes.find(x => x.id === id);
+    if(o && !o.taller_id) nota('Tip: asigna el taller externo en la orden para que quede registrado.', 5000);
+    await mover(id, 'en_proceso', null, null, false);
+  }
+  if(acc === 'terminar'){
+    const t = await pedirTexto('Terminar trabajo', 'Agrega una nota opcional (qué se hizo, pendientes). Recuerda subir las fotos de terminado.', 'Nota', false);
+    if(t === null) return;
+    await mover(id, 'terminada', t);
+  }
+  if(acc === 'sacar'){
+    const t = await pedirTexto('Sacar de la línea', 'El equipo regresa a la cola de espera. ¿Por qué sale?', 'Motivo', true);
+    if(t === null) return;
+    await mover(id, 'liberar_linea', t);
+  }
+});
+
+async function mover(id, estatus, notaTxt, linea = null, forzar = false){
+  const { error } = await db.rpc('cambiar_estatus', { p_orden:id, p_estatus:estatus, p_nota:notaTxt || null, p_linea:linea, p_forzar:forzar });
+  if(error){ nota(errTxt(error), 7000); return false; }
+  nota('Listo');
+  await refrescar();
+  return true;
+}
+
+/* ============================ POR AUTORIZAR ============================ */
+function puedoResolver(c){
+  if(!S.aut) return false;
+  if(S.aut === 'gerencia') return true;
+  return c.nivel_requerido === 'jefatura';
+}
+function pintarAutorizar(){
+  const lim = limite();
+  $('franjaRegla').querySelector('p').innerHTML =
+    `Cotizaciones hasta <b>${pesos0(lim)}</b> antes de IVA, sumando las del mismo equipo: autoriza la jefatura (Ilse Cortés o Rogelio Morejón) con justificación. Si la suma supera <b>${pesos0(lim)}</b>: autoriza la gerencia (Francisco Mendoza).`;
+  const pend = S.cotPend.filter(c => c.estatus === 'pendiente');
+  const mias = pend.filter(puedoResolver);
+  $('cAutorizar').textContent = S.aut ? mias.length : pend.length;
+
+  const ver = $('aVer').value;
+  let lista = ver === 'mias' ? (S.aut ? mias : pend.filter(c => c.creado_por === S.yo.id))
+            : ver === 'todas' ? pend
+            : S.cotPend.filter(c => c.estatus !== 'pendiente').reverse();
+  if(!lista.length){
+    $('listaAutorizar').innerHTML = `<p class="vacio">${ver === 'resueltas' ? 'Sin cotizaciones resueltas en los últimos 30 días.' :
+      S.aut ? 'No tienes cotizaciones por autorizar.' : 'No hay cotizaciones pendientes tuyas.'}</p>`;
+    return;
+  }
+  $('listaAutorizar').innerHTML = lista.map(c => tarjetaCot(c, true)).join('');
+}
+$('aVer').addEventListener('change', pintarAutorizar);
+
+function tarjetaCot(c, conOrden = false){
+  const total = Number(c.total) || Number(c.monto_sin_iva) * (1 + Number(c.iva_tasa || tasaIva()));
+  const quien = c.nivel_requerido === 'gerencia' ? 'Gerencia' : 'Jefatura';
+  const acciones = [];
+  if(c.estatus === 'pendiente'){
+    if(puedoResolver(c)){
+      acciones.push(`<button class="btn chico" data-cot="autorizar" data-id="${c.id}">Autorizar</button>`);
+      acciones.push(`<button class="btn chico alerta" data-cot="rechazar" data-id="${c.id}">Rechazar</button>`);
+    } else if(S.aut === 'jefatura' && c.nivel_requerido === 'gerencia' && !c.vobo_por){
+      acciones.push(`<button class="btn chico navy" data-cot="vobo" data-id="${c.id}">Dar visto bueno</button>`);
+    }
+    if(c.creado_por === S.yo.id || S.aut) acciones.push(`<button class="btn chico claro" data-cot="cancelar" data-id="${c.id}">Cancelar</button>`);
+  }
+  if(c.archivo_ruta) acciones.push(`<button class="btn chico claro" data-cot="archivo" data-ruta="${esc(c.archivo_ruta)}">Ver cotización</button>`);
+  return `<div class="cot ${c.estatus}">
+    ${conOrden ? `<div class="fila1" style="margin-bottom:4px"><span style="font-family:var(--mono);font-size:12px;color:var(--muted)">${c.folio_txt}</span>
+      <b style="font-family:var(--mono);cursor:pointer" data-orden="${c.orden_id}">${esc(c.niv)}</b>
+      <span class="pri ${c.prioridad}">${PRIORIDAD[c.prioridad]}</span><span class="sub" style="flex:1">${esc(c.orden_descripcion||'')}</span></div>` : ''}
+    <div class="fila1">
+      <span class="monto">${pesos(c.monto_sin_iva)}</span><span class="sub">antes de IVA · ${pesos(total)} con IVA</span>
+      <span class="sp"></span>
+      <span class="sello ${c.estatus==='autorizada'?'ok':c.estatus==='pendiente'?'':'mal'}">${c.estatus === 'pendiente' ? 'Autoriza: ' + quien : c.estatus}</span>
+    </div>
+    <div style="font-size:14px;margin-top:2px"><b>${esc(c.concepto)}</b>${c.proveedor || c.taller ? ' · ' + esc(c.proveedor || c.taller) : ''}</div>
+    <div class="meta">Acumulado del equipo: <b>${pesos(c.acumulado_equipo)}</b> sin IVA · enviada por ${esc(c.creado_por_nombre || '—')} ${hace(c.creado_en)}</div>
+    ${c.vobo_por ? `<div class="meta">Visto bueno de ${esc(c.vobo_por_nombre)} ${c.vobo_nota ? '· ' + esc(c.vobo_nota) : ''}</div>` : ''}
+    ${c.resuelto_por ? `<div class="just"><b>${c.estatus === 'autorizada' ? 'Autorizó' : c.estatus === 'rechazada' ? 'Rechazó' : 'Canceló'} ${esc(c.resuelto_por_nombre||'')}</b> · ${fechaHora(c.resuelto_en)}${c.justificacion ? '<br>' + esc(c.justificacion) : ''}</div>` : ''}
+    ${acciones.length ? `<div class="acciones" style="margin-top:8px">${acciones.join('')}</div>` : ''}
+  </div>`;
+}
+
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-cot]'); if(!b) return;
+  e.stopPropagation();
+  const id = b.dataset.id, acc = b.dataset.cot;
+  const c = S.cotPend.find(x => x.id === id) || (S.cotOrden || []).find(x => x.id === id);
+  if(acc === 'archivo'){
+    const { data, error } = await db.storage.from(BUCKET_ADJ).createSignedUrl(b.dataset.ruta, 600);
+    if(error){ nota(errTxt(error)); return; }
+    window.open(data.signedUrl, '_blank'); return;
+  }
+  let res;
+  if(acc === 'autorizar'){
+    const obligatoria = S.aut !== 'gerencia';
+    const t = await pedirTexto('Autorizar cotización',
+      `${c ? pesos(c.monto_sin_iva) + ' antes de IVA · ' + esc(c.concepto) + '. ' : ''}${obligatoria ? 'Escribe la justificación (obligatoria).' : 'Puedes dejar un comentario (opcional).'}`,
+      'Justificación', obligatoria);
+    if(t === null) return;
+    res = await db.rpc('resolver_cotizacion', { p_id:id, p_autorizar:true, p_texto:t || null });
+  }
+  if(acc === 'rechazar'){
+    const t = await pedirTexto('Rechazar cotización', 'Escribe el motivo del rechazo. Le llega a quien la registró.', 'Motivo', true);
+    if(t === null) return;
+    res = await db.rpc('resolver_cotizacion', { p_id:id, p_autorizar:false, p_texto:t });
+  }
+  if(acc === 'vobo'){
+    const t = await pedirTexto('Visto bueno', 'La cotización supera el tope y la autoriza la gerencia. Tu visto bueno queda registrado para Francisco Mendoza.', 'Comentario (opcional)', false);
+    if(t === null) return;
+    res = await db.rpc('visto_bueno', { p_id:id, p_nota:t || null });
+  }
+  if(acc === 'cancelar'){
+    const t = await pedirTexto('Cancelar cotización', 'Ya no se va a usar (por ejemplo, llegó una mejor). Deja de contar en el acumulado del equipo.', 'Motivo', true);
+    if(t === null) return;
+    res = await db.rpc('cancelar_cotizacion', { p_id:id, p_motivo:t });
+  }
+  if(res && res.error){ nota(errTxt(res.error), 8000); return; }
+  nota('Listo');
+  await refrescar();
+});
+
+/* ============================ DETALLE DE ORDEN ============================ */
+function abrirPanel(titulo, tipo){
+  $('panelTitulo').textContent = titulo;
+  $('panel').dataset.tipo = tipo;
+  $('panel').classList.add('on'); $('telon').classList.add('on');
+  $('panel').setAttribute('aria-hidden', 'false');
+}
+function cerrarPanel(){
+  $('panel').classList.remove('on'); $('telon').classList.remove('on');
+  $('panel').setAttribute('aria-hidden', 'true');
+  S.ordenAbierta = null;
+  const u = new URL(location); u.searchParams.delete('orden'); history.replaceState(null, '', u);
+}
+$('cerrarPanel').onclick = cerrarPanel; $('telon').onclick = cerrarPanel;
+document.addEventListener('keydown', e => { if(e.key === 'Escape'){ if($('visor').classList.contains('on')) cerrarVisor(); else if($('panel').classList.contains('on')) cerrarPanel(); } });
+
+async function abrirOrden(id, silencioso = false){
+  S.ordenAbierta = id;
+  const u = new URL(location); u.searchParams.set('orden', id); history.replaceState(null, '', u);
+  if(!silencioso){ abrirPanel('Cargando…', 'orden'); $('panelCuerpo').innerHTML = '<p class="cargando">Cargando orden…</p>'; $('panelPie').innerHTML = ''; }
+  const [o, cs, bi, fo] = await Promise.all([
+    db.from('v_ordenes').select('*').eq('id', id).maybeSingle(),
+    db.from('v_cotizaciones').select('*').eq('orden_id', id).order('creado_en'),
+    db.from('v_bitacora').select('*').eq('orden_id', id).order('en', { ascending:false }),
+    db.from('v_fotos').select('*').eq('orden_id', id).order('tomada_en')
+  ]);
+  if(S.ordenAbierta !== id) return;
+  if(o.error || !o.data){ $('panelCuerpo').innerHTML = `<p class="vacio">No se pudo abrir la orden: ${esc(errTxt(o.error) || 'no existe')}</p>`; return; }
+  const ord = o.data;
+  S.cotOrden = cs.data || [];
+  abrirPanel(`${ord.folio_txt} · ${ord.niv}`, 'orden');
+  const fotos = fo.data || [];
+  const acumEquipo = (await db.rpc('acumulado_equipo', { p_equipo: ord.equipo_id })).data || 0;
+
+  const pasos = ['abierta','cotizacion','por_autorizar','autorizada','en_proceso','terminada','entregada'];
+  const iActual = pasos.indexOf(ord.estatus);
+  const chain = ord.estatus === 'cancelada'
+    ? `<div class="chain"><div class="chev mal"><strong>Cancelada</strong>${esc(ord.motivo_cancelacion || '')}</div></div>`
+    : `<div class="chain">${pasos.map((p, i) => `<div class="chev ${i < iActual ? 'hecho' : i === iActual ? (p === 'por_autorizar' ? 'turno' : 'info') : ''}"><strong>${ESTATUS[p]}</strong></div>`).join('')}</div>`;
+
+  const editable = puedeEscribir() && !['entregada','cancelada'].includes(ord.estatus);
+  const lineasPatio = S.lineas.filter(l => l.activo && l.patio_id === ord.patio_id);
+  const ocupadas = new Set(S.ordenes.filter(x => x.estatus === 'en_proceso' && x.linea_id && x.id !== ord.id).map(x => x.linea_id));
+
+  // acciones del trabajo
+  let acc = '';
+  if(puedeEscribir()){
+    if(ord.estatus === 'autorizada'){
+      const opc = lineasPatio.map(l => `<option value="${l.id}" ${ocupadas.has(l.id) ? 'disabled' : ''}>${esc(l.nombre)} · ${l.uso === 'prioritaria' ? 'con ticket' : 'sin asignar'}${ocupadas.has(l.id) ? ' (ocupada)' : ''}</option>`).join('');
+      acc = `<div class="bloque"><h3>Iniciar trabajo</h3>
+        <div class="campos">
+          <label class="campo"><span class="lbl">Dónde</span><select id="oDonde">${opc}<option value="">Taller externo / sin línea</option></select></label>
+          <label class="campo"><span class="lbl">Nota</span><input id="oDondeNota" placeholder="Opcional; obligatoria si la línea no corresponde"></label>
+        </div>
+        <div class="acciones" style="margin-top:10px"><button class="btn" id="oIniciar">Iniciar trabajo</button></div></div>`;
+    } else if(ord.estatus === 'en_proceso'){
+      acc = `<div class="bloque foco"><h3>${ord.linea ? 'Trabajando en ' + esc(ord.linea) : 'Trabajando' + (ord.taller ? ' en ' + esc(ord.taller) : '')}</h3>
+        <p class="t" style="font-size:13px">Desde ${fechaHora(ord.fecha_inicio)}</p>
+        <div class="acciones" style="margin-top:10px"><button class="btn" data-accion="terminar" data-id="${ord.id}">Marcar terminado</button>
+        ${ord.linea_id ? `<button class="btn claro" data-accion="sacar" data-id="${ord.id}">Sacar de la línea</button>` : ''}</div></div>`;
+    } else if(ord.estatus === 'terminada'){
+      acc = `<div class="bloque"><h3>Trabajo terminado</h3><p class="sub">Sube fotos de terminado y de entrega antes de liberar el equipo.</p>
+        <div class="acciones" style="margin-top:10px"><button class="btn" id="oEntregar">Liberar / entregar equipo</button></div></div>`;
+    }
+  }
+
+  // previsualización de la regla al capturar
+  const formCot = editable && !['terminada'].includes(ord.estatus) ? `
+    <details style="margin-top:6px" ${S.cotOrden.length ? '' : 'open'}><summary style="cursor:pointer;font-weight:600;color:var(--navy)">+ Agregar cotización</summary>
+      <div class="campos" style="margin-top:10px">
+        <label class="campo ancho"><span class="lbl">Concepto <i>*</i></span><input id="cConcepto" placeholder="Ej. Cambio de balatas y tambores traseros"></label>
+        <label class="campo"><span class="lbl">Monto antes de IVA <i>*</i></span><input id="cMonto" type="number" min="0" step="0.01" inputmode="decimal"></label>
+        <label class="campo"><span class="lbl">Taller o proveedor</span>
+          <select id="cTaller"><option value="">— Otro (escribir) —</option>${S.talleres.filter(t => t.activo).map(t => `<option value="${t.id}" ${t.id === ord.taller_id ? 'selected' : ''}>${esc(t.nombre)}</option>`).join('')}</select></label>
+        <label class="campo"><span class="lbl">Proveedor (si no está en la lista)</span><input id="cProveedor"></label>
+        <label class="campo"><span class="lbl">Archivo de la cotización</span><input id="cArchivo" type="file" accept="application/pdf,image/*"></label>
+      </div>
+      <div class="regla" id="cRegla">Acumulado actual del equipo: <b>&nbsp;${pesos(acumEquipo)}</b>&nbsp;sin IVA.</div>
+      <div class="acciones" style="margin-top:10px"><button class="btn navy" id="cGuardar">Enviar a autorización</button></div>
+    </details>` : '';
+
+  $('panelCuerpo').innerHTML = `
+    ${chain}
+    <div class="bloque" style="margin-top:14px">
+      <div class="fila1" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+        <span class="est ${ord.estatus}">${ESTATUS[ord.estatus]}</span><span class="pri ${ord.prioridad}">${PRIORIDAD[ord.prioridad]}</span>
+        <span class="sello oscuro">${TIPO[ord.tipo]}</span>${ord.atrasada ? '<span class="sello mal">Atrasada</span>' : ''}
+        <span class="sp"></span>${editable ? '<button class="btn chico claro" id="oEditar">Editar datos</button>' : ''}
+      </div>
+      <p style="font-size:15px;margin-bottom:12px">${esc(ord.descripcion)}</p>
+      ${ord.trabajos?.length ? `<div class="nivs" style="margin-bottom:12px">${ord.trabajos.map(t => `<span class="pieza">${esc((S.tipos.find(x => x.clave === t) || {}).nombre || t)}</span>`).join('')}</div>` : ''}
+      <dl class="datos">
+        <div><dt>Equipo</dt><dd class="mono">${esc(ord.niv)}</dd></div>
+        <div><dt>Placa · tipo</dt><dd>${esc(ord.placa || '—')} · ${esc(ord.tipo_equipo || '—')} ${esc(ord.marca || '')} ${ord.anio || ''}</dd></div>
+        <div><dt>Patio</dt><dd>${esc(ord.patio || '—')}</dd></div>
+        <div><dt>Asignación del equipo</dt><dd>${esc(ord.estatus_asignacion || '—')}${ord.cliente_actual ? ' · ' + esc(ord.cliente_actual) : ''}</dd></div>
+        <div><dt>Cliente (ticket)</dt><dd>${esc(ord.cliente || '—')}</dd></div>
+        <div><dt>Se requiere para</dt><dd>${fecha(ord.fecha_requerida)}</dd></div>
+        <div><dt>Taller</dt><dd>${esc(ord.taller || '—')}</dd></div>
+        <div><dt>Responsable</dt><dd>${esc(ord.responsable || '—')}</dd></div>
+        <div><dt>Fecha compromiso</dt><dd>${fecha(ord.fecha_compromiso)}</dd></div>
+        <div><dt>Creada por</dt><dd>${esc(ord.creado_por_nombre || '—')} · ${fecha(ord.creado_en)}</dd></div>
+      </dl>
+      <div id="oEdicion"></div>
+    </div>
+    ${acc}
+    <div class="bloque">
+      <div class="importes">
+        <div><div class="g">${pesos0(ord.autorizado_sin_iva)}</div><div class="t">autorizado sin IVA</div></div>
+        <div><div class="v">${pesos(ord.cotizado_sin_iva)}</div><div class="t">cotizado vivo</div></div>
+        <div><div class="v">${pesos(acumEquipo)}</div><div class="t">acumulado del equipo</div></div>
+      </div>
+      <h3>Cotizaciones</h3>
+      ${S.cotOrden.length ? S.cotOrden.map(c => tarjetaCot(c)).join('') : `<p class="sub" style="margin-bottom:8px">${ord.requiere_cotizacion ? 'Sin cotizaciones todavía. El trabajo no puede iniciar hasta que una esté autorizada.' : 'Esta orden se marcó sin costo; no requiere cotización.'}</p>`}
+      ${formCot}
+    </div>
+    <div class="bloque">
+      <h3>Fotos</h3>
+      <div class="etapas" id="oEtapas">${Object.entries(ETAPAS).map(([k, v]) => `<button data-etapa="${k}" aria-pressed="${k === S.etapaFoto}">${v} <span class="sub" style="display:inline">${fotos.filter(f => f.etapa === k).length}</span></button>`).join('')}</div>
+      <div class="galeria" id="oGaleria"></div>
+    </div>
+    <div class="bloque">
+      <h3>Bitácora</h3>
+      ${puedeEscribir() ? `<div style="display:flex;gap:8px;margin-bottom:14px"><input id="oComentario" placeholder="Escribe un comentario o avance"><button class="btn chico navy" id="oComentar">Agregar</button></div>` : ''}
+      <ul class="linea">${(bi.data || []).map(b => `<li class="${b.tipo === 'autorizacion' || b.tipo === 'alta' ? 'ok' : b.tipo === 'rechazo' || b.tipo === 'cotizacion_cancelada' ? 'bad' : b.tipo === 'cotizacion' ? 'warn' : ''}">
+        <div class="t">${esc(b.texto || b.tipo)}</div><div class="m">${esc(b.por_nombre || '')} · ${fechaHora(b.en)}</div></li>`).join('')}</ul>
+    </div>`;
+
+  $('panelPie').innerHTML = puedeEscribir() && !['entregada','cancelada'].includes(ord.estatus)
+    ? `<button class="btn chico alerta" id="oCancelar">Cancelar orden</button><span class="sp"></span><button class="btn chico claro" onclick="document.getElementById('cerrarPanel').click()">Cerrar</button>`
+    : `<button class="btn chico claro" onclick="document.getElementById('cerrarPanel').click()">Cerrar</button>`;
+
+  pintarGaleria(ord, fotos);
+  $('oEtapas').onclick = e => { const b = e.target.closest('[data-etapa]'); if(!b) return; S.etapaFoto = b.dataset.etapa;
+    $('oEtapas').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); pintarGaleria(ord, fotos); };
+
+  if($('oComentar')) $('oComentar').onclick = async () => {
+    const t = $('oComentario').value.trim(); if(!t) return;
+    const { error } = await db.rpc('comentar', { p_orden:ord.id, p_texto:t });
+    if(error){ nota(errTxt(error)); return; }
+    abrirOrden(ord.id, true);
+  };
+  if($('oCancelar')) $('oCancelar').onclick = async () => {
+    const t = await pedirTexto('Cancelar orden', 'Las cotizaciones pendientes también se cancelan.', 'Motivo', true);
+    if(t === null) return;
+    if(await mover(ord.id, 'cancelada', t)) abrirOrden(ord.id, true);
+  };
+  if($('oEntregar')) $('oEntregar').onclick = async () => {
+    const t = await pedirTexto('Liberar equipo', 'El equipo queda listo y la orden se cierra.', 'Nota (opcional)', false);
+    if(t === null) return;
+    if(await mover(ord.id, 'entregada', t)) abrirOrden(ord.id, true);
+  };
+  if($('oIniciar')) $('oIniciar').onclick = async () => {
+    const lineaId = $('oDonde').value ? Number($('oDonde').value) : null;
+    const l = S.lineas.find(x => x.id === lineaId);
+    const fuera = l && ((l.uso === 'prioritaria') !== (ord.prioridad === 'ticket'));
+    const n = $('oDondeNota').value.trim();
+    if(fuera && !n){ nota('Esta línea no corresponde a la prioridad del equipo: escribe el motivo en la nota.', 6000); $('oDondeNota').focus(); return; }
+    if(await mover(ord.id, 'en_proceso', n, lineaId, !!fuera)) abrirOrden(ord.id, true);
+  };
+  if($('oEditar')) $('oEditar').onclick = () => formEditar(ord);
+
+  if($('cMonto')){
+    const regla = () => {
+      const m = Number($('cMonto').value) || 0;
+      const total = acumEquipo + m, lim = limite(), ger = total > lim;
+      $('cRegla').className = 'regla' + (ger ? ' ger' : '');
+      $('cRegla').innerHTML = m
+        ? `Acumulado del equipo con esta cotización: <b>&nbsp;${pesos(total)}</b>&nbsp;sin IVA (${pesos(m * (1 + tasaIva()))} con IVA). ${ger
+            ? `Supera ${pesos0(lim)}: <b>&nbsp;la autoriza Francisco Mendoza</b>.`
+            : `Dentro del tope de ${pesos0(lim)}: la autoriza <b>&nbsp;Ilse Cortés o Rogelio Morejón</b>&nbsp;con justificación.`}`
+        : `Acumulado actual del equipo: <b>&nbsp;${pesos(acumEquipo)}</b>&nbsp;sin IVA. Tope: ${pesos0(lim)}.`;
+    };
+    $('cMonto').oninput = regla; regla();
+    $('cGuardar').onclick = async () => {
+      const concepto = $('cConcepto').value.trim(), monto = Number($('cMonto').value);
+      if(!concepto){ nota('Escribe el concepto'); $('cConcepto').focus(); return; }
+      if(!(monto > 0)){ nota('Escribe el monto antes de IVA'); $('cMonto').focus(); return; }
+      $('cGuardar').disabled = true;
+      let ruta = null;
+      const f = $('cArchivo').files[0];
+      if(f){
+        const ext = (f.name.split('.').pop() || 'pdf').toLowerCase().replace(/[^a-z0-9]/g, '');
+        ruta = `${ord.id}/${uuid()}.${ext}`;
+        const up = await db.storage.from(BUCKET_ADJ).upload(ruta, f, { contentType: f.type || 'application/octet-stream' });
+        if(up.error){ $('cGuardar').disabled = false; nota('No se pudo subir el archivo: ' + errTxt(up.error), 7000); return; }
+      }
+      const tallerId = $('cTaller').value ? Number($('cTaller').value) : null;
+      const { error } = await db.rpc('agregar_cotizacion', { p_orden:ord.id, p_concepto:concepto, p_monto_sin_iva:monto,
+        p_proveedor: $('cProveedor').value.trim() || null, p_taller: tallerId, p_archivo: ruta });
+      $('cGuardar').disabled = false;
+      if(error){ nota(errTxt(error), 7000); return; }
+      nota('Cotización enviada a autorización');
+      await refrescar(); abrirOrden(ord.id, true);
+    };
+  }
+}
+
+function formEditar(ord){
+  const resp = S.personal.map(p => `<option value="${p.id}" ${p.id === ord.responsable_id ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('');
+  $('oEdicion').innerHTML = `<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:14px">
+    <div class="campos">
+      <label class="campo ancho"><span class="lbl">Descripción</span><textarea id="eDesc">${esc(ord.descripcion)}</textarea></label>
+      <label class="campo"><span class="lbl">Prioridad</span><select id="ePri"><option value="ticket" ${ord.prioridad==='ticket'?'selected':''}>Con ticket (asignado a cliente)</option><option value="sin_asignar" ${ord.prioridad==='sin_asignar'?'selected':''}>Sin asignar</option></select></label>
+      <label class="campo"><span class="lbl">Cliente (ticket)</span><input id="eCliente" value="${esc(ord.cliente || '')}"></label>
+      <label class="campo"><span class="lbl">Se requiere para</span><input id="eReq" type="date" value="${ord.fecha_requerida || ''}"></label>
+      <label class="campo"><span class="lbl">Fecha compromiso</span><input id="eComp" type="date" value="${ord.fecha_compromiso || ''}"></label>
+      <label class="campo"><span class="lbl">Taller</span><select id="eTaller"><option value="">—</option>${S.talleres.filter(t => t.activo || t.id === ord.taller_id).map(t => `<option value="${t.id}" ${t.id === ord.taller_id ? 'selected' : ''}>${esc(t.nombre)}</option>`).join('')}</select></label>
+      <label class="campo"><span class="lbl">Responsable</span><select id="eResp"><option value="">— Otro (escribir) —</option>${resp}</select></label>
+      <label class="campo"><span class="lbl">Responsable externo</span><input id="eRespTxt" value="${esc(ord.responsable_id ? '' : (ord.responsable_texto || ''))}" placeholder="Nombre del mecánico o contacto"></label>
+    </div>
+    <div class="acciones" style="margin-top:12px"><button class="btn chico navy" id="eGuardar">Guardar cambios</button><button class="btn chico claro" id="eCerrar">Cancelar</button></div></div>`;
+  $('eCerrar').onclick = () => $('oEdicion').innerHTML = '';
+  $('eGuardar').onclick = async () => {
+    const cambios = {
+      descripcion: $('eDesc').value.trim() || ord.descripcion,
+      prioridad: $('ePri').value,
+      cliente: $('eCliente').value.trim() || null,
+      fecha_requerida: $('eReq').value || null,
+      fecha_compromiso: $('eComp').value || null,
+      taller_id: $('eTaller').value ? Number($('eTaller').value) : null,
+      responsable_id: $('eResp').value || null,
+      responsable_texto: $('eResp').value ? null : ($('eRespTxt').value.trim() || null),
+      actualizado_en: new Date().toISOString()
+    };
+    const { error } = await db.from('ordenes').update(cambios).eq('id', ord.id);
+    if(error){ nota(errTxt(error), 7000); return; }
+    const cambiados = Object.keys(cambios).filter(k => k !== 'actualizado_en' && String(cambios[k] ?? '') !== String(ord[k] ?? ''));
+    if(cambiados.length) await db.rpc('comentar', { p_orden:ord.id, p_texto:'Datos actualizados: ' + cambiados.join(', ').replace(/_/g, ' ') });
+    nota('Guardado');
+    await refrescar(); abrirOrden(ord.id, true);
+  };
+}
+
+/* ---------------------------- fotos ---------------------------- */
+const urlsFirmadas = new Map();
+async function firmar(rutas){
+  const faltan = rutas.filter(r => !urlsFirmadas.has(r));
+  if(faltan.length){
+    const { data } = await db.storage.from(BUCKET_FOTOS).createSignedUrls(faltan, 3600);
+    (data || []).forEach(d => { if(d.signedUrl) urlsFirmadas.set(d.path, d.signedUrl); });
+  }
+  return rutas.map(r => urlsFirmadas.get(r));
+}
+async function pintarGaleria(ord, fotos){
+  const et = S.etapaFoto;
+  const lista = fotos.filter(f => f.etapa === et);
+  const urls = await firmar(lista.map(f => f.ruta_storage));
+  const subir = puedeEscribir() && !['cancelada'].includes(ord.estatus) ? `<label class="subir">
+      <svg viewBox="0 0 24 24"><path d="M3 7h3l2-3h8l2 3h3v13H3z"/><circle cx="12" cy="13" r="4"/></svg>
+      Tomar o subir fotos de ${ETAPAS[et].toLowerCase()}
+      <input type="file" accept="image/*" multiple id="oFotos"></label>` : '';
+  $('oGaleria').innerHTML = subir + lista.map((f, i) => `<div class="ft" data-foto="${i}"><img loading="lazy" src="${urls[i] || ''}" alt=""><span>${fechaHora(f.tomada_en)}</span></div>`).join('')
+    + (!lista.length && !subir ? '<p class="sub">Sin fotos en esta etapa.</p>' : '');
+  $('oGaleria').querySelectorAll('[data-foto]').forEach(el => el.onclick = () => {
+    const f = lista[Number(el.dataset.foto)]; verFoto(urls[Number(el.dataset.foto)], `${ETAPAS[f.etapa]} · ${fechaHora(f.tomada_en)} · ${f.subida_por_nombre || ''}`);
+  });
+  if($('oFotos')) $('oFotos').onchange = async e => {
+    const files = [...e.target.files]; if(!files.length) return;
+    const ok = await subirFotos(files, { equipo_id:ord.equipo_id, patio_id:ord.patio_id, niv:ord.niv, orden_id:ord.id, etapa:et });
+    if(ok) abrirOrden(ord.id, true);
+  };
+}
+function comprimir(file, max = 1600, q = 0.78){
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      const r = Math.min(1, max / Math.max(img.width, img.height));
+      const cv = document.createElement('canvas'); cv.width = Math.round(img.width * r); cv.height = Math.round(img.height * r);
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      cv.toBlob(b => { URL.revokeObjectURL(url); b ? res({ blob:b, w:cv.width, h:cv.height }) : rej(new Error('No se pudo procesar la imagen')); }, 'image/jpeg', q);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('Formato de imagen no soportado')); };
+    img.src = url;
+  });
+}
+async function subirFotos(files, d){
+  let hechas = 0, fallas = [];
+  for(const f of files){
+    nota(`Subiendo foto ${hechas + fallas.length + 1} de ${files.length}…`, 60000);
+    try{
+      const c = await comprimir(f);
+      const id = uuid();
+      const ruta = `${d.niv || 'SIN_NIV'}/operaciones/${d.orden_id || ('revision-' + d.revision_id)}/${id}.jpg`;
+      const up = await db.storage.from(BUCKET_FOTOS).upload(ruta, c.blob, { contentType:'image/jpeg', upsert:true });
+      if(up.error) throw up.error;
+      const r1 = await core.from('fotos').insert({ id, equipo_id:d.equipo_id, patio_id:d.patio_id || null, modulo_origen:'operaciones',
+        etapa:d.etapa, angulo:null, ruta_storage:ruta, ancho:c.w, alto:c.h, bytes:c.blob.size, publica:false,
+        subida_por:S.yo.id, tomada_en: new Date(f.lastModified || Date.now()).toISOString() });
+      if(r1.error) throw r1.error;
+      const r2 = await db.from('orden_fotos').insert({ foto_id:id, orden_id:d.orden_id || null, revision_id:d.revision_id || null, etapa:d.etapa });
+      if(r2.error) throw r2.error;
+      hechas++;
+    }catch(err){ fallas.push(errTxt(err)); }
+  }
+  nota(fallas.length ? `Subieron ${hechas}; fallaron ${fallas.length}: ${fallas[0]}` : `${hechas} foto${hechas > 1 ? 's' : ''} guardada${hechas > 1 ? 's' : ''}`, 6000);
+  return hechas > 0;
+}
+function verFoto(src, txt){ if(!src) return; $('visorImg').src = src; $('visorTxt').textContent = txt || ''; $('visor').classList.add('on'); }
+function cerrarVisor(){ $('visor').classList.remove('on'); $('visorImg').src = ''; }
+$('visorCerrar').onclick = cerrarVisor;
+
+/* ============================ BUSCADOR DE EQUIPO ============================ */
+function buscadorEquipo(cont, alElegir, inicial = null){
+  cont.innerHTML = `<input id="bqEq" placeholder="Escribe NIV o placa (mínimo 3 caracteres)" spellcheck="false" autocomplete="off" style="text-transform:uppercase">
+    <div id="bqRes"></div>`;
+  let t, ultimo = '';
+  const pintarElegido = e => {
+    const abiertas = S.ordenes.filter(o => o.equipo_id === e.id && ACTIVAS.includes(o.estatus));
+    cont.innerHTML = `<div class="eq-elegido"><span class="niv">${esc(e.niv)}</span>
+      <span class="sub" style="flex:1">${esc(e.placa || 'sin placa')} · ${esc(nombrePatio(e.patio_fisico_id || e.patio_id))} · ${esc(e.estatus_asignacion || '')}${e.cliente_actual ? ' · ' + esc(e.cliente_actual) : ''}</span>
+      <button class="btn chico claro" type="button" id="bqCambiar">Cambiar</button></div>
+      ${abiertas.length ? `<p class="aviso" style="background:var(--amber-soft);border-color:var(--amber);color:#6B4A00">Ya tiene ${abiertas.length} orden(es) abierta(s): ${abiertas.map(o => `${o.folio_txt} (${TIPO[o.tipo].toLowerCase()}, ${ESTATUS[o.estatus].toLowerCase()})`).join(', ')}.</p>` : ''}`;
+    $('bqCambiar').onclick = () => buscadorEquipo(cont, alElegir);
+    alElegir(e);
+  };
+  if(inicial){ pintarElegido(inicial); return; }
+  $('bqEq').oninput = () => {
+    clearTimeout(t);
+    t = setTimeout(async () => {
+      const q = $('bqEq').value.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
+      if(q.length < 3){ $('bqRes').innerHTML = ''; return; }
+      ultimo = q;
+      const { data, error } = await core.from('equipos')
+        .select('id,niv,placa,patio_id,patio_fisico_id,estatus_operativo,estatus_asignacion,cliente_actual')
+        .eq('activo', true).or(`niv.ilike.%${q}%,placa.ilike.%${q}%`).order('niv').limit(15);
+      if(q !== ultimo) return;
+      if(error){ $('bqRes').innerHTML = `<p class="sub">${esc(errTxt(error))}</p>`; return; }
+      $('bqRes').innerHTML = data.length ? `<div class="resultados-eq">${data.map((e, i) => `<button type="button" data-i="${i}">
+          <span class="niv">${esc(e.niv)}</span><small>${esc(e.placa || 'sin placa')} · ${esc(nombrePatio(e.patio_fisico_id || e.patio_id))} · ${esc(e.estatus_operativo || '')} · ${esc(e.estatus_asignacion || '')}${e.cliente_actual ? ' · ' + esc(e.cliente_actual) : ''}</small></button>`).join('')}</div>`
+        : '<p class="sub" style="margin-top:6px">Ningún equipo coincide.</p>';
+      $('bqRes').querySelectorAll('[data-i]').forEach(b => b.onclick = () => pintarElegido(data[Number(b.dataset.i)]));
+    }, 280);
+  };
+  setTimeout(() => $('bqEq')?.focus(), 250);
+}
+const nombrePatio = id => (S.patios.find(p => p.id === id) || {}).nombre || 'sin patio';
+
+/* ============================ NUEVA ORDEN ============================ */
+function nuevaOrden(pre = {}){
+  S.ordenAbierta = null;
+  abrirPanel('Nueva orden de trabajo', 'nueva');
+  let equipo = pre.equipo || null;
+  const tiposHtml = cat => S.tipos.filter(t => t.activo && t.categoria === cat).map(t =>
+    `<label><input type="checkbox" value="${t.clave}" ${(pre.trabajos || []).includes(t.clave) ? 'checked' : ''}> ${esc(t.nombre)}</label>`).join('');
+  $('panelCuerpo').innerHTML = `
+    <div class="bloque"><h3>Equipo</h3><div id="nEquipo"></div></div>
+    <div class="bloque">
+      <div class="segmento" id="nTipo"><button type="button" data-v="reparacion" aria-pressed="${(pre.tipo || 'reparacion') === 'reparacion'}">Reparación</button><button type="button" data-v="adecuacion" aria-pressed="${pre.tipo === 'adecuacion'}">Adecuación</button></div>
+      <div class="campos">
+        <div class="campo ancho"><span class="lbl">Trabajos</span><div class="chips" id="nTrabajos"></div></div>
+        <label class="campo ancho"><span class="lbl">Descripción del trabajo <i>*</i></span><textarea id="nDesc" placeholder="Qué se tiene que hacer y por qué">${esc(pre.descripcion || '')}</textarea></label>
+        <label class="campo"><span class="lbl">Prioridad</span><select id="nPri"><option value="ticket">Con ticket (asignado a cliente)</option><option value="sin_asignar">Recuperado sin asignar</option></select>
+          <span class="pista" id="nPriPista"></span></label>
+        <label class="campo"><span class="lbl">Cliente (si tiene ticket)</span><input id="nCliente"></label>
+        <label class="campo"><span class="lbl">Se requiere para</span><input id="nReq" type="date"></label>
+        <label class="campo"><span class="lbl">Fecha compromiso de taller</span><input id="nComp" type="date"></label>
+        <label class="campo"><span class="lbl">Taller</span><select id="nTaller"><option value="">— Por definir —</option>${S.talleres.filter(t => t.activo).map(t => `<option value="${t.id}">${esc(t.nombre)}</option>`).join('')}</select></label>
+        <label class="campo"><span class="lbl">Responsable</span><select id="nResp"><option value="">— Por definir —</option>${S.personal.map(p => `<option value="${p.id}">${esc(p.nombre)}</option>`).join('')}</select></label>
+        <label class="campo ancho opcion"><input type="checkbox" id="nSinCosto"> Sin costo (no requiere cotización ni autorización; por ejemplo, refacción de almacén)</label>
+        <div class="campo ancho"><span class="lbl">Fotos de condición</span>
+          <label class="soltar" id="nFotosLbl"><b>Tomar o elegir fotos</b><span>Opcional. Documenta cómo está el equipo antes del trabajo.</span><input type="file" accept="image/*" multiple id="nFotos"></label></div>
+      </div>
+    </div>`;
+  $('panelPie').innerHTML = `<button class="btn claro" id="nCancelar">Cancelar</button><button class="btn" id="nGuardar">Crear orden</button>`;
+  let tipo = pre.tipo || 'reparacion';
+  const pintarTrabajos = () => $('nTrabajos').innerHTML = tiposHtml(tipo);
+  pintarTrabajos();
+  $('nTipo').onclick = e => { const b = e.target.closest('button'); if(!b) return; tipo = b.dataset.v;
+    $('nTipo').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); pintarTrabajos(); };
+  $('nFotos').onchange = () => { const n = $('nFotos').files.length; $('nFotosLbl').classList.toggle('tiene', n > 0);
+    $('nFotosLbl').querySelector('span').textContent = n ? `${n} foto(s) lista(s) para subir al crear la orden` : 'Opcional.'; };
+  buscadorEquipo($('nEquipo'), e => {
+    equipo = e;
+    const asignado = (e.estatus_asignacion || '').toUpperCase() === 'ASIGNADO';
+    $('nPri').value = asignado ? 'ticket' : 'sin_asignar';
+    $('nPriPista').textContent = asignado ? 'Sugerido: el equipo está asignado a cliente.' : 'Sugerido: el equipo está libre.';
+    if(asignado && e.cliente_actual && !$('nCliente').value) $('nCliente').value = e.cliente_actual;
+  }, equipo);
+  $('nCancelar').onclick = cerrarPanel;
+  $('nGuardar').onclick = async () => {
+    if(!equipo){ nota('Elige el equipo'); return; }
+    const desc = $('nDesc').value.trim();
+    if(!desc){ nota('Describe el trabajo'); $('nDesc').focus(); return; }
+    $('nGuardar').disabled = true;
+    const trabajos = [...$('nTrabajos').querySelectorAll('input:checked')].map(i => i.value);
+    const { data:id, error } = await db.rpc('crear_orden', {
+      p_equipo: equipo.id, p_tipo: tipo, p_trabajos: trabajos, p_prioridad: $('nPri').value, p_descripcion: desc,
+      p_patio: null, p_revision: pre.revision_id || null, p_cliente: $('nCliente').value.trim() || null,
+      p_fecha_requerida: $('nReq').value || null, p_requiere_cotizacion: !$('nSinCosto').checked,
+      p_taller: $('nTaller').value ? Number($('nTaller').value) : null, p_responsable: $('nResp').value || null,
+      p_responsable_texto: null, p_fecha_compromiso: $('nComp').value || null
+    });
+    if(error){ $('nGuardar').disabled = false; nota(errTxt(error), 7000); return; }
+    const files = [...$('nFotos').files];
+    if(files.length) await subirFotos(files, { equipo_id:equipo.id, patio_id:equipo.patio_fisico_id || equipo.patio_id, niv:equipo.niv, orden_id:id, etapa:'condicion' });
+    nota('Orden creada');
+    await refrescar();
+    abrirOrden(id);
+  };
+}
+$('btnNuevaOrden').onclick = () => nuevaOrden();
+
+/* ============================ REVISIONES ============================ */
+function pintarRevisiones(){
+  if(!S.revisiones.length){ $('listaRevisiones').innerHTML = '<p class="vacio">Todavía no hay revisiones registradas.</p>'; return; }
+  const RES = { listo:['Listo para operar','ok'], reparacion:['Requiere reparación','mal'], adecuacion:['Requiere adecuación',''], baja:['Para baja','mal'] };
+  $('listaRevisiones').innerHTML = `<table><thead><tr><th>Fecha</th><th>NIV</th><th>Patio</th><th>Motivo</th><th>Condición</th><th>Resultado</th><th>Fallas</th><th>Orden</th><th>Revisó</th></tr></thead><tbody>${
+    S.revisiones.map(r => {
+      const fallas = Object.entries(r.puntos || {}).filter(([, v]) => v && v.estado === 'falla').map(([k]) => (PUNTOS.find(p => p[0] === k) || [k, k])[1]);
+      const ord = r.orden_id ? S.ordenes.find(o => o.id === r.orden_id) : null;
+      return `<tr>
+        <td class="niv">${fechaHora(r.creado_en)}</td><td class="niv">${esc(r.niv)}</td><td>${esc(r.patio || '—')}</td>
+        <td>${esc({llegada:'Llegada',periodica:'Periódica',pre_entrega:'Pre-entrega',otra:'Otra'}[r.motivo])}${r.procedencia ? '<span class="sub">' + esc(r.procedencia) + '</span>' : ''}</td>
+        <td>${esc(r.condicion || '—')}</td>
+        <td><span class="sello ${RES[r.resultado][1]}">${RES[r.resultado][0]}</span></td>
+        <td>${fallas.length ? esc(fallas.join(', ')) : '—'}${r.observaciones ? '<span class="sub">' + esc(r.observaciones) + '</span>' : ''}</td>
+        <td>${ord ? `<button class="btn chico claro" data-orden="${ord.id}">${ord.folio_txt}</button>` :
+          (['reparacion','adecuacion'].includes(r.resultado) && puedeEscribir() ? `<button class="btn chico" data-rev-orden="${r.id}">Crear orden</button>` : '—')}</td>
+        <td>${esc(r.creado_por_nombre || '')}${r.fotos ? '<span class="sub">' + r.fotos + ' foto(s)</span>' : ''}</td></tr>`;
+    }).join('')}</tbody></table>`;
+}
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-rev-orden]'); if(!b) return;
+  const r = S.revisiones.find(x => x.id === b.dataset.revOrden); if(!r) return;
+  const { data:eq } = await core.from('equipos').select('id,niv,placa,patio_id,patio_fisico_id,estatus_operativo,estatus_asignacion,cliente_actual').eq('id', r.equipo_id).maybeSingle();
+  ordenDesdeRevision(r, eq);
+});
+function ordenDesdeRevision(r, eq){
+  const fallas = Object.entries(r.puntos || {}).filter(([, v]) => v && v.estado === 'falla');
+  const trabajos = [...new Set(fallas.map(([k]) => PUNTO_TRABAJO[k]).filter(Boolean))];
+  const desc = fallas.map(([k, v]) => `${(PUNTOS.find(p => p[0] === k) || [k, k])[1]}${v.nota ? ': ' + v.nota : ''}`).join('; ')
+    + (r.observaciones ? (fallas.length ? '. ' : '') + r.observaciones : '');
+  nuevaOrden({ equipo:eq, tipo: r.resultado === 'adecuacion' ? 'adecuacion' : 'reparacion', trabajos, descripcion: desc, revision_id: r.id });
+}
+
+function nuevaRevision(){
+  S.ordenAbierta = null;
+  abrirPanel('Revisión fisicomecánica', 'revision');
+  let equipo = null;
+  const puntos = {};
+  $('panelCuerpo').innerHTML = `
+    <div class="bloque"><h3>Equipo</h3><div id="rEquipo"></div></div>
+    <div class="bloque"><div class="campos">
+      <label class="campo"><span class="lbl">Motivo</span><select id="rMotivo"><option value="llegada">Llegada a patio</option><option value="pre_entrega">Antes de entrega</option><option value="periodica">Revisión periódica</option><option value="otra">Otra</option></select></label>
+      <label class="campo"><span class="lbl">Procedencia</span><input id="rProc" placeholder="Cliente, patio o proveedor de donde llega"></label>
+      <label class="campo"><span class="lbl">Patio</span><select id="rPatio">${S.patios.map(p => `<option value="${p.id}">${esc(p.nombre)}</option>`).join('')}</select></label>
+      <label class="campo"><span class="lbl">Condición general</span><select id="rCond"><option value="buena">Buena</option><option value="regular">Regular</option><option value="mala">Mala</option></select></label>
+    </div></div>
+    <div class="bloque"><h3>Puntos de revisión</h3><p class="sub" style="margin-bottom:10px">Marca cada punto. Si tiene falla, describe qué tiene.</p>
+      <div class="checks" id="rChecks">${PUNTOS.map(([k, n]) => `<div class="chk" data-k="${k}"><div class="fila1"><b>${n}</b>
+        <span class="tri"><button type="button" data-v="ok">Bien</button><button type="button" data-v="falla">Falla</button><button type="button" data-v="na">N/A</button></span></div>
+        <input placeholder="¿Qué tiene?" data-nota="${k}"></div>`).join('')}</div>
+      <div class="acciones" style="margin-top:10px"><button type="button" class="btn chico claro" id="rTodoBien">Marcar lo no revisado como bien</button></div>
+    </div>
+    <div class="bloque"><div class="campos">
+      <label class="campo ancho"><span class="lbl">Resultado <i>*</i></span><select id="rRes"><option value="">— Elige —</option><option value="listo">Listo para operar</option><option value="reparacion">Requiere reparación</option><option value="adecuacion">Requiere adecuación</option><option value="baja">Para baja / pérdida total</option></select></label>
+      <label class="campo ancho"><span class="lbl">Observaciones</span><textarea id="rObs"></textarea></label>
+      <div class="campo ancho"><span class="lbl">Fotos de condición</span>
+        <label class="soltar" id="rFotosLbl"><b>Tomar o elegir fotos</b><span>Frente, costados, interior y cada falla.</span><input type="file" accept="image/*" multiple id="rFotos"></label></div>
+    </div></div>`;
+  $('panelPie').innerHTML = `<button class="btn claro" id="rCancelar">Cancelar</button><button class="btn" id="rGuardar">Guardar revisión</button>`;
+  $('rChecks').onclick = e => {
+    const b = e.target.closest('.tri button'); if(!b) return;
+    const box = b.closest('.chk'), k = box.dataset.k;
+    box.querySelectorAll('.tri button').forEach(x => x.setAttribute('aria-pressed', x === b));
+    box.classList.toggle('falla', b.dataset.v === 'falla');
+    puntos[k] = { ...(puntos[k] || {}), estado:b.dataset.v };
+    if(b.dataset.v === 'falla') box.querySelector('input').focus();
+    sugerirResultado();
+  };
+  const sugerirResultado = () => {
+    if($('rRes').dataset.tocado) return;
+    const hay = Object.values(puntos).some(p => p.estado === 'falla');
+    $('rRes').value = hay ? 'reparacion' : (Object.keys(puntos).length === PUNTOS.length ? 'listo' : '');
+  };
+  $('rRes').onchange = () => $('rRes').dataset.tocado = '1';
+  $('rTodoBien').onclick = () => {
+    $('rChecks').querySelectorAll('.chk').forEach(box => { if(!puntos[box.dataset.k]){ box.querySelector('[data-v="ok"]').click(); } });
+  };
+  $('rFotos').onchange = () => { const n = $('rFotos').files.length; $('rFotosLbl').classList.toggle('tiene', n > 0);
+    $('rFotosLbl').querySelector('span').textContent = n ? `${n} foto(s) lista(s)` : 'Frente, costados, interior y cada falla.'; };
+  buscadorEquipo($('rEquipo'), e => { equipo = e; const p = e.patio_fisico_id || e.patio_id; if(p) $('rPatio').value = p; });
+  $('rCancelar').onclick = cerrarPanel;
+  $('rGuardar').onclick = async () => {
+    if(!equipo){ nota('Elige el equipo'); return; }
+    const res = $('rRes').value;
+    if(!res){ nota('Elige el resultado de la revisión'); $('rRes').focus(); return; }
+    $('rChecks').querySelectorAll('[data-nota]').forEach(i => { if(puntos[i.dataset.nota] && i.value.trim()) puntos[i.dataset.nota].nota = i.value.trim(); });
+    const sinNota = Object.entries(puntos).filter(([, v]) => v.estado === 'falla' && !v.nota);
+    if(sinNota.length){ nota('Describe qué tiene cada punto con falla', 5000); $('rChecks').querySelector(`[data-nota="${sinNota[0][0]}"]`).focus(); return; }
+    $('rGuardar').disabled = true;
+    const id = uuid();
+    const fila = { id, equipo_id:equipo.id, patio_id:Number($('rPatio').value) || null, motivo:$('rMotivo').value,
+      procedencia:$('rProc').value.trim() || null, puntos, condicion:$('rCond').value, resultado:res,
+      observaciones:$('rObs').value.trim() || null, creado_por:S.yo.id };
+    const { error } = await db.from('revisiones').insert(fila);
+    if(error){ $('rGuardar').disabled = false; nota(errTxt(error), 7000); return; }
+    const files = [...$('rFotos').files];
+    if(files.length) await subirFotos(files, { equipo_id:equipo.id, patio_id:fila.patio_id, niv:equipo.niv, revision_id:id, etapa:'condicion' });
+    await cargarRevisiones(); pintarRevisiones();
+    if(['reparacion','adecuacion'].includes(res)){
+      nota('Revisión guardada. Completa la orden de trabajo.', 5000);
+      ordenDesdeRevision({ ...fila, observaciones:fila.observaciones }, equipo);
+    } else { nota('Revisión guardada'); cerrarPanel(); }
+  };
+}
+$('btnNuevaRevision').onclick = nuevaRevision;
+
+/* ============================ AVISOS ============================ */
+async function cargarAvisos(){
+  const { data } = await db.rpc('mis_avisos', { p_limite:40 });
+  S.avisos = data || [];
+}
+function pintarAvisos(){
+  const nuevos = S.avisos.filter(a => !a.leido).length;
+  $('nAvisos').textContent = nuevos || '';
+  $('listaAvisos').innerHTML = S.avisos.length ? S.avisos.map(a => `<button class="aviso-it ${a.leido ? '' : 'nuevo'}" data-aviso="${a.id}" data-o="${a.orden_id || ''}">
+      ${esc(a.texto)}<small>${hace(a.creado_en)}</small></button>`).join('')
+    : '<p class="vacio" style="padding:18px 12px">Sin avisos en los últimos 30 días.</p>';
+}
+$('btnAvisos').onclick = e => { e.stopPropagation(); $('avisos').classList.toggle('on'); };
+document.addEventListener('click', e => { if(!e.target.closest('#avisos') && !e.target.closest('#btnAvisos')) $('avisos').classList.remove('on'); });
+$('listaAvisos').onclick = async e => {
+  const b = e.target.closest('[data-aviso]'); if(!b) return;
+  await db.rpc('marcar_avisos_leidos', { p_ids:[Number(b.dataset.aviso)] });
+  const a = S.avisos.find(x => String(x.id) === b.dataset.aviso); if(a) a.leido = true;
+  pintarAvisos(); $('avisos').classList.remove('on');
+  if(b.dataset.o) abrirOrden(b.dataset.o);
+};
+$('leerTodos').onclick = async () => {
+  const ids = S.avisos.filter(a => !a.leido).map(a => Number(a.id)); if(!ids.length) return;
+  await db.rpc('marcar_avisos_leidos', { p_ids:ids });
+  S.avisos.forEach(a => a.leido = true); pintarAvisos();
+};
+function escucharAvisos(){
+  db.channel('operaciones-avisos')
+    .on('postgres_changes', { event:'INSERT', schema:'operaciones', table:'avisos' }, async payload => {
+      await refrescar();
+      const a = payload.new;
+      if(!S.avisos.some(x => x.id === a.id)) return;     // no era para mí
+      nota(a.texto, 7000);
+      if('Notification' in window && Notification.permission === 'granted' && document.visibilityState !== 'visible'){
+        try{ new Notification('Operaciones y taller', { body:a.texto, tag:'op-' + a.id }); }catch(_){}
+      }
+    }).subscribe();
+  if('Notification' in window && Notification.permission === 'default'){
+    $('btnAvisos').addEventListener('click', () => Notification.requestPermission().catch(() => {}), { once:true });
+  }
+}
+
+/* ============================ CONFIGURACIÓN ============================ */
+function pintarConfig(){
+  const puedeRegla = S.admin || S.aut === 'gerencia';
+  $('confParametros').innerHTML = `
+    <label class="campo"><span class="lbl">Tope antes de IVA (MXN)</span><input id="pLimite" type="number" min="0" step="100" value="${limite()}" ${puedeRegla ? '' : 'disabled'}></label>
+    <label class="campo"><span class="lbl">Días que se suman de órdenes cerradas</span><input id="pVentana" type="number" min="0" step="1" value="${S.params.ventana_acumulado_dias ?? 90}" ${puedeRegla ? '' : 'disabled'}></label>
+    <label class="campo"><span class="lbl">Tasa de IVA</span><input id="pIva" type="number" min="0" max="1" step="0.01" value="${tasaIva()}" ${puedeRegla ? '' : 'disabled'}></label>`;
+  $('confParamPista').textContent = `Se suman las cotizaciones pendientes y autorizadas del mismo equipo en sus órdenes abiertas, más las de órdenes cerradas de los últimos ${S.params.ventana_acumulado_dias ?? 90} días. ` +
+    (puedeRegla ? '' : 'Solo la gerencia o un administrador cambian la regla.');
+  $('guardarParametros').hidden = !puedeRegla;
+
+  const aut = S.personal.filter(p => p.nivel_autorizacion);
+  const otros = S.personal.filter(p => !p.nivel_autorizacion);
+  $('confAutorizadores').innerHTML = `<table class="tabla-conf"><thead><tr><th>Persona</th><th>Nivel</th><th>Activo</th></tr></thead><tbody>
+    ${aut.map(p => `<tr><td>${esc(p.nombre)}<span class="sub">${esc(p.puesto || '')}</span></td>
+      <td><select data-aut-nivel="${p.id}" ${puedeRegla ? '' : 'disabled'}><option value="jefatura" ${p.nivel_autorizacion === 'jefatura' ? 'selected' : ''}>Jefatura</option><option value="gerencia" ${p.nivel_autorizacion === 'gerencia' ? 'selected' : ''}>Gerencia</option></select></td>
+      <td><input type="checkbox" style="width:auto" data-aut-activo="${p.id}" ${p.autorizador_activo ? 'checked' : ''} ${puedeRegla ? '' : 'disabled'}></td></tr>`).join('')}
+    </tbody></table>
+    ${puedeRegla && otros.length ? `<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><select id="autNuevo" style="flex:1;min-width:180px">${otros.map(p => `<option value="${p.id}">${esc(p.nombre)}</option>`).join('')}</select>
+      <select id="autNuevoNivel" style="width:auto"><option value="jefatura">Jefatura</option><option value="gerencia">Gerencia</option></select><button class="btn chico navy" id="autAgregar">Agregar</button></div>` : ''}`;
+
+  const filaLinea = l => `<tr><td>${esc(nombrePatio(l.patio_id))}</td><td><input data-lin="${l.id}" data-c="nombre" value="${esc(l.nombre)}"></td>
+    <td class="num">${l.numero}</td>
+    <td><select data-lin="${l.id}" data-c="uso"><option value="prioritaria" ${l.uso === 'prioritaria' ? 'selected' : ''}>Prioritaria (con ticket)</option><option value="general" ${l.uso === 'general' ? 'selected' : ''}>General (sin asignar)</option></select></td>
+    <td><input type="checkbox" style="width:auto" data-lin="${l.id}" data-c="activo" ${l.activo ? 'checked' : ''}></td></tr>`;
+  $('confLineas').innerHTML = `<table class="tabla-conf"><thead><tr><th>Patio</th><th>Nombre</th><th>Núm.</th><th>Uso</th><th>Activa</th></tr></thead><tbody>${S.lineas.map(filaLinea).join('')}</tbody></table>
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><select id="linPatio" style="width:auto">${S.patios.map(p => `<option value="${p.id}">${esc(p.nombre)}</option>`).join('')}</select>
+    <select id="linUso" style="width:auto"><option value="prioritaria">Prioritaria</option><option value="general">General</option></select><button class="btn chico navy" id="linAgregar">Agregar línea</button></div>`;
+
+  $('confTalleres').innerHTML = `<table class="tabla-conf"><thead><tr><th>Nombre</th><th>Tipo</th><th>Patio</th><th>Contacto</th><th>Teléfono</th><th>Correo</th><th>Activo</th></tr></thead><tbody>
+    ${S.talleres.map(t => `<tr><td><input data-tal="${t.id}" data-c="nombre" value="${esc(t.nombre)}"></td>
+      <td><select data-tal="${t.id}" data-c="tipo"><option value="interno" ${t.tipo === 'interno' ? 'selected' : ''}>Interno</option><option value="externo" ${t.tipo === 'externo' ? 'selected' : ''}>Externo</option></select></td>
+      <td><select data-tal="${t.id}" data-c="patio_id"><option value="">—</option>${S.patios.map(p => `<option value="${p.id}" ${p.id === t.patio_id ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('')}</select></td>
+      <td><input data-tal="${t.id}" data-c="contacto" value="${esc(t.contacto || '')}"></td>
+      <td><input data-tal="${t.id}" data-c="telefono" value="${esc(t.telefono || '')}"></td>
+      <td><input data-tal="${t.id}" data-c="correo" value="${esc(t.correo || '')}"></td>
+      <td><input type="checkbox" style="width:auto" data-tal="${t.id}" data-c="activo" ${t.activo ? 'checked' : ''}></td></tr>`).join('')}
+    </tbody></table>
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><input id="talNombre" placeholder="Nombre del taller o proveedor" style="flex:1;min-width:200px">
+      <select id="talTipo" style="width:auto"><option value="externo">Externo</option><option value="interno">Interno</option></select><button class="btn chico navy" id="talAgregar">Agregar</button></div>`;
+
+  $('confTipos').innerHTML = `<table class="tabla-conf"><thead><tr><th>Nombre</th><th>Categoría</th><th>Orden</th><th>Activo</th></tr></thead><tbody>
+    ${S.tipos.map(t => `<tr><td><input data-tip="${t.clave}" data-c="nombre" value="${esc(t.nombre)}"></td>
+      <td><select data-tip="${t.clave}" data-c="categoria"><option value="reparacion" ${t.categoria === 'reparacion' ? 'selected' : ''}>Reparación</option><option value="adecuacion" ${t.categoria === 'adecuacion' ? 'selected' : ''}>Adecuación</option></select></td>
+      <td><input type="number" style="width:80px" data-tip="${t.clave}" data-c="orden" value="${t.orden}"></td>
+      <td><input type="checkbox" style="width:auto" data-tip="${t.clave}" data-c="activo" ${t.activo ? 'checked' : ''}></td></tr>`).join('')}
+    </tbody></table>
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><input id="tipNombre" placeholder="Nuevo tipo de trabajo" style="flex:1;min-width:200px">
+      <select id="tipCat" style="width:auto"><option value="reparacion">Reparación</option><option value="adecuacion">Adecuación</option></select><button class="btn chico navy" id="tipAgregar">Agregar</button></div>`;
+  enlazarConfig();
+}
+const valorDe = el => el.type === 'checkbox' ? el.checked : el.type === 'number' ? Number(el.value) : (el.value === '' ? null : (el.dataset.c === 'patio_id' ? Number(el.value) : el.value));
+async function guardarCampo(tabla, campoId, id, el){
+  const { error } = await db.from(tabla).update({ [el.dataset.c]: valorDe(el) }).eq(campoId, id);
+  if(error){ nota(errTxt(error), 6000); return; }
+  nota('Guardado', 1500);
+  await cargarCatalogos();
+}
+function enlazarConfig(){
+  $('guardarParametros').onclick = async () => {
+    const vals = { limite_autorizacion:Number($('pLimite').value), ventana_acumulado_dias:Number($('pVentana').value), iva:Number($('pIva').value) };
+    if(!(vals.limite_autorizacion > 0)){ nota('El tope debe ser mayor a cero'); return; }
+    for(const [clave, valor] of Object.entries(vals)){
+      const { error } = await db.from('parametros').update({ valor, actualizado_por:S.yo.id, actualizado_en:new Date().toISOString() }).eq('clave', clave);
+      if(error){ nota(errTxt(error), 6000); return; }
+    }
+    await cargarCatalogos(); pintarConfig(); pintarAutorizar(); nota('Regla actualizada');
+  };
+  document.querySelectorAll('[data-aut-nivel]').forEach(el => el.onchange = async () => {
+    const { error } = await db.from('autorizadores').update({ nivel:el.value }).eq('perfil_id', el.dataset.autNivel);
+    if(error) nota(errTxt(error), 6000); else { nota('Guardado', 1500); await cargarCatalogos(); }
+  });
+  document.querySelectorAll('[data-aut-activo]').forEach(el => el.onchange = async () => {
+    const { error } = await db.from('autorizadores').update({ activo:el.checked }).eq('perfil_id', el.dataset.autActivo);
+    if(error) nota(errTxt(error), 6000); else { nota('Guardado', 1500); await cargarCatalogos(); }
+  });
+  if($('autAgregar')) $('autAgregar').onclick = async () => {
+    const { error } = await db.from('autorizadores').insert({ perfil_id:$('autNuevo').value, nivel:$('autNuevoNivel').value });
+    if(error) nota(errTxt(error), 6000); else { await cargarCatalogos(); pintarConfig(); }
+  };
+  document.querySelectorAll('[data-lin]').forEach(el => el.onchange = () => guardarCampo('lineas', 'id', el.dataset.lin, el));
+  document.querySelectorAll('[data-tal]').forEach(el => el.onchange = () => guardarCampo('talleres', 'id', el.dataset.tal, el));
+  document.querySelectorAll('[data-tip]').forEach(el => el.onchange = () => guardarCampo('tipos_trabajo', 'clave', el.dataset.tip, el));
+  $('linAgregar').onclick = async () => {
+    const patio = Number($('linPatio').value);
+    const num = Math.max(0, ...S.lineas.filter(l => l.patio_id === patio).map(l => l.numero)) + 1;
+    const { error } = await db.from('lineas').insert({ patio_id:patio, numero:num, nombre:'Línea ' + num, uso:$('linUso').value });
+    if(error) nota(errTxt(error), 6000); else { await cargarCatalogos(); pintarConfig(); pintarTaller(); }
+  };
+  $('talAgregar').onclick = async () => {
+    const n = $('talNombre').value.trim(); if(!n){ nota('Escribe el nombre'); return; }
+    const { error } = await db.from('talleres').insert({ nombre:n, tipo:$('talTipo').value });
+    if(error) nota(errTxt(error), 6000); else { await cargarCatalogos(); pintarConfig(); }
+  };
+  $('tipAgregar').onclick = async () => {
+    const n = $('tipNombre').value.trim(); if(!n){ nota('Escribe el nombre'); return; }
+    const clave = n.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+    const { error } = await db.from('tipos_trabajo').insert({ clave, nombre:n, categoria:$('tipCat').value, orden:200 });
+    if(error) nota(errTxt(error), 6000); else { await cargarCatalogos(); pintarConfig(); }
+  };
+}
+
+/* ============================ diálogo ============================ */
+function pedirTexto(titulo, texto, placeholder, obligatorio){
+  return new Promise(res => {
+    $('dTitulo').textContent = titulo; $('dTexto').innerHTML = texto; $('dExtra').innerHTML = '';
+    $('dCampo').value = ''; $('dCampo').placeholder = placeholder || ''; $('dError').textContent = '';
+    $('dialogo').classList.add('on'); setTimeout(() => $('dCampo').focus(), 50);
+    const cerrar = v => { $('dialogo').classList.remove('on'); $('dAceptar').onclick = $('dCancelar').onclick = null; res(v); };
+    $('dCancelar').onclick = () => cerrar(null);
+    $('dAceptar').onclick = () => {
+      const v = $('dCampo').value.trim();
+      if(obligatorio && !v){ $('dError').textContent = 'Este dato es obligatorio.'; return; }
+      cerrar(v);
+    };
+  });
+}
+
+/* ============================ sesión ============================ */
+$('salir').onclick = async () => { await db.auth.signOut(); location.href = 'index.html'; };
+iniciar().catch(err => { console.error(err); nota('Error al iniciar: ' + errTxt(err), 10000); });
+</script>
+</body>
+</html>
