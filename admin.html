@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>Administración · Plataforma HT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Saira:ital,wght@1,700;1,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="ht.css?v=2026-09-25b">
+<style>
+  .roles-celda{display:flex;gap:4px;flex-wrap:wrap}
+  .grupo{margin-top:6px}
+  .grupo + .grupo{margin-top:18px}
+  .checks{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 18px;margin-top:8px}
+  .checks label{margin:0}
+  .checks .opcion{padding:8px 10px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);cursor:pointer}
+  .checks .opcion:has(input:checked){border-color:var(--lime);background:var(--lime-soft)}
+  .checks .opcion small{display:block;font-size:12px;color:var(--muted)}
+  .checks .opcion.bloq{opacity:.65;cursor:not-allowed}
+  .vista-modulos{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .vista-modulos .sello.lectura{background:var(--pend)}
+  .vista-modulos .sello.escritura{background:var(--lime);color:#0A2A0E}
+  .vista-modulos .sello.admin{background:var(--navy);color:#fff}
+  .interruptor{display:flex;align-items:center;gap:10px;font-weight:600}
+  .interruptor input{width:auto;transform:scale(1.25)}
+  .matriz td,.matriz th{white-space:nowrap}
+  .matriz td:first-child{font-weight:600;position:sticky;left:0;background:var(--surface);z-index:1}
+  .matriz th:first-child{position:sticky;left:0;z-index:2}
+  .matriz select{width:auto;min-width:112px;padding:6px 8px;font-size:13px}
+  .matriz select.n-lectura{background:var(--pend)}
+  .matriz select.n-escritura{background:var(--lime-soft);border-color:var(--lime)}
+  .matriz select.n-admin{background:var(--navy);color:#fff;border-color:var(--edge)}
+  .matriz small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+  .leyenda{font-size:13px;color:var(--muted);margin-bottom:12px}
+  .patio-acc{display:flex;gap:8px;margin-top:8px}
+  #bloqueo{max-width:560px}
+  #contenido > section:first-child{margin-top:18px}
+  @media (max-width:760px){ .checks{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<header>
+  <div class="cinta"></div>
+  <div class="barra">
+    <div class="marca">Plataforma <span>HT</span></div>
+    <div class="rotulo"><b>HT RENT &gt;</b><span>ARRENDA Y CRECE</span></div>
+    <div class="quien">
+      <b id="nombreUsuario">—</b><br>
+      <span class="eyebrow" id="puestoUsuario"></span>
+    </div>
+    <button class="salir" id="salir">Salir</button>
+  </div>
+</header>
+
+<main>
+  <a class="migaja" href="index.html">← Volver a módulos</a>
+  <h1>Administración</h1>
+  <span class="eyebrow">Usuarios, roles y acceso a los módulos de la plataforma</span>
+
+  <div id="bloqueo" style="display:none"></div>
+
+  <div id="contenido" style="display:none">
+    <section>
+      <div class="cifras" id="cifras"></div>
+    </section>
+
+    <section>
+      <div class="pestanas" role="tablist">
+        <button class="pestana" role="tab" aria-selected="true" data-tab="usuarios">Usuarios <span class="c" id="cUsuarios">0</span></button>
+        <button class="pestana" role="tab" aria-selected="false" data-tab="roles">Roles y módulos</button>
+      </div>
+
+      <!-- ===== Usuarios ===== -->
+      <div id="tabUsuarios">
+        <div class="filtros">
+          <input id="q" placeholder="Buscar por nombre, correo o puesto" spellcheck="false">
+          <select id="fEstado">
+            <option value="">Todos los usuarios</option>
+            <option value="pendiente">Pendientes de activar (sin rol)</option>
+            <option value="activo">Activos</option>
+            <option value="inactivo">Inactivos</option>
+            <option value="nunca">Nunca han entrado</option>
+          </select>
+          <select id="fRol"><option value="">Cualquier rol</option></select>
+          <button class="btn claro chico" id="limpiar">Limpiar</button>
+        </div>
+        <div class="resultados" id="lista"><p class="cargando">Cargando usuarios…</p></div>
+      </div>
+
+      <!-- ===== Roles y módulos ===== -->
+      <div id="tabRoles" style="display:none">
+        <p class="leyenda">Elige qué ve cada rol en cada módulo. <b>Lectura</b>: solo consulta · <b>Escritura</b>: puede capturar y editar · <b>Admin</b>: control total del módulo. Los cambios se guardan al momento y aplican para todas las personas con ese rol la próxima vez que abran la plataforma.</p>
+        <div class="resultados" id="matriz"></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div class="telon" id="telon"></div>
+<aside class="panel" id="panel" aria-hidden="true">
+  <div class="panel-cab"><h3 id="panelTitulo"></h3><button class="cerrar" id="cerrar" aria-label="Cerrar">×</button></div>
+  <div class="panel-cuerpo" id="panelCuerpo"></div>
+  <div class="panel-pie">
+    <button class="btn claro" id="cancelar">Cancelar</button>
+    <button class="btn" id="guardar">Guardar cambios</button>
+  </div>
+</aside>
+<div class="nota" id="nota" role="status"></div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const SUPABASE_URL  = 'https://ahfjstuwekcuxshclprl.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFoZmpzdHV3ZWtjdXhzaGNscHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwNDg2MjYsImV4cCI6MjEwMzYyNDYyNn0.lf1uw8WHPRy21GuYlK9NzeI5JgJK2be1LrODq22CodM';
+const db = createClient(SUPABASE_URL, SUPABASE_ANON, { db:{ schema:'core' } });
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fHora = d => d ? new Date(d).toLocaleString('es-MX',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+function nota(t){ const n=$('nota'); n.textContent=t; n.classList.add('on'); clearTimeout(nota._t); nota._t=setTimeout(()=>n.classList.remove('on'),4000); }
+function hace(d){
+  if(!d) return 'Nunca ha entrado';
+  const dias = Math.floor((Date.now() - new Date(d)) / 86400000);
+  if(dias <= 0) return 'Hoy';
+  if(dias === 1) return 'Ayer';
+  if(dias < 30) return `Hace ${dias} días`;
+  if(dias < 365) return `Hace ${Math.floor(dias/30)} mes(es)`;
+  return `Hace más de un año`;
+}
+
+const NIVEL_PESO = { lectura:1, escritura:2, admin:3 };
+const NIVEL_TXT  = { lectura:'Lectura', escritura:'Escritura', admin:'Admin' };
+
+const st = { yo:null, usuarios:[], roles:[], modulos:[], rolMod:[], patios:[], abierto:null };
+
+/* ---------------- arranque y candado ---------------- */
+const { data:{ session } } = await db.auth.getSession();
+if(!session){ location.href = 'index.html'; }
+st.yo = session.user;
+
+const { data: perfil } = await db.from('perfiles').select('nombre,puesto').eq('id', st.yo.id).maybeSingle();
+$('nombreUsuario').textContent = perfil?.nombre || st.yo.email;
+$('puestoUsuario').textContent = perfil?.puesto || '';
+
+const { data: misMods } = await db.from('v_mis_modulos').select('clave');
+if(!(misMods||[]).some(m => m.clave === 'admin')){
+  $('bloqueo').style.display = 'block';
+  $('bloqueo').innerHTML = `<p class="aviso">Este módulo es solo para el administrador de la plataforma. Si necesitas un cambio de acceso, pídeselo a Rogelio Morejón.</p>`;
+  throw new Error('sin acceso');
+}
+$('contenido').style.display = 'block';
+
+await cargarTodo();
+
+async function cargarTodo(){
+  const [us, ro, mo, rm, pa] = await Promise.all([
+    db.rpc('admin_usuarios'),
+    db.from('roles').select('clave,nombre'),
+    db.from('modulos').select('clave,nombre,orden').order('orden'),
+    db.from('rol_modulos').select('rol,modulo,nivel'),
+    db.from('patios').select('id,nombre,activo').order('nombre')
+  ]);
+  const err = [us,ro,mo,rm,pa].find(r => r.error);
+  if(err){ $('lista').innerHTML = `<p class="vacio">No se pudo cargar la información: ${esc(err.error.message)}</p>`; return; }
+  st.usuarios = us.data; st.roles = ordenarRoles(ro.data); st.modulos = mo.data; st.rolMod = rm.data; st.patios = pa.data;
+
+  const sel = $('fRol'), actual = sel.value;
+  sel.innerHTML = '<option value="">Cualquier rol</option>' + st.roles.map(r=>`<option value="${esc(r.clave)}">${esc(r.nombre)}</option>`).join('');
+  sel.value = actual;
+
+  pintarCifras(); pintarLista(); pintarMatriz();
+}
+
+function ordenarRoles(lista){
+  const orden = ['admin','servicio_clientes','documentos','operaciones','capturista','comercial','legal','movimientos_editor','consulta_general'];
+  return [...lista].sort((a,b)=>{
+    const ia = a.clave.startsWith('inventario_') ? 50 : (orden.indexOf(a.clave)+1 || 40);
+    const ib = b.clave.startsWith('inventario_') ? 50 : (orden.indexOf(b.clave)+1 || 40);
+    return ia - ib || a.nombre.localeCompare(b.nombre);
+  });
+}
+function nombreRol(c){ return st.roles.find(r=>r.clave===c)?.nombre || c; }
+
+/* ---------------- cifras ---------------- */
+function pintarCifras(){
+  const u = st.usuarios;
+  const activos   = u.filter(x => x.activo && x.roles.length).length;
+  const pend      = u.filter(x => !x.roles.length).length;
+  const inactivos = u.filter(x => !x.activo).length;
+  const nunca     = u.filter(x => !x.ultimo_acceso).length;
+  $('cUsuarios').textContent = u.length;
+  $('cifras').innerHTML = `
+    <div class="cifra"><div class="n">${activos}</div><div class="t">usuarios con acceso</div></div>
+    <div class="cifra ${pend?'urge':''}"><div class="n">${pend}</div><div class="t">pendientes de activar</div></div>
+    <div class="cifra"><div class="n">${inactivos}</div><div class="t">inactivos</div></div>
+    <div class="cifra"><div class="n">${nunca}</div><div class="t">nunca han entrado</div></div>`;
+}
+
+/* ---------------- lista de usuarios ---------------- */
+function filtrados(){
+  const q = $('q').value.trim().toLowerCase();
+  const e = $('fEstado').value, r = $('fRol').value;
+  return st.usuarios.filter(u => {
+    if(q && !`${u.nombre||''} ${u.correo||''} ${u.puesto||''}`.toLowerCase().includes(q)) return false;
+    if(e==='pendiente' && u.roles.length) return false;
+    if(e==='activo' && !(u.activo && u.roles.length)) return false;
+    if(e==='inactivo' && u.activo) return false;
+    if(e==='nunca' && u.ultimo_acceso) return false;
+    if(r && !u.roles.includes(r)) return false;
+    return true;
+  }).sort((a,b) => (a.roles.length?1:0) - (b.roles.length?1:0) || (b.activo-a.activo) || (a.nombre||'').localeCompare(b.nombre||''));
+}
+
+function estadoSello(u){
+  if(!u.activo) return '<span class="sello mal">Inactivo</span>';
+  if(!u.roles.length) return '<span class="sello" style="background:var(--amber-soft);color:#7A5200;border:1px solid var(--amber)">Pendiente</span>';
+  return '<span class="sello ok">Activo</span>';
+}
+
+function pintarLista(){
+  const lista = filtrados();
+  if(!lista.length){ $('lista').innerHTML = '<p class="vacio">Ningún usuario coincide con los filtros.</p>'; return; }
+  $('lista').innerHTML = `<table>
+    <thead><tr><th>Usuario</th><th>Puesto</th><th>Roles</th><th>Último acceso</th><th>Estado</th></tr></thead>
+    <tbody>${lista.map(u => `<tr class="fila" data-id="${u.id}">
+      <td><b>${esc(u.nombre||'(sin nombre)')}</b><span class="sub">${esc(u.correo)}</span></td>
+      <td>${esc(u.puesto||'—')}</td>
+      <td><div class="roles-celda">${u.roles.length ? u.roles.map(r=>`<span class="sello ${r==='admin'?'oscuro':''}">${esc(nombreRol(r))}</span>`).join('') : '<span class="sub">Sin roles</span>'}</div></td>
+      <td>${hace(u.ultimo_acceso)}<span class="sub">${fHora(u.ultimo_acceso)}</span></td>
+      <td>${estadoSello(u)}</td>
+    </tr>`).join('')}</tbody></table>
+    <p class="vacio">${lista.length} usuario(s).</p>`;
+}
+
+$('lista').addEventListener('click', e => {
+  const tr = e.target.closest('tr.fila');
+  if(tr) abrir(tr.dataset.id);
+});
+['q','fEstado','fRol'].forEach(id => $(id).addEventListener('input', pintarLista));
+$('limpiar').addEventListener('click', () => { $('q').value=''; $('fEstado').value=''; $('fRol').value=''; pintarLista(); });
+
+/* ---------------- ficha del usuario ---------------- */
+function abrir(id){
+  const u = st.usuarios.find(x => x.id === id);
+  if(!u) return;
+  st.abierto = u;
+  const soyYo = u.id === st.yo.id;
+  const generales = st.roles.filter(r => !r.clave.startsWith('inventario_'));
+  const invent    = st.roles.filter(r =>  r.clave.startsWith('inventario_'));
+  const invActual = u.roles.find(r => r.startsWith('inventario_')) || '';
+
+  $('panelTitulo').textContent = u.nombre || u.correo;
+  $('panelCuerpo').innerHTML = `
+    ${soyYo ? '<div class="bloque aviso">Este es tu propio usuario. Por seguridad no puedes quitarte el rol de Administrador ni desactivarte.</div>' : ''}
+    ${!u.roles.length ? '<div class="bloque aviso">Este usuario ya se registró pero no tiene roles: al entrar no ve ningún módulo. Asígnale al menos un rol para activarlo.</div>' : ''}
+
+    <div class="bloque">
+      <h3>Datos</h3>
+      <div class="campos">
+        <div class="campo"><label><span class="lbl">Nombre</span><input id="fNombre" value="${esc(u.nombre||'')}"></label></div>
+        <div class="campo"><label><span class="lbl">Puesto</span><input id="fPuesto" value="${esc(u.puesto||'')}"></label></div>
+        <div class="campo ancho"><span class="lbl">Correo</span><div class="mono">${esc(u.correo)}</div></div>
+        <div class="campo"><span class="lbl">Registrado</span><div>${fHora(u.creado_en)||'—'}</div></div>
+        <div class="campo"><span class="lbl">Último acceso</span><div>${hace(u.ultimo_acceso)} <span class="sub">${fHora(u.ultimo_acceso)}</span></div></div>
+        <div class="campo ancho">
+          <label class="interruptor"><input type="checkbox" id="fActivo" ${u.activo?'checked':''} ${soyYo?'disabled':''}> Usuario activo</label>
+          <div class="pista">Si lo desactivas, conserva sus roles pero deja de ver todos los módulos.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bloque">
+      <h3>Roles</h3>
+      <div class="grupo">
+        <span class="lbl">Áreas y funciones</span>
+        <div class="checks">${generales.map(r => {
+          const bloq = soyYo && r.clave==='admin';
+          return `<label class="opcion ${bloq?'bloq':''}"><input type="checkbox" name="rol" value="${esc(r.clave)}" ${u.roles.includes(r.clave)?'checked':''} ${bloq?'disabled':''}>
+            <span>${esc(r.nombre)}<small>${resumenRol(r.clave)}</small></span></label>`;
+        }).join('')}</div>
+      </div>
+      <div class="grupo">
+        <span class="lbl">Inventario de Operaciones <span class="sub" style="display:inline">· solo uno</span></span>
+        <div class="checks">
+          <label class="opcion"><input type="radio" name="rolInv" value="" ${!invActual?'checked':''}><span>Sin rol de Inventario</span></label>
+          ${invent.map(r => `<label class="opcion"><input type="radio" name="rolInv" value="${esc(r.clave)}" ${invActual===r.clave?'checked':''}>
+            <span>${esc(r.nombre.replace('Inventario · ',''))}<small>${resumenRol(r.clave)}</small></span></label>`).join('')}
+        </div>
+      </div>
+    </div>
+
+    <div class="bloque foco">
+      <h3>Módulos que verá</h3>
+      <div class="vista-modulos" id="vistaModulos"></div>
+    </div>
+
+    <div class="bloque">
+      <h3>Patios asignados</h3>
+      <p class="pista">Opcional. Queda registrado para limitar por patio en las apps que lo usen; hoy ningún módulo filtra todavía por este dato.</p>
+      <div class="patio-acc">
+        <button class="btn claro chico" type="button" id="patTodos">Marcar todos</button>
+        <button class="btn claro chico" type="button" id="patNinguno">Quitar todos</button>
+      </div>
+      <div class="checks">${st.patios.filter(p => p.activo || u.patios.includes(p.id)).map(p => `
+        <label class="opcion"><input type="checkbox" name="patio" value="${p.id}" ${u.patios.includes(p.id)?'checked':''}><span>${esc(p.nombre)}</span></label>`).join('')}
+      </div>
+    </div>`;
+
+  $('panelCuerpo').querySelectorAll('input[name="rol"],input[name="rolInv"],#fActivo').forEach(i => i.addEventListener('change', vistaModulos));
+  $('patTodos').onclick   = () => $('panelCuerpo').querySelectorAll('input[name="patio"]').forEach(i => i.checked = true);
+  $('patNinguno').onclick = () => $('panelCuerpo').querySelectorAll('input[name="patio"]').forEach(i => i.checked = false);
+  vistaModulos();
+
+  $('panel').classList.add('on'); $('telon').classList.add('on'); $('panel').setAttribute('aria-hidden','false');
+}
+
+function resumenRol(rol){
+  const mods = st.rolMod.filter(x => x.rol === rol);
+  if(!mods.length) return 'Sin módulos asignados';
+  return mods.map(x => `${st.modulos.find(m=>m.clave===x.modulo)?.nombre || x.modulo} (${NIVEL_TXT[x.nivel]?.toLowerCase()||x.nivel})`).join(' · ');
+}
+
+function rolesElegidos(){
+  const p = $('panelCuerpo');
+  const roles = [...p.querySelectorAll('input[name="rol"]:checked')].map(i => i.value);
+  if(st.abierto?.id === st.yo.id && !roles.includes('admin')) roles.push('admin');
+  const inv = p.querySelector('input[name="rolInv"]:checked')?.value;
+  if(inv) roles.push(inv);
+  return roles;
+}
+
+function vistaModulos(){
+  const cont = $('vistaModulos');
+  if(!$('fActivo').checked){ cont.innerHTML = '<span class="t">Usuario inactivo: no verá ningún módulo.</span>'; return; }
+  const roles = rolesElegidos();
+  const nivel = {};
+  st.rolMod.filter(x => roles.includes(x.rol)).forEach(x => {
+    if(!nivel[x.modulo] || NIVEL_PESO[x.nivel] > NIVEL_PESO[nivel[x.modulo]]) nivel[x.modulo] = x.nivel;
+  });
+  const lista = st.modulos.filter(m => nivel[m.clave]);
+  cont.innerHTML = lista.length
+    ? lista.map(m => `<span class="sello ${nivel[m.clave]}">${esc(m.nombre)} · ${NIVEL_TXT[nivel[m.clave]]}</span>`).join('')
+    : '<span class="t">Ninguno. Asígnale al menos un rol.</span>';
+}
+
+function cerrar(){
+  $('panel').classList.remove('on'); $('telon').classList.remove('on'); $('panel').setAttribute('aria-hidden','true');
+  st.abierto = null;
+}
+$('cerrar').onclick = cerrar; $('cancelar').onclick = cerrar; $('telon').onclick = cerrar;
+document.addEventListener('keydown', e => { if(e.key==='Escape' && st.abierto) cerrar(); });
+
+$('guardar').addEventListener('click', async () => {
+  const u = st.abierto; if(!u) return;
+  const p = $('panelCuerpo');
+  const datos = {
+    p_id: u.id,
+    p_nombre: $('fNombre').value,
+    p_puesto: $('fPuesto').value,
+    p_activo: $('fActivo').checked,
+    p_roles: rolesElegidos(),
+    p_patios: [...p.querySelectorAll('input[name="patio"]:checked')].map(i => Number(i.value))
+  };
+  if(datos.p_activo && !datos.p_roles.length && !confirm('Este usuario quedará sin roles y no verá ningún módulo. ¿Guardar así?')) return;
+
+  $('guardar').disabled = true;
+  const { error } = await db.rpc('admin_guardar_usuario', datos);
+  $('guardar').disabled = false;
+  if(error){ nota('No se pudo guardar: ' + error.message); return; }
+  cerrar();
+  nota(`Cambios guardados para ${datos.p_nombre || u.correo}. Los verá la próxima vez que abra la plataforma.`);
+  await cargarTodo();
+});
+
+/* ---------------- matriz de roles y módulos ---------------- */
+function pintarMatriz(){
+  const personas = {};
+  st.usuarios.filter(u => u.activo).forEach(u => u.roles.forEach(r => personas[r] = (personas[r]||0) + 1));
+  $('matriz').innerHTML = `<table class="matriz">
+    <thead><tr><th>Rol</th>${st.modulos.map(m=>`<th>${esc(m.nombre)}</th>`).join('')}</tr></thead>
+    <tbody>${st.roles.map(r => `<tr>
+      <td>${esc(r.nombre)}<small>${personas[r.clave]||0} persona(s) activa(s)</small></td>
+      ${st.modulos.map(m => {
+        const n = st.rolMod.find(x => x.rol===r.clave && x.modulo===m.clave)?.nivel || '';
+        const fijo = r.clave==='admin' && m.clave==='admin';
+        return `<td><select class="n-${n}" data-rol="${esc(r.clave)}" data-mod="${esc(m.clave)}" ${fijo?'disabled title="Fijo"':''}>
+          <option value="" ${!n?'selected':''}>Sin acceso</option>
+          <option value="lectura" ${n==='lectura'?'selected':''}>Lectura</option>
+          <option value="escritura" ${n==='escritura'?'selected':''}>Escritura</option>
+          <option value="admin" ${n==='admin'?'selected':''}>Admin</option>
+        </select></td>`;
+      }).join('')}
+    </tr>`).join('')}</tbody></table>`;
+}
+
+$('matriz').addEventListener('change', async e => {
+  const s = e.target.closest('select'); if(!s) return;
+  const { rol, mod } = s.dataset, nivel = s.value || null;
+  const modNombre = st.modulos.find(m=>m.clave===mod)?.nombre || mod;
+  if(mod==='admin' && nivel && !confirm(`Vas a dar acceso al módulo de Administración al rol "${nombreRol(rol)}". Esas personas podrán ver la pantalla, aunque solo tú puedes guardar cambios. ¿Continuar?`)){
+    pintarMatriz(); return;
+  }
+  s.disabled = true;
+  const { error } = await db.rpc('admin_nivel_rol', { p_rol: rol, p_modulo: mod, p_nivel: nivel });
+  s.disabled = false;
+  if(error){ nota('No se pudo cambiar: ' + error.message); pintarMatriz(); return; }
+  st.rolMod = st.rolMod.filter(x => !(x.rol===rol && x.modulo===mod));
+  if(nivel) st.rolMod.push({ rol, modulo: mod, nivel });
+  s.className = 'n-' + (nivel||'');
+  nota(`${nombreRol(rol)} · ${modNombre}: ${nivel ? NIVEL_TXT[nivel] : 'sin acceso'}.`);
+});
+
+/* ---------------- pestañas y salir ---------------- */
+document.querySelectorAll('.pestana').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.pestana').forEach(x => x.setAttribute('aria-selected', x===b ? 'true' : 'false'));
+  $('tabUsuarios').style.display = b.dataset.tab==='usuarios' ? '' : 'none';
+  $('tabRoles').style.display    = b.dataset.tab==='roles' ? '' : 'none';
+}));
+
+$('salir').addEventListener('click', async () => { await db.auth.signOut(); location.href = 'index.html'; });
+</script>
+</body>
+</html>
