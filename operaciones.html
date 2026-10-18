@@ -153,6 +153,13 @@
 .visor img{max-width:100%;max-height:100%;object-fit:contain}
 
 .nota:empty{display:none}
+.btn-prueba{background:transparent;border:1px solid var(--edge);color:#C8D6E5;border-radius:var(--r);padding:7px 12px;font-size:13px;font-weight:600}
+.btn-prueba[aria-pressed="true"]{background:var(--amber);border-color:var(--amber);color:#2B1B00}
+.franja-prueba{display:none;align-items:center;gap:12px;flex-wrap:wrap;background:var(--amber-soft);border:2px solid var(--amber);border-left:8px solid var(--amber);border-radius:var(--r);padding:10px 14px;margin-bottom:14px;color:#5A3D00;font-size:14px}
+.franja-prueba p{flex:1;min-width:240px}
+body.prueba .franja-prueba{display:flex}
+body.prueba header{border-bottom-color:var(--amber)}
+body.prueba header .cinta{background:var(--amber)}
 .dialogo{position:fixed;inset:0;background:rgba(5,15,30,.55);z-index:50;display:none;align-items:center;justify-content:center;padding:16px}
 .dialogo.on{display:flex}
 .dialogo .caja{background:var(--surface);border:2px solid var(--edge);border-radius:var(--r);width:min(460px,100%);padding:18px}
@@ -194,6 +201,7 @@
         <b id="nombreUsuario">—</b><br>
         <span class="eyebrow" id="rolUsuario"></span>
       </div>
+      <button class="btn-prueba" id="btnPrueba" aria-pressed="false" hidden>Modo prueba</button>
       <button class="campana" id="btnAvisos" aria-label="Avisos">
         <svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
         <span class="n" id="nAvisos"></span>
@@ -204,6 +212,11 @@
 
   <main>
     <a class="migaja" href="index.html">← Volver a módulos</a>
+    <div class="franja-prueba" id="franjaPrueba">
+      <p><b>Modo prueba.</b> Lo que hagas aquí se guarda aparte: no aparece en las órdenes reales, no entra al historial del equipo ni a Imágenes HT, y las facturas solo se simulan (no llegan a Autorización de facturas ni a pagos).</p>
+      <button class="btn chico claro" id="borrarPruebas">Borrar mis datos de prueba</button>
+      <button class="btn chico navy" id="salirPrueba">Salir del modo prueba</button>
+    </div>
     <div class="pestanas" role="tablist" id="tabs">
       <button class="pestana" data-tab="ordenes" aria-selected="true">Órdenes <span class="c" id="cOrdenes">0</span></button>
       <button class="pestana" data-tab="taller" aria-selected="false">Taller</button>
@@ -413,7 +426,7 @@ const S = {
   yo:null, nivel:null, aut:null, config:false, admin:false,
   patios:[], talleres:[], tipos:[], lineas:[], params:{}, personal:[],
   ordenes:[], cotPend:[], revisiones:[], avisos:[],
-  tab:'ordenes', ordenAbierta:null, etapaFoto:'condicion'
+  tab:'ordenes', ordenAbierta:null, etapaFoto:'condicion', prueba:false
 };
 const puedeEscribir = () => S.nivel === 'escritura' || S.nivel === 'admin';
 
@@ -423,12 +436,13 @@ async function iniciar(){
   if(!session){ location.href = 'index.html'; return; }
   S.yo = { id: session.user.id, correo: session.user.email };
 
-  const [perfil, nivel, aut, conf, adm] = await Promise.all([
+  const [perfil, nivel, aut, conf, adm, pru] = await Promise.all([
     core.from('perfiles').select('nombre,puesto').eq('id', S.yo.id).maybeSingle(),
     core.rpc('nivel_modulo', { p_modulo:'operaciones' }),
     db.rpc('mi_nivel_autorizacion'),
     db.rpc('puede_configurar'),
-    core.rpc('es_admin')
+    core.rpc('es_admin'),
+    db.rpc('en_prueba')
   ]);
   S.yo.nombre = perfil.data?.nombre || S.yo.correo;
   S.nivel = nivel.data || null;
@@ -441,6 +455,9 @@ async function iniciar(){
   S.aut = aut.data || null;
   S.config = !!conf.data;
   S.admin = !!adm.data;
+  S.prueba = !!pru.data;
+  aplicarModoPrueba();
+  $('btnPrueba').hidden = !(puedeEscribir() || S.aut);
 
   $('app').style.display = 'flex';
   $('nombreUsuario').textContent = S.yo.nombre;
@@ -490,18 +507,18 @@ const limite = () => S.params.limite_autorizacion ?? 15000;
 const tasaIva = () => S.params.iva ?? 0.16;
 
 async function cargarOrdenes(){
-  const { data, error } = await db.from('v_ordenes').select('*').order('creado_en', { ascending:false }).limit(1000);
+  const { data, error } = await db.from('v_ordenes').select('*').eq('es_prueba', S.prueba).order('creado_en', { ascending:false }).limit(1000);
   if(error){ $('listaOrdenes').innerHTML = `<p class="vacio">No se pudieron leer las órdenes: ${esc(errTxt(error))}</p>`; return; }
   S.ordenes = data || [];
 }
 async function cargarCotizaciones(){
   const desde = new Date(Date.now() - 30*864e5).toISOString();
-  const { data, error } = await db.from('v_cotizaciones').select('*')
+  const { data, error } = await db.from('v_cotizaciones').select('*').eq('es_prueba', S.prueba)
     .or(`estatus.eq.pendiente,resuelto_en.gte."${desde}"`).order('creado_en', { ascending:true }).limit(500);
   if(!error) S.cotPend = data || [];
 }
 async function cargarRevisiones(){
-  const { data, error } = await db.from('v_revisiones').select('*').order('creado_en', { ascending:false }).limit(150);
+  const { data, error } = await db.from('v_revisiones').select('*').eq('es_prueba', S.prueba).order('creado_en', { ascending:false }).limit(150);
   if(error){ $('listaRevisiones').innerHTML = `<p class="vacio">No se pudieron leer las revisiones: ${esc(errTxt(error))}</p>`; return; }
   S.revisiones = data || [];
 }
@@ -991,7 +1008,7 @@ async function abrirOrden(id, silencioso = false){
       const f = $('cArchivo').files[0];
       if(f){
         const ext = (f.name.split('.').pop() || 'pdf').toLowerCase().replace(/[^a-z0-9]/g, '');
-        ruta = `${ord.id}/${uuid()}.${ext}`;
+        ruta = `${ord.es_prueba ? 'prueba/' : ''}${ord.id}/${uuid()}.${ext}`;
         const up = await db.storage.from(BUCKET_ADJ).upload(ruta, f, { contentType: f.type || 'application/octet-stream' });
         if(up.error){ $('cGuardar').disabled = false; nota('No se pudo subir el archivo: ' + errTxt(up.error), 7000); return; }
       }
@@ -1044,18 +1061,19 @@ function formEditar(ord){
 
 /* ---------------------------- fotos ---------------------------- */
 const urlsFirmadas = new Map();
-async function firmar(rutas){
-  const faltan = rutas.filter(r => !urlsFirmadas.has(r));
-  if(faltan.length){
-    const { data } = await db.storage.from(BUCKET_FOTOS).createSignedUrls(faltan, 3600);
+async function firmar(fotos){
+  for(const bucket of [BUCKET_FOTOS, BUCKET_ADJ]){
+    const faltan = fotos.filter(f => (f.bucket || BUCKET_FOTOS) === bucket && !urlsFirmadas.has(f.ruta_storage)).map(f => f.ruta_storage);
+    if(!faltan.length) continue;
+    const { data } = await db.storage.from(bucket).createSignedUrls(faltan, 3600);
     (data || []).forEach(d => { if(d.signedUrl) urlsFirmadas.set(d.path, d.signedUrl); });
   }
-  return rutas.map(r => urlsFirmadas.get(r));
+  return fotos.map(f => urlsFirmadas.get(f.ruta_storage));
 }
 async function pintarGaleria(ord, fotos){
   const et = S.etapaFoto;
   const lista = fotos.filter(f => f.etapa === et);
-  const urls = await firmar(lista.map(f => f.ruta_storage));
+  const urls = await firmar(lista);
   const subir = puedeEscribir() && !['cancelada'].includes(ord.estatus) ? `<label class="subir">
       <svg viewBox="0 0 24 24"><path d="M3 7h3l2-3h8l2 3h3v13H3z"/><circle cx="12" cy="13" r="4"/></svg>
       Tomar o subir fotos de ${ETAPAS[et].toLowerCase()}
@@ -1091,6 +1109,15 @@ async function subirFotos(files, d){
     try{
       const c = await comprimir(f);
       const id = uuid();
+      if(S.prueba){
+        const rutaP = `prueba/${d.orden_id || ('revision-' + d.revision_id)}/${id}.jpg`;
+        const upP = await db.storage.from(BUCKET_ADJ).upload(rutaP, c.blob, { contentType:'image/jpeg', upsert:true });
+        if(upP.error) throw upP.error;
+        const rp = await db.from('fotos_prueba').insert({ id, orden_id:d.orden_id || null, revision_id:d.revision_id || null, etapa:d.etapa,
+          ruta:rutaP, subida_por:S.yo.id, tomada_en: new Date(f.lastModified || Date.now()).toISOString() });
+        if(rp.error) throw rp.error;
+        hechas++; continue;
+      }
       const ruta = `${d.niv || 'SIN_NIV'}/operaciones/${d.orden_id || ('revision-' + d.revision_id)}/${id}.jpg`;
       const up = await db.storage.from(BUCKET_FOTOS).upload(ruta, c.blob, { contentType:'image/jpeg', upsert:true });
       if(up.error) throw up.error;
@@ -1176,6 +1203,7 @@ function bloqueFacturas(ord, facturas, facturadoVivo){
         <label class="soltar campo" id="fxPdfLbl"><b>PDF de la factura</b><span>Opcional, recomendado.</span><input type="file" accept="application/pdf" id="fxPdf"></label>
         <label class="campo ancho"><span class="lbl">Nota para pagos</span><input id="fxNota" placeholder="Opcional"></label>
       </div>
+      ${ord.es_prueba ? '<div class="regla ger">Orden de prueba: la factura solo se simula; no llega a Autorización de facturas ni a pagos.</div>' : ''}
       <div class="regla" id="fxRegla">Carga el XML para comparar la factura contra lo autorizado (${pesos(resta)} por facturar sin IVA).</div>
       <div class="acciones" style="margin-top:10px"><button class="btn navy" id="fxEnviar" disabled>Enviar factura</button>
         <a class="btn claro chico" href="gastos.html" target="_blank" style="text-decoration:none">Abrir Autorización de facturas</a></div>
@@ -1241,6 +1269,10 @@ function enlazarFacturas(ord, facturadoVivo){
       return;
     }
     const r = data[0];
+    if(ord.es_prueba){
+      nota(`PRUEBA: ${r.directa ? 'esta factura habría pasado directo a pagos' : 'esta factura habría ido a la ruta normal de autorización'}. No se envió a Autorización de facturas.`, 9000);
+      await refrescar(); abrirOrden(ord.id, true); return;
+    }
     const subir = [{ clase:'xml', file:new Blob([xmlTexto], { type:'application/xml' }), nombre:xmlFile.name }];
     if($('fxPdf').files[0]) subir.push({ clase:'pdf', file:$('fxPdf').files[0], nombre:$('fxPdf').files[0].name });
     let fallas = 0;
@@ -1607,6 +1639,37 @@ function enlazarConfig(){
     if(error) nota(errTxt(error), 6000); else { await cargarCatalogos(); pintarConfig(); }
   };
 }
+
+/* ============================ MODO PRUEBA ============================ */
+function aplicarModoPrueba(){
+  document.body.classList.toggle('prueba', S.prueba);
+  $('btnPrueba').setAttribute('aria-pressed', S.prueba);
+  $('btnPrueba').textContent = S.prueba ? 'Modo prueba: activo' : 'Modo prueba';
+}
+async function cambiarPrueba(activo){
+  const { error } = await db.rpc('cambiar_modo_prueba', { p_activo: activo });
+  if(error){ nota(errTxt(error), 6000); return; }
+  S.prueba = activo; aplicarModoPrueba(); cerrarPanel();
+  nota(activo ? 'Modo prueba activo: lo que hagas no afecta lo real' : 'Saliste del modo prueba');
+  await refrescar();
+  if(S.tab === 'revisiones'){ await cargarRevisiones(); pintarRevisiones(); }
+}
+$('btnPrueba').onclick = () => cambiarPrueba(!S.prueba);
+$('salirPrueba').onclick = () => cambiarPrueba(false);
+$('borrarPruebas').onclick = async () => {
+  const t = await pedirTexto('Borrar mis datos de prueba', 'Se borran tus órdenes, cotizaciones, revisiones, fotos y avisos de prueba. Lo real no se toca. Escribe BORRAR para confirmar.', 'BORRAR', true);
+  if(t === null) return;
+  if(t.toUpperCase() !== 'BORRAR'){ nota('No se borró nada'); return; }
+  const { data, error } = await db.rpc('borrar_pruebas', { p_todas:false });
+  if(error){ nota(String(error.message || '').includes('borrar_pruebas') ? 'El borrado todavía no está activado en la base de datos.' : errTxt(error), 8000); return; }
+  const r = data[0] || { ordenes:0, revisiones:0, rutas:[] };
+  if(r.rutas && r.rutas.length){
+    for(let i = 0; i < r.rutas.length; i += 100) await db.storage.from(BUCKET_ADJ).remove(r.rutas.slice(i, i + 100));
+  }
+  nota(`Se borraron ${r.ordenes} orden(es) y ${r.revisiones} revisión(es) de prueba`, 6000);
+  cerrarPanel(); await refrescar();
+  if(S.tab === 'revisiones'){ await cargarRevisiones(); pintarRevisiones(); }
+};
 
 /* ============================ diálogo ============================ */
 function pedirTexto(titulo, texto, placeholder, obligatorio){

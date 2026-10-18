@@ -831,3 +831,14 @@ create table if not exists operaciones.facturas(
 );
 -- + parámetro tolerancia_factura (1 peso) y funciones operaciones.enviar_factura(p_orden, p_datos jsonb),
 --   operaciones.adjuntar_factura(...) y operaciones.facturas_orden(p_orden), aplicadas en la base.
+
+-- =====================================================================
+-- Modo prueba (2026-10-18), aplicado en la base: tabla operaciones.modo_prueba,
+-- funciones en_prueba() y cambiar_modo_prueba(), columnas es_prueba en ordenes,
+-- revisiones y avisos, folio PRUEBA-#### (secuencia folio_prueba_seq desde 900001),
+-- tabla fotos_prueba (fotos en el bucket operaciones-adjuntos bajo prueba/),
+-- índices únicos que incluyen es_prueba, acumulado separado prueba/real,
+-- registrar() sin historial del equipo para pruebas y enviar_factura() que
+-- solo simula en órdenes de prueba. Pendiente de pegar a mano:
+-- sql/2026-10-18_operaciones_modo_prueba_pendiente.sql
+-- =====================================================================
