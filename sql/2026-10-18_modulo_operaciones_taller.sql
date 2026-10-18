@@ -842,3 +842,15 @@ create table if not exists operaciones.facturas(
 -- solo simula en órdenes de prueba. Pendiente de pegar a mano:
 -- sql/2026-10-18_operaciones_modo_prueba_pendiente.sql
 -- =====================================================================
+
+-- =====================================================================
+-- Conexión con Entradas y salidas (2026-10-18), aplicada en la base:
+--  * operaciones.bloqueos_salida(): equipos con orden real abierta.
+--  * trigger core.movimientos mov_bloqueo_operaciones (before insert/update):
+--    bloquea una SALIDA de un equipo con orden abierta, salvo destino 'Taller'.
+--    (Decisión de Rogelio Morejón: bloquear hasta que Operaciones libere o cancele.)
+--  * trigger mov_a_orden_operaciones (after insert): la salida a Taller y la
+--    entrada desde Taller quedan en la bitácora de la orden abierta.
+--  * revisiones.movimiento_id y operaciones.entradas_por_revisar(p_dias):
+--    entradas de los últimos días sin revisión de llegada.
+-- =====================================================================

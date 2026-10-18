@@ -209,7 +209,7 @@ label>span.lbl{margin-bottom:5px}
    Vive sobre core: equipos, patios, fotos, eventos y adicionales.
    Captura en campo con cola local: si no hay señal, se guarda y sube después.
    ===================================================================== */
-const APP_VERSION = 'v7 · plataforma · 14 oct 2026';
+const APP_VERSION = 'v8 · plataforma · 18 oct 2026';
 
 const SUPABASE_URL  = 'https://ahfjstuwekcuxshclprl.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFoZmpzdHV3ZWtjdXhzaGNscHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwNDg2MjYsImV4cCI6MjEwMzYyNDYyNn0.lf1uw8WHPRy21GuYlK9NzeI5JgJK2be1LrODq22CodM';
@@ -341,6 +341,7 @@ async function conectar(){
   if(!SESION){ location.href = 'index.html'; return false; }
   const { data: perfil } = await CORE.from('perfiles').select('nombre,puesto').eq('id', SESION.user.id).maybeSingle();
   S.yo = { id:SESION.user.id, nombre:(perfil&&perfil.nombre)||SESION.user.email, puesto:(perfil&&perfil.puesto)||'' };
+  try{ const { data:nOp } = await CORE.rpc('nivel_modulo', { p_modulo:'operaciones' }); S.opNivel = nOp || null; }catch(e){ S.opNivel = null; }
   $('#nombreUsuario').textContent = S.yo.nombre;
   $('#puestoUsuario').textContent = S.yo.puesto;
   return true;
@@ -362,6 +363,10 @@ async function bajarCatalogos(aviso){
     CORE.from('marcas').select('id,nombre')
   ]);
   S.patios = patios || S.patios;
+  try{
+    const { data:bl, error:eb } = await SB.schema('operaciones').rpc('bloqueos_salida');
+    if(!eb){ S.bloqueos = Object.fromEntries((bl||[]).map(b=>[b.equipo_id, b])); await store.put('kv',{k:'bloqueos', v:S.bloqueos}); }
+  }catch(e){}
   CAT.adicionales = (adic||[]).map(a=>({id:a.id, nombre:a.nombre}));
   await store.bulk('patios', S.patios);
   await store.put('kv',{k:'adicionales', v:CAT.adicionales});
@@ -659,7 +664,7 @@ function pintarMov(){
           <div class="hint">${ubic(e) ? 'El sistema lo tiene en <b>'+esc(nombrePatio(ubic(e)))+'</b>'
             : 'Sin patio físico · '+esc(e.estatus||'')}${e.cliente?' · '+esc(e.cliente):''}</div>
         </div><button class="btn claro chico" onclick="quitarEquipo()">Cambiar</button></div>
-        ${avisoUbicacion(m,e)}`
+        ${avisoUbicacion(m,e)}${avisoBloqueo(m,e)}`
       : `<label><span class="lbl">NIV o placas</span>
            <input class="mono" id="mNiv" maxlength="24" autocapitalize="characters" placeholder="Escribe al menos 3 caracteres" oninput="buscarEquipo(this.value)"></label>
          <div id="resNiv"></div>`}
@@ -717,6 +722,11 @@ function pintarMov(){
   if($('#mNiv')) $('#mNiv').focus();
 }
 const paraInput = iso => { const d=new Date(iso); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,16); };
+function avisoBloqueo(m,e){
+  const b = e && (S.bloqueos||{})[e.id];
+  if(!b || m.tipo_mov!=='salida') return '';
+  return `<div class="banner b-warn" style="margin-bottom:0;border-left-color:var(--red);background:var(--red-soft);color:var(--red)"><b>Salida bloqueada.</b> Tiene la orden ${esc(b.folio_txt)} (${esc(String(b.estatus).replace('_',' '))}) abierta en Operaciones y taller: ${esc(b.descripcion||'')}. Operaciones debe liberarla o cancelarla. Solo puede salir con destino <b>Taller</b>.</div>`;
+}
 function avisoUbicacion(m,e){
   const aqui = Number(m.patio_id||S.patioId), u = Number(ubic(e))||null;
   if(m.tipo_mov==='entrada' && u && u !== aqui)
@@ -905,6 +915,12 @@ async function guardarMov(){
   if(m.tipo_mov==='salida'){
     m.destino_tipo=$('#mDestinoTipo').value; m.destino_nombre=$('#mDestinoNombre').value.trim();
     if(!m.destino_nombre){ nota('Captura a quién se entrega'); return; }
+    const bl = (S.bloqueos||{})[m.equipo_id];
+    if(bl && m.destino_tipo!=='Taller'){
+      if(SB && navigator.onLine){ try{ await bajarCatalogos(false); }catch(e){} }
+      const b2 = (S.bloqueos||{})[m.equipo_id];
+      if(b2){ nota(`Salida bloqueada: orden ${b2.folio_txt} abierta en Operaciones y taller`, 6000); pintarMov(); return; }
+    }
   }
   if(m.tipo_mov==='traspaso'){
     m.patio_destino_id=$('#mPatioDestino').value;
@@ -920,6 +936,15 @@ async function guardarMov(){
   await aplicarLocal(m);
   $('#sheetMov').classList.remove('open'); document.body.style.overflow=''; S.movId=null;
   pintar(); nota('Movimiento registrado'); pedirSync();
+  if(m.tipo_mov==='entrada' && ['escritura','admin'].includes(S.opNivel)){
+    const eq = equipoDe(m.equipo_id);
+    if(await preguntar('Entrada registrada.\n¿Hacer ahora la revisión fisicomecánica en Operaciones y taller?','Hacer revisión')){
+      clearTimeout(syncT); nota('Subiendo la entrada…', 8000);
+      try{ await sincronizar(); }catch(e){}
+      const subida = !m.dirty;
+      location.href = `operaciones.html?${subida ? 'revisar=' + encodeURIComponent(m.id) + '&' : ''}niv=${encodeURIComponent((eq&&eq.niv)||'')}`;
+    }
+  }
 }
 
 /* ======================= HISTÓRICO POR EQUIPO ======================= */
@@ -975,6 +1000,7 @@ $$('nav.tabs button').forEach(b=>b.onclick=()=>{
   await abrirDB();
   const kp = await store.get('kv','patioId');     S.patioId = (kp&&kp.v)||'';
   const ka = await store.get('kv','adicionales'); CAT.adicionales = (ka&&ka.v)||[];
+  const kb = await store.get('kv','bloqueos');    S.bloqueos = (kb&&kb.v)||{};
   S.patios      = await store.all('patios');
   S.equipos     = await store.all('equipos');
   const todosMov = await store.all('movimientos');

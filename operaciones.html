@@ -221,7 +221,7 @@ body.prueba header .cinta{background:var(--amber)}
       <button class="pestana" data-tab="ordenes" aria-selected="true">Órdenes <span class="c" id="cOrdenes">0</span></button>
       <button class="pestana" data-tab="taller" aria-selected="false">Taller</button>
       <button class="pestana" data-tab="autorizar" aria-selected="false">Por autorizar <span class="c" id="cAutorizar">0</span></button>
-      <button class="pestana" data-tab="revisiones" aria-selected="false">Revisión de llegada</button>
+      <button class="pestana" data-tab="revisiones" aria-selected="false">Revisión de llegada <span class="c" id="cPorRevisar">0</span></button>
       <button class="pestana" data-tab="config" aria-selected="false" id="tabConfig" hidden>Configuración</button>
     </div>
 
@@ -301,6 +301,8 @@ body.prueba header .cinta{background:var(--amber)}
         <button class="btn" id="btnNuevaRevision" hidden>+ Nueva revisión</button>
       </div>
       <p class="sub" style="margin-bottom:14px">Cómo llega cada equipo al patio. Si necesita trabajo, de aquí sale su orden.</p>
+      <div id="porRevisar"></div>
+      <h2 style="margin-top:6px">Revisiones registradas</h2>
       <div id="listaRevisiones"><p class="cargando">Cargando…</p></div>
     </section>
 
@@ -470,13 +472,22 @@ async function iniciar(){
   $('tabConfig').hidden = !S.config;
 
   await cargarCatalogos();
-  await Promise.all([cargarOrdenes(), cargarCotizaciones(), cargarAvisos()]);
+  await Promise.all([cargarOrdenes(), cargarCotizaciones(), cargarAvisos(), cargarPorRevisar()]);
   pintarTodo();
   escucharAvisos();
   setInterval(async () => { if(document.visibilityState === 'visible'){ await refrescar(); } }, 60000);
 
   const q = new URLSearchParams(location.search);
   if(q.get('orden')) abrirOrden(q.get('orden'));
+  if(q.get('revisar') || q.get('niv')){
+    cambiarTab('revisiones');
+    const m = (S.porRevisar || []).find(x => x.movimiento_id === q.get('revisar'));
+    if(m) revisarEntrada(m);
+    else if(q.get('niv')){
+      const { data:eq } = await core.from('equipos').select('id,niv,placa,patio_id,patio_fisico_id,estatus_operativo,estatus_asignacion,cliente_actual').eq('niv', q.get('niv').toUpperCase()).maybeSingle();
+      if(eq) nuevaRevision({ equipo:eq, movId:q.get('revisar') || null });
+    }
+  }
   if(q.get('tab')) cambiarTab(q.get('tab'));
 }
 
@@ -517,13 +528,34 @@ async function cargarCotizaciones(){
     .or(`estatus.eq.pendiente,resuelto_en.gte."${desde}"`).order('creado_en', { ascending:true }).limit(500);
   if(!error) S.cotPend = data || [];
 }
+async function cargarPorRevisar(){
+  if(S.prueba){ S.porRevisar = []; return; }
+  const { data } = await db.rpc('entradas_por_revisar', { p_dias:15 });
+  S.porRevisar = data || [];
+}
+function pintarPorRevisar(){
+  const l = S.porRevisar || [];
+  $('cPorRevisar').textContent = l.length;
+  $('porRevisar').innerHTML = !l.length ? '' : `<div class="bloque">
+    <h3>Entradas por revisar <span class="sub" style="display:inline">· registradas en Entradas y salidas en los últimos 15 días, sin revisión</span></h3>
+    ${l.map((m, i) => `<div class="en-cola">
+      <div class="fila1"><span class="niv">${esc(m.niv)}</span><span class="sub">${esc(m.placa || '')}</span><span class="sp"></span><span class="sub">${fechaHora(m.fecha)}</span></div>
+      <div class="meta">${esc(m.patio || '')} · llegó de ${esc([m.origen_tipo, m.origen_nombre].filter(Boolean).join(': ') || '—')}${m.condicion ? ' · condición: ' + esc(m.condicion) : ''}${m.fotos ? ' · ' + m.fotos + ' foto(s) de caseta' : ''} · registró ${esc(m.registrado_por || '')}${m.obs ? '<br>' + esc(m.obs) : ''}</div>
+      ${puedeEscribir() ? `<div class="acciones"><button class="btn chico" data-revisar="${i}">Hacer revisión</button></div>` : ''}
+    </div>`).join('')}</div>`;
+  $('porRevisar').querySelectorAll('[data-revisar]').forEach(b => b.onclick = () => revisarEntrada(l[Number(b.dataset.revisar)]));
+}
+async function revisarEntrada(m){
+  const { data:eq } = await core.from('equipos').select('id,niv,placa,patio_id,patio_fisico_id,estatus_operativo,estatus_asignacion,cliente_actual').eq('id', m.equipo_id).maybeSingle();
+  nuevaRevision({ mov:m, equipo:eq });
+}
 async function cargarRevisiones(){
   const { data, error } = await db.from('v_revisiones').select('*').eq('es_prueba', S.prueba).order('creado_en', { ascending:false }).limit(150);
   if(error){ $('listaRevisiones').innerHTML = `<p class="vacio">No se pudieron leer las revisiones: ${esc(errTxt(error))}</p>`; return; }
   S.revisiones = data || [];
 }
 async function refrescar(){
-  await Promise.all([cargarOrdenes(), cargarCotizaciones(), cargarAvisos()]);
+  await Promise.all([cargarOrdenes(), cargarCotizaciones(), cargarAvisos(), cargarPorRevisar()]);
   pintarTodo();
   if(S.ordenAbierta && $('panel').classList.contains('on') && $('panel').dataset.tipo === 'orden'){
     const enEdicion = $('panelCuerpo').querySelector('input:focus, textarea:focus, select:focus');
@@ -531,7 +563,7 @@ async function refrescar(){
   }
 }
 function pintarTodo(){
-  pintarOrdenes(); pintarTaller(); pintarAutorizar(); pintarAvisos();
+  pintarOrdenes(); pintarTaller(); pintarAutorizar(); pintarAvisos(); pintarPorRevisar();
   if(S.tab === 'revisiones') pintarRevisiones();
   if(S.tab === 'config') pintarConfig();
 }
@@ -1423,13 +1455,17 @@ function ordenDesdeRevision(r, eq){
   nuevaOrden({ equipo:eq, tipo: r.resultado === 'adecuacion' ? 'adecuacion' : 'reparacion', trabajos, descripcion: desc, revision_id: r.id });
 }
 
-function nuevaRevision(){
+function nuevaRevision(pre = {}){
   S.ordenAbierta = null;
   abrirPanel('Revisión fisicomecánica', 'revision');
-  let equipo = null;
+  let equipo = pre.equipo || null;
+  const movId = (pre.mov && pre.mov.movimiento_id) || pre.movId || null;
   const puntos = {};
   $('panelCuerpo').innerHTML = `
     <div class="bloque"><h3>Equipo</h3><div id="rEquipo"></div></div>
+    ${pre.mov ? `<div class="bloque"><h3>Entrada registrada en caseta</h3>
+      <p class="sub">${fechaHora(pre.mov.fecha)} · ${esc(pre.mov.patio || '')} · llegó de ${esc([pre.mov.origen_tipo, pre.mov.origen_nombre].filter(Boolean).join(': '))}${pre.mov.condicion ? ' · condición: ' + esc(pre.mov.condicion) : ''} · registró ${esc(pre.mov.registrado_por || '')}${pre.mov.obs ? '<br>' + esc(pre.mov.obs) : ''}</p>
+      <div class="galeria" id="rFotosCaseta" style="margin-top:10px"></div></div>` : ''}
     <div class="bloque"><div class="campos">
       <label class="campo"><span class="lbl">Motivo</span><select id="rMotivo"><option value="llegada">Llegada a patio</option><option value="pre_entrega">Antes de entrega</option><option value="periodica">Revisión periódica</option><option value="otra">Otra</option></select></label>
       <label class="campo"><span class="lbl">Procedencia</span><input id="rProc" placeholder="Cliente, patio o proveedor de donde llega"></label>
@@ -1469,7 +1505,20 @@ function nuevaRevision(){
   };
   $('rFotos').onchange = () => { const n = $('rFotos').files.length; $('rFotosLbl').classList.toggle('tiene', n > 0);
     $('rFotosLbl').querySelector('span').textContent = n ? `${n} foto(s) lista(s)` : 'Frente, costados, interior y cada falla.'; };
-  buscadorEquipo($('rEquipo'), e => { equipo = e; mostrarFicha($('rEquipo'), e.niv); const p = e.patio_fisico_id || e.patio_id; if(p) $('rPatio').value = p; });
+  buscadorEquipo($('rEquipo'), e => { equipo = e; mostrarFicha($('rEquipo'), e.niv); const p = e.patio_fisico_id || e.patio_id; if(p) $('rPatio').value = p; }, equipo);
+  if(pre.mov){
+    if(pre.mov.patio_id) $('rPatio').value = pre.mov.patio_id;
+    $('rProc').value = [pre.mov.origen_tipo, pre.mov.origen_nombre].filter(Boolean).join(': ');
+    if(pre.mov.obs) $('rObs').value = pre.mov.obs;
+    core.from('fotos').select('id,ruta_storage,tomada_en,angulo').eq('modulo_origen', 'movimientos').eq('etapa', pre.mov.movimiento_id).order('tomada_en')
+      .then(async ({ data }) => {
+        const fs = (data || []).map(f => ({ ...f, bucket:BUCKET_FOTOS }));
+        if(!fs.length){ $('rFotosCaseta').innerHTML = '<p class="sub" style="grid-column:1/-1">La caseta no tomó fotos en esta entrada.</p>'; return; }
+        const urls = await firmar(fs);
+        $('rFotosCaseta').innerHTML = fs.map((f, i) => `<div class="ft" data-fc="${i}"><img loading="lazy" src="${urls[i] || ''}" alt=""><span>${esc(f.angulo || '')}</span></div>`).join('');
+        $('rFotosCaseta').querySelectorAll('[data-fc]').forEach(el => el.onclick = () => verFoto(urls[Number(el.dataset.fc)], 'Foto de caseta · ' + (fs[Number(el.dataset.fc)].angulo || '')));
+      });
+  }
   $('rCancelar').onclick = cerrarPanel;
   $('rGuardar').onclick = async () => {
     if(!equipo){ nota('Elige el equipo'); return; }
@@ -1482,19 +1531,19 @@ function nuevaRevision(){
     const id = uuid();
     const fila = { id, equipo_id:equipo.id, patio_id:Number($('rPatio').value) || null, motivo:$('rMotivo').value,
       procedencia:$('rProc').value.trim() || null, puntos, condicion:$('rCond').value, resultado:res,
-      observaciones:$('rObs').value.trim() || null, creado_por:S.yo.id };
+      observaciones:$('rObs').value.trim() || null, creado_por:S.yo.id, movimiento_id: movId };
     const { error } = await db.from('revisiones').insert(fila);
     if(error){ $('rGuardar').disabled = false; nota(errTxt(error), 7000); return; }
     const files = [...$('rFotos').files];
     if(files.length) await subirFotos(files, { equipo_id:equipo.id, patio_id:fila.patio_id, niv:equipo.niv, revision_id:id, etapa:'condicion' });
-    await cargarRevisiones(); pintarRevisiones();
+    await Promise.all([cargarRevisiones(), cargarPorRevisar()]); pintarRevisiones(); pintarPorRevisar();
     if(['reparacion','adecuacion'].includes(res)){
       nota('Revisión guardada. Completa la orden de trabajo.', 5000);
       ordenDesdeRevision({ ...fila, observaciones:fila.observaciones }, equipo);
     } else { nota('Revisión guardada'); cerrarPanel(); }
   };
 }
-$('btnNuevaRevision').onclick = nuevaRevision;
+$('btnNuevaRevision').onclick = () => nuevaRevision();
 
 /* ============================ AVISOS ============================ */
 async function cargarAvisos(){
