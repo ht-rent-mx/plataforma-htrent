@@ -796,3 +796,18 @@ language sql stable security definer set search_path to 'operaciones','core','pu
   order by p.nombre
 $$;
 grant execute on function operaciones.personal() to authenticated;
+
+-- =====================================================================
+-- Accesos definidos por Rogelio Morejón (2026-10-18)
+--   Solo consulta: Servicio a Clientes (rol servicio_clientes), César Valadez
+--     (rol nuevo operaciones_consulta) y José Villarreal (ya por consulta_general).
+--   Capturan y llevan el proceso sin autorizar: Aldair Castellanos y Salvador Martínez (rol operaciones).
+--   Autorizan: Ilse Cortés y Rogelio Morejón (jefatura), Francisco Mendoza (gerencia).
+-- =====================================================================
+insert into core.roles(clave, nombre) values ('operaciones_consulta','Operaciones y taller · Solo consulta') on conflict (clave) do nothing;
+insert into core.rol_modulos(rol, modulo, nivel)
+select 'operaciones_consulta','operaciones','lectura'
+where not exists (select 1 from core.rol_modulos where rol='operaciones_consulta' and modulo='operaciones');
+insert into core.perfil_roles(perfil_id, rol)
+select id, 'operaciones_consulta' from core.perfiles where correo = 'cesar.valadez@htrent.mx'
+on conflict do nothing;
