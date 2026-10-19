@@ -87,6 +87,13 @@
   .outlook{font-size:13px;color:var(--muted);margin-top:10px}
   .outlook b{color:var(--lime-ink)}
   #bloqueo{max-width:560px}
+  .franja-prueba{display:none;align-items:center;gap:12px;flex-wrap:wrap;background:var(--amber-soft);border:2px solid var(--amber);border-left:8px solid var(--amber);border-radius:var(--r);padding:10px 14px;margin-top:18px;color:#5A3D00;font-size:14px}
+  .franja-prueba p{flex:1;min-width:240px}
+  body.prueba .franja-prueba{display:flex}
+  body.prueba header{border-bottom-color:var(--amber)}
+  body.prueba header .cinta{background:var(--amber)}
+  .reserva.es-prueba{outline:2px dashed var(--amber);outline-offset:-2px}
+  .reserva .tag-prueba{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.06em;padding:0 5px;border-radius:2px;background:var(--amber);color:#2B1B00;margin-bottom:1px}
   @media (max-width:760px){
     .sala-opciones{grid-template-columns:1fr}
     .horas{grid-template-columns:1fr 1fr}
@@ -115,6 +122,11 @@
   <span class="eyebrow">Aparta Plataforma, Caja Seca o Portacontenedor · el sistema no permite empalmes</span>
 
   <div id="bloqueo" style="display:none"></div>
+
+  <div class="franja-prueba" id="franjaPrueba">
+    <p><b>Modo prueba.</b> Las reservas se guardan como de prueba: bloquean la sala igual que una real, pero la invitación de Outlook <b>solo te llega a ti</b> (con “[PRUEBA]” en el asunto y la lista de a quiénes se habría invitado). Los participantes no reciben nada.</p>
+    <button class="btn chico claro" id="borrarPruebas" hidden>Borrar reservas de prueba</button>
+  </div>
 
   <div id="contenido" style="display:none">
     <section style="margin-top:18px">
@@ -235,6 +247,17 @@ if(!puedeReservar()){
   $('pistaClic').textContent = 'Tienes acceso de consulta: puedes ver la agenda, pero no apartar salas.';
 }
 
+st.prueba = !!(await db.rpc('salas_en_prueba')).data;
+document.body.classList.toggle('prueba', st.prueba);
+$('borrarPruebas').hidden = !st.esAdmin;
+$('borrarPruebas').onclick = async () => {
+  if(!confirm('Se cancelarán y borrarán TODAS las reservas de prueba (las futuras se quitan también de tu calendario de Outlook). ¿Continuar?')) return;
+  const { data, error } = await db.rpc('salas_borrar_pruebas');
+  if(error){ nota(error.message); return; }
+  nota(`Se borraron ${data} reservas de prueba.`);
+  recargar();
+};
+
 const { data: salas, error: eSalas } = await db.from('salas').select('*').eq('activa', true).order('orden');
 if(eSalas){ $('agenda').innerHTML = `<p class="vacio">No se pudieron leer las salas: ${esc(eSalas.message)}</p>`; throw eSalas; }
 st.salas = salas;
@@ -341,9 +364,9 @@ function pintarAgenda(){
       const b = Math.min(minDelDia(rf) - H_INI*60, totalMin);
       if(b <= 0 || a >= totalMin) continue;
       const h = Math.max((b - a) * PX_MIN - 2, 20);
-      const cls = esMia(r) ? 'mia' : (meInvitaron(r) ? 'invitado' : '');
+      const cls = (esMia(r) ? 'mia' : (meInvitaron(r) ? 'invitado' : '')) + (r.es_prueba ? ' es-prueba' : '');
       html += `<button class="reserva ${cls}" data-id="${r.id}" style="top:${a*PX_MIN+1}px;height:${h}px" title="${esc(r.titulo)} · ${hhmm(ri)}–${hhmm(rf)}">
-        <b>${esc(r.titulo)}</b>
+        ${r.es_prueba ? '<span class="tag-prueba">PRUEBA</span>' : ''}<b>${esc(r.titulo)}</b>
         <span class="h">${hhmm(ri)}–${hhmm(rf)}</span>
         ${h > 52 ? `<span class="o">${esc(r.organizador_nombre || r.organizador_correo || '')}</span>` : ''}
       </button>`;
@@ -407,7 +430,7 @@ function pintarMias(){
         <td style="text-transform:capitalize">${esc(fCorta(i))}</td>
         <td class="niv">${hhmm(i)}–${hhmm(f)}</td>
         <td><b>${esc(nombreSala(r.sala_id))}</b></td>
-        <td>${esc(r.titulo)}${r.serie_id ? ' <span class="sello gris">semanal</span>':''}</td>
+        <td>${r.es_prueba ? '<span class="sello" style="background:var(--amber);color:#2B1B00">Prueba</span> ' : ''}${esc(r.titulo)}${r.serie_id ? ' <span class="sello gris">semanal</span>':''}</td>
         <td>${esc(r.organizador_nombre || r.organizador_correo || '')}</td>
         <td>${esMia(r) ? '<span class="sello ok">Organizas</span>' : '<span class="sello">Invitado</span>'}</td>
       </tr>`; }).join('')
@@ -437,7 +460,7 @@ function abrirDetalle(r){
       <div class="detalle-hora">${esc(fLarga(i))} · ${hhmm(i)} a ${hhmm(f)} h</div>
     </div>
     <div class="bloque">
-      <h3>${esc(r.titulo)}</h3>
+      <h3>${esc(r.titulo)}${r.es_prueba ? ' <span class="sello" style="background:var(--amber);color:#2B1B00">Prueba</span>' : ''}</h3>
       ${r.descripcion ? `<p style="white-space:pre-wrap">${esc(r.descripcion)}</p>` : ''}
       <dl class="datos" style="margin-top:12px">
         <div><dt>Reservó</dt><dd>${esc(r.organizador_nombre || '')}<span class="sub">${esc(r.organizador_correo || '')}</span></dd></div>
@@ -662,7 +685,9 @@ function pintarPersonas(){
   caja.querySelectorAll('.persona').forEach(n => n.remove());
   $('fBuscar').insertAdjacentHTML('beforebegin', st.form.participantes.map(p => personaChip(p, true)).join(''));
   const n = st.form.participantes.length;
-  $('fAvisoCorreo').textContent = n
+  $('fAvisoCorreo').textContent = st.prueba
+    ? `Modo prueba: la invitación solo te llegará a ti${n ? `; ${n === 1 ? 'esta persona no recibirá' : `estas ${n} personas no recibirán`} nada (aparecerán en el correo como “se habría invitado a…”).` : '.'}`
+    : n
     ? `Al guardar, ${n === 1 ? 'la persona recibirá' : `las ${n} personas recibirán`} la invitación en su calendario de Outlook (tú también).`
     : 'Al guardar recibirás la invitación en tu calendario de Outlook. Agrega participantes para que también les llegue.';
 }
