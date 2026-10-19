@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>Salas de juntas · Plataforma HT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Saira:ital,wght@1,700;1,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="ht.css?v=2026-09-25b">
+<style>
+  :root{ --px-min:1.1px; }
+  .barra-agenda{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:18px 0 14px}
+  .barra-agenda .fecha-txt{font-family:var(--display);font-style:italic;font-weight:800;font-size:20px;color:var(--ink);margin-right:auto}
+  .nav{display:inline-flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--surface)}
+  .nav button{padding:8px 13px;background:var(--surface);font-weight:700;color:var(--navy)}
+  .nav button+button{border-left:1px solid var(--line)}
+  .nav button:hover{background:var(--lime-soft)}
+  .barra-agenda input[type=date]{width:auto;padding:7px 10px}
+  .segmento{margin-bottom:0}
+  .segmento.salas-sel button{padding:8px 14px}
+
+  /* ---------- agenda ---------- */
+  .agenda{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow-x:auto}
+  .ag-tabla{display:grid;grid-template-columns:58px repeat(var(--cols),minmax(150px,1fr));min-width:calc(58px + var(--cols) * 150px)}
+  .ag-cab{position:sticky;top:0;z-index:3;background:var(--navy);color:#fff;padding:10px 12px;border-left:1px solid var(--edge);border-bottom:4px solid var(--lime)}
+  .ag-cab:first-child{border-left:0}
+  .ag-cab b{display:block;font-family:var(--display);font-style:italic;font-weight:800;font-size:17px;line-height:1.15}
+  .ag-cab small{display:block;color:#B9C8DC;font-size:12px}
+  .ag-cab .libre{display:inline-block;margin-top:5px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 7px;border-radius:3px;background:var(--lime);color:#0A2A0E}
+  .ag-cab .libre.no{background:var(--amber);color:#2B1B00}
+  .ag-cab.hoy{background:var(--navy-2)}
+  .ag-horas{position:relative;border-right:1px solid var(--line)}
+  .ag-horas span{position:absolute;right:8px;transform:translateY(-50%);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .ag-col{position:relative;border-left:1px solid var(--line);cursor:copy;
+    background-image:repeating-linear-gradient(to bottom,var(--line) 0 1px,transparent 1px calc(var(--px-min)*30)),
+                     repeating-linear-gradient(to bottom,transparent 0 calc(var(--px-min)*30),#EEF1F6 calc(var(--px-min)*30) calc(var(--px-min)*30 + 1px),transparent calc(var(--px-min)*30 + 1px) calc(var(--px-min)*60))}
+  .ag-col.solo-lectura{cursor:default}
+  .ag-pasado{position:absolute;left:0;right:0;top:0;background:repeating-linear-gradient(135deg,rgba(90,102,128,.07) 0 6px,transparent 6px 12px);pointer-events:none}
+  .ag-ahora{position:absolute;left:0;right:0;height:2px;background:var(--red);z-index:2;pointer-events:none}
+  .ag-ahora::before{content:"";position:absolute;left:-4px;top:-4px;width:10px;height:10px;border-radius:50%;background:var(--red)}
+  .ag-hueco{position:absolute;left:4px;right:4px;border:2px dashed var(--lime-ink);background:var(--lime-soft);border-radius:var(--r);pointer-events:none;display:none;font-size:12px;font-weight:700;color:var(--lime-ink);padding:2px 6px}
+  .reserva{position:absolute;left:4px;right:4px;border-radius:var(--r);padding:4px 8px;overflow:hidden;background:var(--navy);color:#fff;border-left:5px solid var(--lime);font-size:13px;line-height:1.25;cursor:pointer;text-align:left;z-index:1;box-shadow:0 1px 2px rgba(5,15,30,.2)}
+  .reserva:hover{background:var(--navy-2)}
+  .reserva.mia{background:var(--lime);color:#0A2A0E;border-left-color:var(--navy)}
+  .reserva.mia:hover{background:#31d015}
+  .reserva.invitado{border-left-color:var(--amber)}
+  .reserva b{display:block;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .reserva .h{font-size:12px;opacity:.85;font-variant-numeric:tabular-nums}
+  .reserva .o{font-size:12px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .leyenda{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-top:10px}
+  .leyenda i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:6px}
+
+  /* ---------- formulario ---------- */
+  .sala-opciones{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .sala-op{border:2px solid var(--line);border-radius:var(--r);background:var(--surface);padding:10px 12px;text-align:left}
+  .sala-op b{display:block;font-size:15px;color:var(--ink)}
+  .sala-op small{display:block;font-size:12px;color:var(--muted)}
+  .sala-op[aria-pressed="true"]{border-color:var(--navy);box-shadow:inset 0 0 0 1px var(--navy)}
+  .sala-op .disp{display:inline-block;margin-top:6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:1px 7px;border-radius:3px;background:var(--pend);color:var(--muted)}
+  .sala-op .disp.si{background:var(--lime-soft);color:var(--lime-ink)}
+  .sala-op .disp.no{background:var(--red-soft);color:var(--red)}
+  .estado-disp{margin-top:12px;padding:10px 12px;border-radius:var(--r);font-size:14px;border-left:5px solid var(--pend);background:var(--surface)}
+  .estado-disp.si{border-color:var(--lime);background:var(--lime-soft);color:var(--lime-ink)}
+  .estado-disp.no{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .estado-disp:empty{display:none}
+  .horas{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:12px}
+  .personas{display:flex;flex-wrap:wrap;gap:6px;padding:8px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);min-height:46px;align-items:center;position:relative}
+  .personas input{border:0;flex:1;min-width:180px;padding:6px 4px;box-shadow:none}
+  .personas input:focus{box-shadow:none}
+  .persona{display:inline-flex;align-items:center;gap:6px;background:var(--navy);color:#fff;border-radius:3px;padding:4px 4px 4px 9px;font-size:13px}
+  .persona.ext{background:var(--edge)}
+  .persona small{color:#B9C8DC}
+  .persona button{background:transparent;color:#fff;width:22px;height:22px;border-radius:3px;font-size:15px;line-height:1}
+  .persona button:hover{background:rgba(255,255,255,.18)}
+  .sugerencias{position:absolute;left:-1px;right:-1px;top:100%;background:var(--surface);border:1px solid var(--navy);border-radius:0 0 var(--r) var(--r);z-index:5;max-height:260px;overflow-y:auto;display:none}
+  .sugerencias.on{display:block}
+  .sugerencias button{display:block;width:100%;text-align:left;padding:8px 12px;background:var(--surface);font-size:14px}
+  .sugerencias button small{color:var(--muted);margin-left:6px}
+  .sugerencias button.activa,.sugerencias button:hover{background:var(--lime-soft)}
+  .detalle-sala{font-family:var(--display);font-style:italic;font-weight:800;font-size:24px;color:var(--ink);line-height:1.1}
+  .detalle-hora{font-size:16px;font-weight:600;margin-top:4px}
+  .lista-p{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .outlook{font-size:13px;color:var(--muted);margin-top:10px}
+  .outlook b{color:var(--lime-ink)}
+  #bloqueo{max-width:560px}
+  @media (max-width:760px){
+    .sala-opciones{grid-template-columns:1fr}
+    .horas{grid-template-columns:1fr 1fr}
+    .horas .campo:first-child{grid-column:1/-1}
+    .barra-agenda .fecha-txt{width:100%;font-size:18px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="cinta"></div>
+  <div class="barra">
+    <div class="marca">Plataforma <span>HT</span></div>
+    <div class="rotulo"><b>HT RENT &gt;</b><span>ARRENDA Y CRECE</span></div>
+    <div class="quien">
+      <b id="nombreUsuario">—</b><br>
+      <span class="eyebrow" id="puestoUsuario"></span>
+    </div>
+    <button class="salir" id="salir">Salir</button>
+  </div>
+</header>
+
+<main>
+  <a class="migaja" href="index.html">← Volver a módulos</a>
+  <h1>Salas de juntas</h1>
+  <span class="eyebrow">Aparta Plataforma, Caja Seca o Portacontenedor · el sistema no permite empalmes</span>
+
+  <div id="bloqueo" style="display:none"></div>
+
+  <div id="contenido" style="display:none">
+    <section style="margin-top:18px">
+      <div class="cifras" id="cifras"></div>
+    </section>
+
+    <section>
+      <div class="pestanas" role="tablist">
+        <button class="pestana" role="tab" aria-selected="true" data-tab="dia">Agenda del día</button>
+        <button class="pestana" role="tab" aria-selected="false" data-tab="semana">Semana por sala</button>
+        <button class="pestana" role="tab" aria-selected="false" data-tab="mias">Mis reuniones <span class="c" id="cMias">0</span></button>
+      </div>
+
+      <div id="vistaAgenda">
+        <div class="barra-agenda">
+          <div class="fecha-txt" id="fechaTxt"></div>
+          <div class="segmento salas-sel" id="salaSemana" style="display:none"></div>
+          <div class="nav">
+            <button id="ant" aria-label="Anterior">‹</button>
+            <button id="hoy">Hoy</button>
+            <button id="sig" aria-label="Siguiente">›</button>
+          </div>
+          <input type="date" id="fecha" aria-label="Ir a fecha">
+          <button class="btn" id="nueva">+ Reservar sala</button>
+        </div>
+        <div class="agenda" id="agenda"><p class="cargando">Cargando agenda…</p></div>
+        <div class="leyenda">
+          <span><i style="background:var(--lime)"></i>Reservadas por ti</span>
+          <span><i style="background:var(--navy);box-shadow:inset 4px 0 0 var(--amber)"></i>Donde estás invitado</span>
+          <span><i style="background:var(--navy);box-shadow:inset 4px 0 0 var(--lime)"></i>Ocupada por otra persona</span>
+          <span id="pistaClic">Haz clic en un espacio libre para apartarlo.</span>
+        </div>
+      </div>
+
+      <div id="vistaMias" style="display:none">
+        <div class="resultados" id="mias"></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div class="telon" id="telon"></div>
+<aside class="panel" id="panel" aria-hidden="true">
+  <div class="panel-cab"><h3 id="panelTitulo"></h3><button class="cerrar" id="cerrar" aria-label="Cerrar">×</button></div>
+  <div class="panel-cuerpo" id="panelCuerpo"></div>
+  <div class="panel-pie" id="panelPie"></div>
+</aside>
+<div class="nota" id="nota" role="status"></div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const SUPABASE_URL  = 'https://ahfjstuwekcuxshclprl.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFoZmpzdHV3ZWtjdXhzaGNscHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwNDg2MjYsImV4cCI6MjEwMzYyNDYyNn0.lf1uw8WHPRy21GuYlK9NzeI5JgJK2be1LrODq22CodM';
+const db = createClient(SUPABASE_URL, SUPABASE_ANON, { db:{ schema:'core' } });
+
+/* Horario que muestra la agenda */
+const H_INI = 7, H_FIN = 20, PASO = 15;
+const PX_MIN = 1.1;
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function nota(t){ const n=$('nota'); n.textContent=t; n.classList.add('on'); clearTimeout(nota._t); nota._t=setTimeout(()=>n.classList.remove('on'),4500); }
+
+/* ---------------- fechas (hora local del navegador) ---------------- */
+const pad = n => String(n).padStart(2,'0');
+const clave = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const dia0 = d => { const x = new Date(d); x.setHours(0,0,0,0); return x; };
+const masDias = (d,n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+const lunes = d => { const x = dia0(d); const w = (x.getDay()+6)%7; return masDias(x,-w); };
+const hhmm = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const minDelDia = d => d.getHours()*60 + d.getMinutes();
+const desdeClave = (k, hm='00:00') => new Date(`${k}T${hm}:00`);
+const mayus = t => t.charAt(0).toUpperCase() + t.slice(1);
+const fLarga = d => mayus(d.toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'}));
+const fCorta = d => d.toLocaleDateString('es-MX',{weekday:'short',day:'numeric',month:'short'});
+const mismoDia = (a,b) => clave(a) === clave(b);
+
+/* ---------------- estado ---------------- */
+const st = {
+  yo:null, correo:'', nombre:'', nivel:null, esAdmin:false,
+  salas:[], reservas:[], dir:[], mias:[],
+  vista:'dia', fecha:dia0(new Date()), salaSemana:null,
+  form:null
+};
+const puedeReservar = () => st.nivel === 'escritura' || st.nivel === 'admin' || st.esAdmin;
+const esMia = r => r.organizador_id === st.yo.id;
+const meInvitaron = r => (r.participantes||[]).some(p => (p.correo||'').toLowerCase() === st.correo);
+const puedeEditar = r => esMia(r) || st.esAdmin;
+const nombreSala = id => st.salas.find(s => s.id === id)?.nombre || 'Sala';
+
+/* ---------------- arranque y candado ---------------- */
+const { data:{ session } } = await db.auth.getSession();
+if(!session){ location.href = 'index.html'; throw new Error('sin sesión'); }
+st.yo = session.user;
+st.correo = (st.yo.email||'').toLowerCase();
+
+const [{ data: perfil }, { data: misMods }] = await Promise.all([
+  db.from('perfiles').select('nombre,puesto,correo').eq('id', st.yo.id).maybeSingle(),
+  db.from('v_mis_modulos').select('clave,nivel')
+]);
+st.nombre = perfil?.nombre || st.yo.email;
+if(perfil?.correo) st.correo = perfil.correo.toLowerCase();
+$('nombreUsuario').textContent = st.nombre;
+$('puestoUsuario').textContent = perfil?.puesto || '';
+
+const mod = (misMods||[]).find(m => m.clave === 'salas');
+st.esAdmin = (misMods||[]).some(m => m.clave === 'admin');
+st.nivel = mod?.nivel || null;
+if(!mod && !st.esAdmin){
+  $('bloqueo').style.display = 'block';
+  $('bloqueo').innerHTML = `<p class="aviso">Todavía no tienes acceso al módulo de salas. Pídeselo a Rogelio Morejón.</p>`;
+  throw new Error('sin acceso');
+}
+$('contenido').style.display = 'block';
+if(!puedeReservar()){
+  $('nueva').style.display = 'none';
+  $('pistaClic').textContent = 'Tienes acceso de consulta: puedes ver la agenda, pero no apartar salas.';
+}
+
+const { data: salas, error: eSalas } = await db.from('salas').select('*').eq('activa', true).order('orden');
+if(eSalas){ $('agenda').innerHTML = `<p class="vacio">No se pudieron leer las salas: ${esc(eSalas.message)}</p>`; throw eSalas; }
+st.salas = salas;
+st.salaSemana = salas[0]?.id;
+db.rpc('salas_directorio').then(({data}) => { st.dir = data || []; });
+
+/* ---------------- carga de datos ---------------- */
+function rango(){
+  if(st.vista === 'semana'){ const l = lunes(st.fecha); return [l, masDias(l,7)]; }
+  return [st.fecha, masDias(st.fecha,1)];
+}
+async function cargarAgenda(){
+  const [ini, fin] = rango();
+  const { data, error } = await db.from('sala_reservas').select('*')
+    .eq('estado','activa').lt('inicio', fin.toISOString()).gt('fin', ini.toISOString())
+    .order('inicio');
+  if(error){ $('agenda').innerHTML = `<p class="vacio">No se pudo leer la agenda: ${esc(error.message)}</p>`; return; }
+  st.reservas = data;
+  pintarAgenda();
+}
+async function cargarMias(){
+  const ahora = new Date();
+  const { data } = await db.from('sala_reservas').select('*')
+    .eq('estado','activa').gt('fin', ahora.toISOString()).lt('inicio', masDias(ahora, 120).toISOString())
+    .order('inicio');
+  st.mias = (data||[]).filter(r => esMia(r) || meInvitaron(r));
+  $('cMias').textContent = st.mias.length;
+  pintarCifras(data||[]);
+  if(st.vista === 'mias') pintarMias();
+}
+async function recargar(){ await Promise.all([cargarAgenda(), cargarMias()]); }
+
+/* ---------------- cifras ---------------- */
+function pintarCifras(proximas){
+  const ahora = new Date(), hoy = clave(ahora);
+  const deHoy = proximas.filter(r => clave(new Date(r.inicio)) === hoy);
+  const ocupadas = new Set(proximas.filter(r => new Date(r.inicio) <= ahora && new Date(r.fin) > ahora).map(r => r.sala_id));
+  const libres = st.salas.filter(s => !ocupadas.has(s.id)).length;
+  const sig = st.mias[0];
+  $('cifras').innerHTML = `
+    <div class="cifra urge"><div class="n">${libres} de ${st.salas.length}</div><div class="t">salas libres en este momento</div></div>
+    <div class="cifra"><div class="n">${deHoy.length}</div><div class="t">reuniones que faltan hoy</div></div>
+    <div class="cifra"><div class="n">${st.mias.length}</div><div class="t">tus próximas reuniones</div></div>
+    <div class="cifra"><div class="n" style="font-size:18px;padding-top:5px">${sig ? esc(nombreSala(sig.sala_id)) : '—'}</div>
+      <div class="t">${sig ? `${fCorta(new Date(sig.inicio))} · ${hhmm(new Date(sig.inicio))} h` : 'sin reuniones próximas'}</div></div>`;
+}
+
+/* ---------------- agenda (día y semana) ---------------- */
+function columnas(){
+  if(st.vista === 'semana'){
+    const l = lunes(st.fecha);
+    return [0,1,2,3,4,5].map(i => { const d = masDias(l,i); return { sala:st.salaSemana, dia:d, titulo:fCorta(d), sub:nombreSala(st.salaSemana) }; });
+  }
+  return st.salas.map(s => ({ sala:s.id, dia:st.fecha, titulo:s.nombre,
+    sub:[s.capacidad ? `${s.capacidad} personas` : '', s.ubicacion||''].filter(Boolean).join(' · ') }));
+}
+
+function pintarAgenda(){
+  const cols = columnas();
+  const ahora = new Date();
+  const totalMin = (H_FIN - H_INI) * 60;
+  const alto = totalMin * PX_MIN;
+  document.documentElement.style.setProperty('--px-min', PX_MIN + 'px');
+
+  if(st.vista === 'semana'){
+    const l = lunes(st.fecha);
+    $('fechaTxt').textContent = `Semana del ${l.toLocaleDateString('es-MX',{day:'numeric',month:'long'})} al ${masDias(l,5).toLocaleDateString('es-MX',{day:'numeric',month:'long',year:'numeric'})}`;
+  } else {
+    $('fechaTxt').textContent = fLarga(st.fecha) + (mismoDia(st.fecha, ahora) ? ' · hoy' : '');
+  }
+  $('fecha').value = clave(st.fecha);
+
+  let html = `<div class="ag-tabla" style="--cols:${cols.length}"><div class="ag-cab"></div>`;
+  for(const c of cols){
+    let estado = '';
+    if(st.vista === 'dia' && mismoDia(c.dia, ahora)){
+      const ocupada = st.reservas.find(r => r.sala_id === c.sala && new Date(r.inicio) <= ahora && new Date(r.fin) > ahora);
+      estado = ocupada ? `<span class="libre no">Ocupada hasta ${hhmm(new Date(ocupada.fin))}</span>` : `<span class="libre">Libre ahora</span>`;
+    }
+    html += `<div class="ag-cab ${st.vista==='semana' && mismoDia(c.dia, ahora) ? 'hoy':''}"><b>${esc(c.titulo)}</b><small>${esc(c.sub)}</small>${estado}</div>`;
+  }
+  html += `<div class="ag-horas" style="height:${alto}px">`;
+  for(let h = H_INI; h <= H_FIN; h++){
+    const y = (h - H_INI) * 60 * PX_MIN;
+    if(h > H_INI && h < H_FIN) html += `<span style="top:${y}px">${pad(h)}:00</span>`;
+  }
+  html += `</div>`;
+
+  cols.forEach((c, i) => {
+    const k = clave(c.dia);
+    html += `<div class="ag-col ${puedeReservar()?'':'solo-lectura'}" data-i="${i}" style="height:${alto}px">`;
+    // franja de lo que ya pasó
+    if(c.dia < dia0(ahora)) html += `<div class="ag-pasado" style="height:${alto}px"></div>`;
+    else if(mismoDia(c.dia, ahora)){
+      const m = Math.min(Math.max(minDelDia(ahora) - H_INI*60, 0), totalMin);
+      if(m > 0) html += `<div class="ag-pasado" style="height:${m*PX_MIN}px"></div>`;
+      if(m > 0 && m < totalMin) html += `<div class="ag-ahora" style="top:${m*PX_MIN}px"></div>`;
+    }
+    html += `<div class="ag-hueco"></div>`;
+    for(const r of st.reservas){
+      const ri = new Date(r.inicio), rf = new Date(r.fin);
+      if(r.sala_id !== c.sala || clave(ri) !== k) continue;
+      const a = Math.max(minDelDia(ri) - H_INI*60, 0);
+      const b = Math.min(minDelDia(rf) - H_INI*60, totalMin);
+      if(b <= 0 || a >= totalMin) continue;
+      const h = Math.max((b - a) * PX_MIN - 2, 20);
+      const cls = esMia(r) ? 'mia' : (meInvitaron(r) ? 'invitado' : '');
+      html += `<button class="reserva ${cls}" data-id="${r.id}" style="top:${a*PX_MIN+1}px;height:${h}px" title="${esc(r.titulo)} · ${hhmm(ri)}–${hhmm(rf)}">
+        <b>${esc(r.titulo)}</b>
+        <span class="h">${hhmm(ri)}–${hhmm(rf)}</span>
+        ${h > 52 ? `<span class="o">${esc(r.organizador_nombre || r.organizador_correo || '')}</span>` : ''}
+      </button>`;
+    }
+    html += `</div>`;
+  });
+  html += `</div>`;
+  $('agenda').innerHTML = html;
+
+  $('agenda').querySelectorAll('.reserva').forEach(b => b.addEventListener('click', e => {
+    e.stopPropagation();
+    abrirDetalle(st.reservas.find(r => r.id === b.dataset.id));
+  }));
+  if(puedeReservar()){
+    $('agenda').querySelectorAll('.ag-col').forEach(col => {
+      const hueco = col.querySelector('.ag-hueco');
+      const minDe = e => {
+        const y = e.clientY - col.getBoundingClientRect().top;
+        return Math.floor(y / PX_MIN / 30) * 30;
+      };
+      col.addEventListener('mousemove', e => {
+        if(e.target.closest('.reserva')){ hueco.style.display='none'; return; }
+        const m = minDe(e), c = cols[+col.dataset.i];
+        const ini = desdeClave(clave(c.dia)); ini.setMinutes(H_INI*60 + m);
+        if(ini < new Date(Date.now() - 30*60000)){ hueco.style.display='none'; return; }
+        hueco.style.display = 'block';
+        hueco.style.top = (m*PX_MIN + 1) + 'px';
+        hueco.style.height = (Math.min(60, totalMin - m)*PX_MIN - 2) + 'px';
+        hueco.textContent = `+ ${hhmm(ini)}`;
+      });
+      col.addEventListener('mouseleave', () => hueco.style.display='none');
+      col.addEventListener('click', e => {
+        if(e.target.closest('.reserva')) return;
+        const c = cols[+col.dataset.i];
+        let m = minDe(e);
+        const ini = desdeClave(clave(c.dia)); ini.setMinutes(H_INI*60 + m);
+        const ahoraRedondo = redondearAdelante(new Date());
+        if(ini < new Date(Date.now() - 30*60000)){ nota('Ese horario ya pasó. Elige uno a partir de ahora.'); return; }
+        const inicio = ini < ahoraRedondo && mismoDia(ini, ahoraRedondo) ? ahoraRedondo : ini;
+        const finR = new Date(inicio.getTime() + 60*60000);
+        const tope = desdeClave(clave(c.dia)); tope.setHours(H_FIN,0,0,0);
+        abrirFormulario({ sala:c.sala, fecha:clave(c.dia), ini:hhmm(inicio), fin:hhmm(finR > tope ? tope : finR) });
+      });
+    });
+  }
+}
+
+function redondearAdelante(d){
+  const x = new Date(d); const m = x.getMinutes();
+  x.setMinutes(Math.ceil(m / PASO) * PASO, 0, 0);
+  return x;
+}
+
+/* ---------------- mis reuniones ---------------- */
+function pintarMias(){
+  const caja = $('mias');
+  if(!st.mias.length){ caja.innerHTML = `<p class="vacio">No tienes reuniones próximas, ni como organizador ni como invitado.</p>`; return; }
+  caja.innerHTML = `<table><thead><tr><th>Fecha</th><th>Horario</th><th>Sala</th><th>Tema</th><th>Organiza</th><th>Tu papel</th></tr></thead><tbody>${
+    st.mias.map(r => { const i = new Date(r.inicio), f = new Date(r.fin);
+      return `<tr class="fila" data-id="${r.id}">
+        <td style="text-transform:capitalize">${esc(fCorta(i))}</td>
+        <td class="niv">${hhmm(i)}–${hhmm(f)}</td>
+        <td><b>${esc(nombreSala(r.sala_id))}</b></td>
+        <td>${esc(r.titulo)}${r.serie_id ? ' <span class="sello gris">semanal</span>':''}</td>
+        <td>${esc(r.organizador_nombre || r.organizador_correo || '')}</td>
+        <td>${esMia(r) ? '<span class="sello ok">Organizas</span>' : '<span class="sello">Invitado</span>'}</td>
+      </tr>`; }).join('')
+  }</tbody></table>`;
+  caja.querySelectorAll('tr.fila').forEach(tr => tr.addEventListener('click', () => abrirDetalle(st.mias.find(r => r.id === tr.dataset.id))));
+}
+
+/* ---------------- panel ---------------- */
+function abrirPanel(titulo){ $('panelTitulo').textContent = titulo; $('panel').classList.add('on'); $('telon').classList.add('on'); $('panel').setAttribute('aria-hidden','false'); }
+function cerrarPanel(){ $('panel').classList.remove('on'); $('telon').classList.remove('on'); $('panel').setAttribute('aria-hidden','true'); st.form = null; }
+$('cerrar').onclick = cerrarPanel; $('telon').onclick = cerrarPanel;
+document.addEventListener('keydown', e => { if(e.key === 'Escape' && $('panel').classList.contains('on')) cerrarPanel(); });
+
+function personaChip(p, quitable){
+  const interno = st.dir.some(d => d.correo === p.correo);
+  return `<span class="persona ${interno?'':'ext'}" data-correo="${esc(p.correo)}">${esc(p.nombre || p.correo)}${p.nombre ? ` <small>${esc(p.correo)}</small>`:''}${quitable ? `<button type="button" aria-label="Quitar">×</button>`:''}</span>`;
+}
+
+/* ----- detalle ----- */
+function abrirDetalle(r){
+  if(!r) return;
+  const i = new Date(r.inicio), f = new Date(r.fin);
+  abrirPanel('Reunión');
+  $('panelCuerpo').innerHTML = `
+    <div class="bloque foco">
+      <div class="detalle-sala" style="color:#fff">Sala ${esc(nombreSala(r.sala_id))}</div>
+      <div class="detalle-hora">${esc(fLarga(i))} · ${hhmm(i)} a ${hhmm(f)} h</div>
+    </div>
+    <div class="bloque">
+      <h3>${esc(r.titulo)}</h3>
+      ${r.descripcion ? `<p style="white-space:pre-wrap">${esc(r.descripcion)}</p>` : ''}
+      <dl class="datos" style="margin-top:12px">
+        <div><dt>Reservó</dt><dd>${esc(r.organizador_nombre || '')}<span class="sub">${esc(r.organizador_correo || '')}</span></dd></div>
+        <div><dt>Se repite</dt><dd>${r.serie_id ? 'Cada semana' : 'No'}</dd></div>
+      </dl>
+      <p class="outlook">${r.outlook_evento_id ? '<b>✓ Invitación enviada por Outlook</b>' : 'La invitación de Outlook se envía automáticamente al guardar.'}</p>
+    </div>
+    <div class="bloque">
+      <h3>Participantes (${(r.participantes||[]).length})</h3>
+      <div class="lista-p">${(r.participantes||[]).map(p => personaChip(p,false)).join('') || '<span class="sub">Solo el organizador</span>'}</div>
+    </div>
+    <div class="bloque" id="cajaCancelar" style="display:none">
+      <h3>Cancelar reunión</h3>
+      <label class="campo"><span class="lbl">Motivo (se incluye en el aviso a los participantes)</span><textarea id="motivo" maxlength="300"></textarea></label>
+      ${r.serie_id ? `<label class="opcion" style="margin-top:10px"><input type="checkbox" id="todaSerie"> Cancelar también las fechas siguientes de esta serie semanal</label>` : ''}
+    </div>`;
+  const pie = $('panelPie');
+  if(puedeEditar(r) && f > new Date()){
+    pie.innerHTML = `<button class="btn alerta" id="bCancelar">Cancelar reunión</button><span style="flex:1"></span><button class="btn claro" id="bCerrar">Cerrar</button><button class="btn" id="bEditar">Modificar</button>`;
+    $('bEditar').onclick = () => abrirFormulario({ id:r.id, sala:r.sala_id, fecha:clave(i), ini:hhmm(i), fin:hhmm(f), titulo:r.titulo, descripcion:r.descripcion, participantes:r.participantes||[] });
+    $('bCancelar').onclick = async () => {
+      if($('cajaCancelar').style.display === 'none'){ $('cajaCancelar').style.display = 'block'; $('bCancelar').textContent = 'Confirmar cancelación'; $('motivo').focus(); return; }
+      $('bCancelar').disabled = true;
+      const { data, error } = await db.rpc('salas_cancelar', { p_id:r.id, p_motivo:$('motivo').value, p_toda_serie: !!$('todaSerie')?.checked });
+      $('bCancelar').disabled = false;
+      if(error){ nota(error.message); return; }
+      nota(data > 1 ? `Se cancelaron ${data} reuniones. Se avisó a los participantes.` : 'Reunión cancelada. Se avisó a los participantes.');
+      cerrarPanel(); recargar();
+    };
+  } else {
+    pie.innerHTML = `<button class="btn claro" id="bCerrar">Cerrar</button>`;
+  }
+  $('bCerrar').onclick = cerrarPanel;
+}
+
+/* ----- formulario ----- */
+function opcionesHora(sel, desde, hasta){
+  let o = '';
+  for(let m = desde; m <= hasta; m += PASO){
+    const v = `${pad(Math.floor(m/60))}:${pad(m%60)}`;
+    o += `<option value="${v}" ${v===sel?'selected':''}>${v}</option>`;
+  }
+  return o;
+}
+
+function abrirFormulario(d){
+  if(!puedeReservar()) return;
+  const ahora = redondearAdelante(new Date());
+  const base = d || {};
+  let fecha = base.fecha || clave(st.fecha < dia0(new Date()) ? new Date() : st.fecha);
+  let ini = base.ini, fin = base.fin;
+  if(!ini){
+    const hoy = fecha === clave(new Date());
+    const m = hoy ? Math.max(minDelDia(ahora), H_INI*60) : 9*60;
+    ini = `${pad(Math.floor(m/60))}:${pad(m%60)}`;
+    const mf = Math.min(m + 60, H_FIN*60);
+    fin = `${pad(Math.floor(mf/60))}:${pad(mf%60)}`;
+  }
+  st.form = {
+    id: base.id || null,
+    sala: base.sala || (st.vista==='semana' ? st.salaSemana : st.salas[0].id),
+    participantes: (base.participantes||[]).map(p => ({ nombre:p.nombre||'', correo:(p.correo||'').toLowerCase() })),
+    libre: null
+  };
+  abrirPanel(base.id ? 'Modificar reserva' : 'Reservar sala');
+  $('panelCuerpo').innerHTML = `
+    <div class="bloque">
+      <span class="lbl">Sala</span>
+      <div class="sala-opciones" id="fSalas">${st.salas.map(s => `
+        <button type="button" class="sala-op" data-sala="${s.id}" aria-pressed="${s.id===st.form.sala}">
+          <b>${esc(s.nombre)}</b><small>${s.capacidad ? s.capacidad+' personas' : '&nbsp;'}</small><span class="disp">…</span>
+        </button>`).join('')}</div>
+      <div class="horas" style="margin-top:14px">
+        <label class="campo" style="margin:0"><span class="lbl">Fecha</span><input type="date" id="fFecha" value="${fecha}" min="${clave(new Date())}"></label>
+        <label class="campo" style="margin:0"><span class="lbl">Empieza</span><select id="fIni">${opcionesHora(ini, H_INI*60, H_FIN*60 - PASO)}</select></label>
+        <label class="campo" style="margin:0"><span class="lbl">Termina</span><select id="fFin">${opcionesHora(fin, H_INI*60 + PASO, H_FIN*60)}</select></label>
+      </div>
+      <div class="estado-disp" id="fDisp"></div>
+    </div>
+    <div class="bloque">
+      <label class="campo" style="margin:0"><span class="lbl">Tema de la reunión <i>*</i></span><input id="fTitulo" maxlength="120" value="${esc(base.titulo||'')}" placeholder="Ej. Revisión semanal de cartera"></label>
+      <label class="campo"><span class="lbl">Notas para los participantes</span><textarea id="fDesc" maxlength="1500" placeholder="Orden del día, material a traer, liga de Teams…">${esc(base.descripcion||'')}</textarea></label>
+      ${base.id ? '' : `<label class="campo"><span class="lbl">¿Se repite?</span><select id="fRepite">
+        <option value="1">No, solo esta fecha</option>
+        ${[2,3,4,6,8,12,16,26].map(n=>`<option value="${n}">Cada semana, ${n} semanas</option>`).join('')}
+      </select><div class="pista">Si alguna de las fechas ya está ocupada, no se aparta ninguna y te decimos cuál choca.</div></label>`}
+    </div>
+    <div class="bloque">
+      <span class="lbl">Participantes</span>
+      <div class="personas" id="fPersonas">
+        <input id="fBuscar" autocomplete="off" spellcheck="false" placeholder="Escribe un nombre o un correo y presiona Enter">
+        <div class="sugerencias" id="fSug"></div>
+      </div>
+      <div class="pista" style="font-size:12px;color:var(--muted);margin-top:6px">Puedes pegar varios correos separados por coma o punto y coma. Tú recibes la invitación automáticamente.</div>
+      <p class="aviso ok" id="fAvisoCorreo" style="margin-top:12px"></p>
+    </div>
+    <p class="aviso" id="fError"></p>`;
+  $('panelPie').innerHTML = `<button class="btn claro" id="fCancelar">Cancelar</button><button class="btn" id="fGuardar">${base.id ? 'Guardar cambios' : 'Reservar y enviar invitación'}</button>`;
+  $('fCancelar').onclick = cerrarPanel;
+  $('fGuardar').onclick = guardar;
+
+  $('fSalas').querySelectorAll('.sala-op').forEach(b => b.onclick = () => {
+    st.form.sala = +b.dataset.sala;
+    $('fSalas').querySelectorAll('.sala-op').forEach(x => x.setAttribute('aria-pressed', String(+x.dataset.sala === st.form.sala)));
+    verificar();
+  });
+  ['fFecha','fIni','fFin'].forEach(id => $(id).addEventListener('change', () => {
+    if(id === 'fIni' && $('fFin').value <= $('fIni').value){
+      const [h,m] = $('fIni').value.split(':').map(Number); const mf = Math.min(h*60+m+60, H_FIN*60);
+      $('fFin').value = `${pad(Math.floor(mf/60))}:${pad(mf%60)}`;
+    }
+    verificar();
+  }));
+  prepararParticipantes();
+  pintarPersonas();
+  verificar();
+  setTimeout(() => (base.titulo ? $('fBuscar') : $('fTitulo')).focus(), 260);
+}
+
+/* disponibilidad en vivo de las 3 salas para el horario elegido */
+async function verificar(){
+  const f = st.form; if(!f) return;
+  const k = $('fFecha').value, a = $('fIni').value, b = $('fFin').value;
+  const disp = $('fDisp');
+  f.libre = null;
+  if(!k || !a || !b){ disp.className='estado-disp'; disp.textContent=''; return; }
+  const ini = desdeClave(k, a), fin = desdeClave(k, b);
+  if(fin <= ini){ disp.className='estado-disp no'; disp.textContent='La hora de término debe ser después de la de inicio.'; f.libre=false; return; }
+  if(!f.id && ini < new Date(Date.now() - 15*60000)){ disp.className='estado-disp no'; disp.textContent='Ese horario ya pasó.'; f.libre=false; return; }
+
+  const token = verificar._t = Symbol();
+  const { data, error } = await db.from('sala_reservas').select('id,sala_id,titulo,inicio,fin,organizador_nombre,organizador_correo')
+    .eq('estado','activa').lt('inicio', fin.toISOString()).gt('fin', ini.toISOString());
+  if(token !== verificar._t || !st.form) return;
+  if(error){ disp.className='estado-disp'; disp.textContent='No se pudo revisar la disponibilidad; el sistema la valida de todos modos al guardar.'; f.libre = true; return; }
+  const choques = data.filter(r => r.id !== f.id);
+  $('fSalas').querySelectorAll('.sala-op').forEach(x => {
+    const ocup = choques.find(r => r.sala_id === +x.dataset.sala);
+    const s = x.querySelector('.disp');
+    s.className = 'disp ' + (ocup ? 'no' : 'si');
+    s.textContent = ocup ? `Ocupada ${hhmm(new Date(ocup.inicio))}–${hhmm(new Date(ocup.fin))}` : 'Libre';
+  });
+  const mio = choques.filter(r => r.sala_id === f.sala);
+  if(mio.length){
+    const libres = st.salas.filter(s => !choques.some(r => r.sala_id === s.id)).map(s => s.nombre);
+    disp.className = 'estado-disp no';
+    disp.innerHTML = `<b>Sala ${esc(nombreSala(f.sala))} ocupada:</b> ${mio.map(r => `${hhmm(new Date(r.inicio))}–${hhmm(new Date(r.fin))} "${esc(r.titulo)}", apartada por ${esc(r.organizador_nombre||r.organizador_correo||'')}`).join('; ')}.`
+      + (libres.length ? `<br>A esa hora están libres: <b>${esc(libres.join(', '))}</b>.` : '<br>A esa hora no hay ninguna sala libre.');
+    f.libre = false;
+  } else {
+    disp.className = 'estado-disp si';
+    disp.innerHTML = `✓ Sala <b>${esc(nombreSala(f.sala))}</b> disponible de ${a} a ${b} h.`;
+    f.libre = true;
+  }
+  $('fGuardar').disabled = !f.libre;
+}
+
+/* participantes: búsqueda en el directorio + correos externos */
+function prepararParticipantes(){
+  const inp = $('fBuscar'), sug = $('fSug');
+  let activa = -1, opciones = [];
+  const valido = c => /^[^@\s;,]+@[^@\s;,]+\.[^@\s;,]+$/.test(c);
+  const agregar = (p) => {
+    p.correo = p.correo.trim().toLowerCase();
+    if(!valido(p.correo)) { nota(`“${p.correo}” no parece un correo válido.`); return; }
+    if(p.correo === st.correo) { nota('Tú ya recibes la invitación como organizador.'); return; }
+    if(st.form.participantes.some(x => x.correo === p.correo)) return;
+    st.form.participantes.push(p);
+    pintarPersonas();
+  };
+  const mostrar = () => {
+    const q = inp.value.trim().toLowerCase();
+    if(q.length < 2){ sug.classList.remove('on'); opciones=[]; return; }
+    const ya = new Set(st.form.participantes.map(p => p.correo));
+    opciones = st.dir.filter(d => !ya.has(d.correo) && d.correo !== st.correo &&
+      ((d.nombre||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').includes(q.normalize('NFD').replace(/[̀-ͯ]/g,'')) || d.correo.includes(q))).slice(0, 8);
+    activa = opciones.length ? 0 : -1;
+    sug.innerHTML = opciones.map((d,i) => `<button type="button" data-i="${i}" class="${i===activa?'activa':''}">${esc(d.nombre||d.correo)}<small>${esc(d.correo)}${d.puesto ? ' · '+esc(d.puesto):''}</small></button>`).join('')
+      || (valido(q) ? `<button type="button" data-ext="1" class="activa">Agregar <b>${esc(q)}</b><small>correo externo</small></button>` : '');
+    sug.classList.toggle('on', !!sug.innerHTML);
+    sug.querySelectorAll('button').forEach(b => b.onmousedown = e => {
+      e.preventDefault();
+      if(b.dataset.ext) agregar({ nombre:'', correo:q }); else agregar({ ...opciones[+b.dataset.i] });
+      inp.value=''; sug.classList.remove('on'); inp.focus();
+    });
+  };
+  inp.addEventListener('input', mostrar);
+  inp.addEventListener('blur', () => setTimeout(() => sug.classList.remove('on'), 120));
+  inp.addEventListener('paste', e => {
+    const t = (e.clipboardData || window.clipboardData).getData('text');
+    if(/[;,\s]/.test(t.trim()) && t.includes('@')){
+      e.preventDefault();
+      t.split(/[;,\s<>]+/).filter(x => x.includes('@')).forEach(c => {
+        const d = st.dir.find(x => x.correo === c.toLowerCase());
+        agregar({ nombre:d?.nombre || '', correo:c });
+      });
+    }
+  });
+  inp.addEventListener('keydown', e => {
+    const botones = sug.querySelectorAll('button');
+    if(e.key === 'ArrowDown' && botones.length){ e.preventDefault(); activa = (activa+1) % botones.length; botones.forEach((b,i)=>b.classList.toggle('activa', i===activa)); }
+    else if(e.key === 'ArrowUp' && botones.length){ e.preventDefault(); activa = (activa-1+botones.length) % botones.length; botones.forEach((b,i)=>b.classList.toggle('activa', i===activa)); }
+    else if(e.key === 'Enter' || e.key === ',' || e.key === ';' || e.key === 'Tab'){
+      const q = inp.value.trim().replace(/[;,]$/,'');
+      if(!q){ if(e.key !== 'Tab') e.preventDefault(); return; }
+      e.preventDefault();
+      if(opciones[activa]) agregar({ ...opciones[activa] });
+      else if(valido(q)){ const d = st.dir.find(x => x.correo === q.toLowerCase()); agregar({ nombre:d?.nombre||'', correo:q }); }
+      else { nota('Elige a alguien de la lista o escribe un correo completo.'); return; }
+      inp.value=''; sug.classList.remove('on');
+    }
+    else if(e.key === 'Backspace' && !inp.value && st.form.participantes.length){ st.form.participantes.pop(); pintarPersonas(); }
+  });
+  $('fPersonas').addEventListener('click', e => {
+    const x = e.target.closest('.persona button');
+    if(x){ const c = x.parentElement.dataset.correo; st.form.participantes = st.form.participantes.filter(p => p.correo !== c); pintarPersonas(); }
+    else if(e.target.id === 'fPersonas') inp.focus();
+  });
+}
+function pintarPersonas(){
+  const caja = $('fPersonas');
+  caja.querySelectorAll('.persona').forEach(n => n.remove());
+  $('fBuscar').insertAdjacentHTML('beforebegin', st.form.participantes.map(p => personaChip(p, true)).join(''));
+  const n = st.form.participantes.length;
+  $('fAvisoCorreo').textContent = n
+    ? `Al guardar, ${n === 1 ? 'la persona recibirá' : `las ${n} personas recibirán`} la invitación en su calendario de Outlook (tú también).`
+    : 'Al guardar recibirás la invitación en tu calendario de Outlook. Agrega participantes para que también les llegue.';
+}
+
+async function guardar(){
+  const f = st.form; if(!f) return;
+  const err = $('fError'); err.textContent = '';
+  const titulo = $('fTitulo').value.trim();
+  if(!titulo){ err.textContent = 'Escribe el tema de la reunión.'; $('fTitulo').focus(); return; }
+  if(f.libre === false){ err.textContent = 'Esa sala ya está ocupada en ese horario. Cambia la sala o la hora.'; return; }
+  const pendiente = $('fBuscar').value.trim();
+  if(pendiente){ err.textContent = `Te quedó “${pendiente}” sin agregar a participantes: presiona Enter para agregarlo o bórralo.`; return; }
+  const k = $('fFecha').value;
+  const args = {
+    p_sala: f.sala, p_titulo: titulo, p_descripcion: $('fDesc').value,
+    p_inicio: desdeClave(k, $('fIni').value).toISOString(),
+    p_fin:    desdeClave(k, $('fFin').value).toISOString(),
+    p_participantes: f.participantes
+  };
+  $('fGuardar').disabled = true; $('fGuardar').textContent = 'Guardando…';
+  const { error } = f.id
+    ? await db.rpc('salas_modificar', { p_id:f.id, ...args })
+    : await db.rpc('salas_reservar',  { ...args, p_semanas: +($('fRepite')?.value || 1) });
+  if(error){
+    err.textContent = error.message;
+    $('fGuardar').disabled = false; $('fGuardar').textContent = f.id ? 'Guardar cambios' : 'Reservar y enviar invitación';
+    verificar(); cargarAgenda();
+    return;
+  }
+  nota(f.id ? 'Cambios guardados. Se avisó a los participantes.' : `Sala ${nombreSala(f.sala)} apartada. Las invitaciones van en camino.`);
+  st.fecha = dia0(desdeClave(k));
+  cerrarPanel();
+  recargar();
+}
+
+/* ---------------- navegación ---------------- */
+function pintarSelectorSala(){
+  const s = $('salaSemana');
+  s.style.display = st.vista === 'semana' ? 'inline-flex' : 'none';
+  s.innerHTML = st.salas.map(x => `<button aria-pressed="${x.id===st.salaSemana}" data-sala="${x.id}">${esc(x.nombre)}</button>`).join('');
+  s.querySelectorAll('button').forEach(b => b.onclick = () => { st.salaSemana = +b.dataset.sala; pintarSelectorSala(); pintarAgenda(); });
+}
+document.querySelectorAll('.pestana').forEach(t => t.onclick = () => {
+  document.querySelectorAll('.pestana').forEach(x => x.setAttribute('aria-selected', String(x === t)));
+  st.vista = t.dataset.tab;
+  $('vistaAgenda').style.display = st.vista === 'mias' ? 'none' : 'block';
+  $('vistaMias').style.display  = st.vista === 'mias' ? 'block' : 'none';
+  if(st.vista === 'mias') pintarMias(); else { pintarSelectorSala(); cargarAgenda(); }
+});
+const paso = () => st.vista === 'semana' ? 7 : 1;
+$('ant').onclick = () => { st.fecha = masDias(st.fecha, -paso()); cargarAgenda(); };
+$('sig').onclick = () => { st.fecha = masDias(st.fecha,  paso()); cargarAgenda(); };
+$('hoy').onclick = () => { st.fecha = dia0(new Date()); cargarAgenda(); };
+$('fecha').onchange = e => { if(e.target.value){ st.fecha = dia0(desdeClave(e.target.value)); cargarAgenda(); } };
+$('nueva').onclick = () => abrirFormulario(null);
+$('salir').onclick = async () => { await db.auth.signOut(); location.href = 'index.html'; };
+
+/* ---------------- en vivo ---------------- */
+let espera;
+db.channel('salas-agenda')
+  .on('postgres_changes', { event:'*', schema:'core', table:'sala_reservas' }, () => {
+    clearTimeout(espera); espera = setTimeout(recargar, 400);
+  })
+  .subscribe();
+setInterval(() => { if(!document.hidden) recargar(); }, 60000);
+document.addEventListener('visibilitychange', () => { if(!document.hidden) recargar(); });
+
+await recargar();
+</script>
+</body>
+</html>
