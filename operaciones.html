@@ -67,6 +67,30 @@
 .linea-box.libre .cuerpo{align-items:center;justify-content:center;color:var(--muted);font-size:14px;background:repeating-linear-gradient(135deg,var(--bg) 0 10px,var(--surface) 10px 20px)}
 .linea-box .niv{font-family:var(--mono);font-weight:700;font-size:15px;color:var(--ink);word-break:break-all;cursor:pointer}
 .linea-box .acciones{margin-top:auto}
+.av{height:7px;background:var(--pend);border-radius:4px;overflow:hidden;margin-top:2px}
+.av i{display:block;height:100%;background:var(--lime-ink)}
+.av.det i{background:var(--red)}
+.av-txt{font-size:12px;color:var(--muted);display:flex;justify-content:space-between}
+.sigue{font-size:13px;font-weight:600;color:var(--ink);border-left:3px solid var(--lime);padding:2px 0 2px 7px;background:var(--bg)}
+.sigue.det{border-left-color:var(--red);color:var(--red);background:var(--red-soft)}
+/* tareas del taller */
+.tar{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:8px;align-items:center;border-top:1px solid var(--line);padding:8px 0}
+.tar:first-of-type{border-top:none}
+.tar .pos{font-family:var(--mono);font-weight:700;color:var(--muted);text-align:center}
+.tar .d b{display:block;font-size:14px;font-weight:600}
+.tar.hecha .d b{text-decoration:line-through;color:var(--muted)}
+.tar .d small{display:block;font-size:12px;color:var(--muted)}
+.tar .d small.mal{color:var(--red);font-weight:600}
+.tar .ctl{display:flex;gap:4px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.tar .ctl select{width:auto;padding:5px 6px;font-size:12.5px}
+.tar .ctl button{padding:5px 8px;font-size:12.5px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+.tar .ctl button:hover{border-color:var(--navy)}
+.et{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:var(--pend);color:var(--muted)}
+.et.en_curso{background:var(--navy);color:#fff}
+.et.hecha{background:var(--lime-soft);color:var(--lime-ink);border:1px solid var(--lime)}
+.et.detenida{background:var(--red-soft);color:var(--red);border:1px solid var(--red)}
+.nueva-tarea{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) 80px auto;gap:8px;margin-top:10px}
+@media (max-width:640px){.tar{grid-template-columns:22px minmax(0,1fr)}.tar .ctl{grid-column:2;justify-content:flex-start}.nueva-tarea{grid-template-columns:1fr 1fr}}
 .colas{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .cola h3{display:flex;align-items:center;gap:8px}
 .cola .c{font-size:12px;background:var(--pend);padding:1px 8px;border-radius:10px;font-weight:600}
@@ -254,6 +278,8 @@ body.prueba header .cinta{background:var(--amber)}
     <section id="secTaller" hidden>
       <div class="cab-sec">
         <h1>Líneas del taller</h1>
+        <a class="btn chico claro" href="taller.html" target="_blank" rel="noopener" style="text-decoration:none">Vista de mecánicos</a>
+        <a class="btn chico claro" id="lnkPantalla" href="taller.html?pantalla=1" target="_blank" rel="noopener" style="text-decoration:none">Pantalla del taller</a>
         <select id="tPatio" style="width:auto"></select>
       </div>
       <p class="vacio" id="tSinLineas" hidden style="padding-top:0">Este patio no tiene líneas configuradas.</p>
@@ -427,7 +453,7 @@ const PUNTO_TRABAJO = { llantas:'llantas', frenos:'frenos', luces:'electrica', e
 const S = {
   yo:null, nivel:null, aut:null, config:false, admin:false,
   patios:[], talleres:[], tipos:[], lineas:[], params:{}, personal:[],
-  ordenes:[], cotPend:[], revisiones:[], avisos:[],
+  ordenes:[], cotPend:[], revisiones:[], avisos:[], tareas:{},
   tab:'ordenes', ordenAbierta:null, etapaFoto:'condicion', prueba:false
 };
 const puedeEscribir = () => S.nivel === 'escritura' || S.nivel === 'admin';
@@ -521,6 +547,27 @@ async function cargarOrdenes(){
   const { data, error } = await db.from('v_ordenes').select('*').eq('es_prueba', S.prueba).order('creado_en', { ascending:false }).limit(1000);
   if(error){ $('listaOrdenes').innerHTML = `<p class="vacio">No se pudieron leer las órdenes: ${esc(errTxt(error))}</p>`; return; }
   S.ordenes = data || [];
+  const ta = await db.from('v_tareas').select('id,orden_id,posicion,descripcion,estatus,nota,mecanico,mecanico_id,horas_estimadas,terminada_en')
+    .eq('es_prueba', S.prueba).not('estatus_orden', 'in', '(entregada,cancelada)').order('posicion');
+  S.tareas = {};
+  (ta.data || []).forEach(t => (S.tareas[t.orden_id] ||= []).push(t));
+}
+const EST_TAREA = { pendiente:'Pendiente', en_curso:'En curso', hecha:'Hecha', detenida:'Detenida' };
+function resumenTareas(ordenId){
+  const t = S.tareas[ordenId] || [];
+  const hechas = t.filter(x => x.estatus === 'hecha').length;
+  const det = t.find(x => x.estatus === 'detenida');
+  const sig = det || t.find(x => x.estatus === 'en_curso') || t.find(x => x.estatus === 'pendiente');
+  return { total:t.length, hechas, pct: t.length ? Math.round(hechas * 100 / t.length) : 0, det, sig };
+}
+function htmlAvance(ordenId){
+  const a = resumenTareas(ordenId);
+  if(!a.total) return '<div class="sub">Sin tareas para el taller · ábrela para armarlas</div>';
+  return `<div class="av ${a.det ? 'det' : ''}"><i style="width:${a.pct}%"></i></div>
+    <div class="av-txt"><span>${a.hechas} de ${a.total} tareas</span><b>${a.pct}%</b></div>
+    ${a.det ? `<div class="sigue det">Detenida: ${esc(a.det.descripcion)} — ${esc(a.det.nota || '')}</div>`
+      : a.sig ? `<div class="sigue">Sigue: ${esc(a.sig.descripcion)}${a.sig.mecanico ? ' · ' + esc(a.sig.mecanico) : ''}</div>`
+      : '<div class="sigue">Todas hechas · revisar y terminar</div>'}`;
 }
 async function cargarCotizaciones(){
   const desde = new Date(Date.now() - 30*864e5).toISOString();
@@ -653,6 +700,7 @@ document.addEventListener('click', e => {
 /* ============================ TALLER ============================ */
 function pintarTaller(){
   const patio = Number($('tPatio').value);
+  $('lnkPantalla').href = `taller.html?pantalla=1&patio=${patio}`;
   const lineas = S.lineas.filter(l => l.activo && l.patio_id === patio).sort((a,b) => a.numero - b.numero);
   $('tSinLineas').hidden = !!lineas.length;
   const enLinea = id => S.ordenes.find(o => o.estatus === 'en_proceso' && o.linea_id === id);
@@ -666,6 +714,7 @@ function pintarTaller(){
         <div class="fila1" style="display:flex;gap:6px;align-items:center"><span class="folio" style="font-family:var(--mono);font-size:12px;color:var(--muted)">${o.folio_txt}</span><span class="pri ${o.prioridad}">${PRIORIDAD[o.prioridad]}</span></div>
         <div class="niv" data-orden="${o.id}">${esc(o.niv)}</div>
         <div style="font-size:13px">${esc(o.descripcion)}</div>
+        ${htmlAvance(o.id)}
         <div class="sub">Entró ${hace(o.fecha_inicio)}${o.responsable ? ' · ' + esc(o.responsable) : ''}${o.fecha_compromiso ? ' · compromiso ' + fecha(o.fecha_compromiso) : ''}</div>
         ${puedeEscribir() ? `<div class="acciones"><button class="btn chico" data-accion="terminar" data-id="${o.id}">Terminar</button>
           <button class="btn chico claro" data-accion="sacar" data-id="${o.id}">Sacar de línea</button></div>` : ''}`
@@ -731,7 +780,9 @@ document.addEventListener('click', async e => {
     await mover(id, 'en_proceso', null, null, false);
   }
   if(acc === 'terminar'){
-    const t = await pedirTexto('Terminar trabajo', 'Agrega una nota opcional (qué se hizo, pendientes). Recuerda subir las fotos de terminado.', 'Nota', false);
+    const rt = resumenTareas(id), faltan = rt.total - rt.hechas;
+    const t = await pedirTexto('Terminar trabajo', (faltan ? `<b style="color:var(--red)">Ojo: ${faltan} tarea${faltan > 1 ? 's' : ''} del taller sin marcar como hecha${faltan > 1 ? 's' : ''}.</b><br>` : '')
+      + 'Agrega una nota opcional (qué se hizo, pendientes). Recuerda subir las fotos de terminado.', 'Nota', false);
     if(t === null) return;
     await mover(id, 'terminada', t);
   }
@@ -961,6 +1012,7 @@ async function abrirOrden(id, silencioso = false){
     </div>
     ${htmlFicha(fiR, true)}
     ${acc}
+    ${htmlTareas(ord)}
     <div class="bloque">
       <div class="importes">
         <div><div class="g">${pesos0(ord.autorizado_sin_iva)}</div><div class="t">autorizado sin IVA</div></div>
@@ -988,6 +1040,7 @@ async function abrirOrden(id, silencioso = false){
     ? `<button class="btn chico alerta" id="oCancelar">Cancelar orden</button><span class="sp"></span><button class="btn chico claro" onclick="document.getElementById('cerrarPanel').click()">Cerrar</button>`
     : `<button class="btn chico claro" onclick="document.getElementById('cerrarPanel').click()">Cerrar</button>`;
 
+  enlazarTareas(ord);
   pintarGaleria(ord, fotos);
   $('oEtapas').onclick = e => { const b = e.target.closest('[data-etapa]'); if(!b) return; S.etapaFoto = b.dataset.etapa;
     $('oEtapas').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); pintarGaleria(ord, fotos); };
@@ -1053,6 +1106,98 @@ async function abrirOrden(id, silencioso = false){
       await refrescar(); abrirOrden(ord.id, true);
     };
   }
+}
+
+/* ============================ TAREAS DEL TALLER ============================ */
+function opcionesPersonal(sel){
+  const orden = p => (p.roles || []).includes('mecanico') ? 0 : (p.roles || []).includes('taller') ? 1 : 2;
+  const lista = [...S.personal].sort((a, b) => orden(a) - orden(b) || (a.nombre || '').localeCompare(b.nombre || ''));
+  return '<option value="">Sin asignar</option>' + lista.map(p => `<option value="${p.id}" ${p.id === sel ? 'selected' : ''}>${esc(p.nombre)}${(p.roles || []).includes('mecanico') ? '' : ' (' + ((p.roles || []).includes('taller') ? 'encargado' : 'oficina') + ')'}</option>`).join('');
+}
+function htmlTareas(ord){
+  const tareas = S.tareas[ord.id] || [];
+  const editable = puedeEscribir() && !['entregada','cancelada'].includes(ord.estatus);
+  const a = resumenTareas(ord.id);
+  const sinMec = !S.personal.some(p => (p.roles || []).includes('mecanico'));
+  const filas = tareas.map((t, i) => `<div class="tar ${t.estatus}" data-tarea="${t.id}">
+      <span class="pos">${t.posicion}</span>
+      <div class="d"><b>${esc(t.descripcion)}</b>
+        <small><span class="et ${t.estatus}">${EST_TAREA[t.estatus]}</span> ${esc(t.mecanico || 'Sin asignar')}${t.horas_estimadas ? ' · ' + t.horas_estimadas + ' h' : ''}${t.terminada_en ? ' · hecha ' + hace(t.terminada_en) : ''}</small>
+        ${t.estatus === 'detenida' && t.nota ? `<small class="mal">Motivo: ${esc(t.nota)}</small>` : ''}
+      </div>
+      ${editable ? `<div class="ctl">
+        <select data-tmec="${t.id}" aria-label="Asignar">${opcionesPersonal(t.mecanico_id)}</select>
+        <select data-test="${t.id}" aria-label="Estatus">${Object.entries(EST_TAREA).map(([k, v]) => `<option value="${k}" ${k === t.estatus ? 'selected' : ''}>${v}</option>`).join('')}</select>
+        <button data-tsub="${t.id}" ${i === 0 ? 'disabled' : ''} aria-label="Subir">↑</button>
+        <button data-tbaj="${t.id}" ${i === tareas.length - 1 ? 'disabled' : ''} aria-label="Bajar">↓</button>
+        <button data-tdel="${t.id}" aria-label="Quitar">✕</button>
+      </div>` : ''}
+    </div>`).join('');
+  const desdeTrabajos = editable && !tareas.length && ord.trabajos?.length
+    ? `<button class="btn chico claro" id="tDesdeTrabajos">Crear tareas desde los trabajos de la orden (${ord.trabajos.length})</button>` : '';
+  return `<div class="bloque">
+    <h3>Tareas del taller ${a.total ? `<span class="sub" style="display:inline">· ${a.hechas} de ${a.total} hechas (${a.pct}%)</span>` : ''}</h3>
+    <p class="sub" style="margin:-4px 0 8px">Los mecánicos las ven en su celular (Taller → Mis trabajos), sin montos ni datos del cliente, y marcan su avance.${ord.fecha_compromiso ? '' : ' <b>Pon la fecha compromiso</b> en "Editar datos" para que vean para cuándo se entrega.'}</p>
+    ${sinMec && editable ? '<p class="regla" style="margin:0 0 8px">Todavía no hay usuarios con el rol <b>&nbsp;Mecánico</b>. Dalo de alta en Administración para poder asignarles tareas.</p>' : ''}
+    ${filas || '<p class="sub">Sin tareas todavía.</p>'}
+    ${editable ? `<div class="nueva-tarea">
+        <input id="tDesc" placeholder="Nueva tarea, ej. Cambiar balatas traseras">
+        <select id="tMec">${opcionesPersonal(null)}</select>
+        <input id="tHoras" type="number" min="0" step="0.5" inputmode="decimal" placeholder="Horas">
+        <button class="btn chico navy" id="tAgregar">Agregar</button>
+      </div>
+      <div class="acciones" style="margin-top:8px">${desdeTrabajos}</div>` : ''}
+  </div>`;
+}
+function enlazarTareas(ord){
+  const cuerpo = $('panelCuerpo');
+  const recargar = async () => { await cargarOrdenes(); pintarTaller(); abrirOrden(ord.id, true); };
+  const llamar = async (fn, args, ok) => {
+    const { error } = await db.rpc(fn, args);
+    if(error){ nota(errTxt(error), 7000); await recargar(); return false; }
+    if(ok) nota(ok);
+    await recargar(); return true;
+  };
+  const buscar = id => (S.tareas[ord.id] || []).find(t => t.id === id);
+
+  if($('tAgregar')){
+    const agregar = async () => {
+      const d = $('tDesc').value.trim(); if(!d){ nota('Escribe la tarea'); $('tDesc').focus(); return; }
+      $('tAgregar').disabled = true;
+      await llamar('tarea_guardar', { p_id:null, p_orden:ord.id, p_descripcion:d, p_mecanico:$('tMec').value || null,
+        p_horas: $('tHoras').value ? Number($('tHoras').value) : null }, 'Tarea agregada');
+      setTimeout(() => $('tDesc')?.focus(), 80);
+    };
+    $('tAgregar').onclick = agregar;
+    $('tDesc').onkeydown = e => { if(e.key === 'Enter') agregar(); };
+  }
+  if($('tDesdeTrabajos')) $('tDesdeTrabajos').onclick = async () => {
+    $('tDesdeTrabajos').disabled = true;
+    for(const k of ord.trabajos){
+      const nom = (S.tipos.find(x => x.clave === k) || {}).nombre || k;
+      const { error } = await db.rpc('tarea_guardar', { p_id:null, p_orden:ord.id, p_descripcion:nom, p_mecanico:null, p_horas:null });
+      if(error){ nota(errTxt(error), 7000); break; }
+    }
+    nota('Tareas creadas: ahora asígnalas'); await recargar();
+  };
+  cuerpo.querySelectorAll('[data-tmec]').forEach(s => s.onchange = () => {
+    const t = buscar(s.dataset.tmec); if(!t) return;
+    llamar('tarea_guardar', { p_id:t.id, p_orden:ord.id, p_descripcion:t.descripcion, p_mecanico:s.value || null, p_horas:t.horas_estimadas }, 'Asignada');
+  });
+  cuerpo.querySelectorAll('[data-test]').forEach(s => s.onchange = async () => {
+    let n = null;
+    if(s.value === 'detenida'){
+      n = await pedirTexto('Detener tarea', 'Se avisa al encargado del taller y a la jefatura.', 'Motivo', true);
+      if(n === null){ await recargar(); return; }
+    }
+    llamar('tarea_avance', { p_id:s.dataset.test, p_estatus:s.value, p_nota:n }, 'Estatus actualizado');
+  });
+  cuerpo.querySelectorAll('[data-tsub]').forEach(b => b.onclick = () => llamar('tarea_mover', { p_id:b.dataset.tsub, p_delta:-1 }));
+  cuerpo.querySelectorAll('[data-tbaj]').forEach(b => b.onclick = () => llamar('tarea_mover', { p_id:b.dataset.tbaj, p_delta:1 }));
+  cuerpo.querySelectorAll('[data-tdel]').forEach(b => b.onclick = () => {
+    const t = buscar(b.dataset.tdel);
+    if(t && confirm(`¿Quitar la tarea "${t.descripcion}"?`)) llamar('tarea_borrar', { p_id:t.id }, 'Tarea quitada');
+  });
 }
 
 function formEditar(ord){

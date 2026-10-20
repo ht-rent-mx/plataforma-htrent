@@ -370,3 +370,13 @@ grant execute on function operaciones.puede_ver_taller(), operaciones.es_encarga
   operaciones.taller_foto(uuid, uuid, text, text, int, int, int, timestamptz, text)
 to authenticated;
 grant select on operaciones.orden_tareas to authenticated;
+
+-- ---------------------------------------------------------------- folios
+-- Los ensayos con rollback consumieron folios (OT-0001 a OT-0006); si todavía
+-- no hay órdenes guardadas, la numeración vuelve a empezar en OT-0001.
+do $$
+begin
+  if not exists (select 1 from operaciones.ordenes) then
+    alter table operaciones.ordenes alter column folio restart with 1;
+  end if;
+end $$;

@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B3D66">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>Taller · Plataforma HT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Saira:ital,wght@1,700;1,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="ht.css?v=2026-09-25b">
+<style>
+/* =====================================================================
+   Módulo Taller · vista para mecánicos y pantalla del taller
+   Sin montos, cotizaciones, autorizaciones ni datos del cliente.
+   ===================================================================== */
+#app{display:none}
+.modtit{font-family:var(--display);font-style:italic;font-weight:700;font-size:15px;color:var(--lime);text-transform:uppercase;letter-spacing:.03em}
+.cab-sec{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.cab-sec h1{margin:0;flex:1}
+.sp{flex:1}
+.reloj{font-family:var(--display);font-style:italic;font-weight:800;font-size:22px;color:#fff}
+.actualizado{font-size:12px;color:var(--muted)}
+
+/* cifras */
+.cifras{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
+.cifra{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
+.cifra .n{font-family:var(--display);font-style:italic;font-weight:800;font-size:28px;color:var(--ink);line-height:1.1}
+.cifra .t{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.cifra.mal .n{color:var(--red)}
+.cifra.ojo .n{color:#9A6400}
+
+/* líneas */
+.lineas{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:20px}
+.lin{background:var(--surface);border:2px solid var(--line);border-radius:var(--r);display:flex;flex-direction:column;min-height:220px}
+.lin.prioritaria{border-top:7px solid var(--amber)}
+.lin.general{border-top:7px solid var(--navy)}
+.lin .cab{padding:9px 12px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
+.lin .cab b{font-family:var(--display);font-style:italic;font-weight:800;font-size:19px;color:var(--ink)}
+.lin .cab span{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.lin .cuerpo{padding:12px;flex:1;display:flex;flex-direction:column;gap:7px}
+.lin.libre .cuerpo{align-items:center;justify-content:center;color:var(--muted);font-weight:600;background:repeating-linear-gradient(135deg,var(--bg) 0 10px,var(--surface) 10px 20px)}
+.folio{font-family:var(--mono);font-weight:700;font-size:12px;color:var(--muted)}
+.niv{font-family:var(--mono);font-weight:700;font-size:17px;color:var(--ink);word-break:break-all;line-height:1.2}
+.equipo{font-size:13px;color:var(--muted)}
+.desc{font-size:14px}
+.barra-av{height:9px;background:var(--pend);border-radius:5px;overflow:hidden}
+.barra-av i{display:block;height:100%;background:var(--lime-ink);border-radius:5px}
+.barra-av.det i{background:var(--red)}
+.pct{font-size:12.5px;color:var(--muted);display:flex;justify-content:space-between}
+.tareas-mini{display:flex;flex-wrap:wrap;gap:4px}
+.tm{font-size:11.5px;padding:2px 7px;border-radius:3px;border:1px solid var(--line);color:var(--muted);background:var(--surface)}
+.tm.hecha{color:var(--lime-ink);border-color:var(--lime);background:var(--lime-soft)}
+.tm.en_curso{color:#fff;background:var(--navy);border-color:var(--navy)}
+.tm.detenida{color:var(--red);border-color:var(--red);background:var(--red-soft)}
+.sigue{font-size:14px;font-weight:600;color:var(--ink);border-left:4px solid var(--lime);padding:3px 0 3px 8px;background:var(--bg)}
+.sigue.det{border-left-color:var(--red);color:var(--red);background:var(--red-soft)}
+.quien{font-size:12.5px;color:var(--muted)}
+.fecha{display:inline-block;font-size:12.5px;font-weight:700;padding:3px 9px;border-radius:3px;align-self:flex-start}
+.fecha.ok{background:var(--lime-soft);color:var(--lime-ink);border:1px solid var(--lime)}
+.fecha.hoy{background:var(--amber-soft);color:#7A5200;border:1px solid var(--amber)}
+.fecha.mal{background:var(--red);color:#fff}
+.fecha.sin{background:var(--pend);color:var(--muted)}
+.pri{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:3px}
+.pri.ticket{background:var(--amber);color:#2B1B00}
+.pri.sin_asignar{background:var(--pend);color:var(--muted)}
+.prueba-tag{font-size:10.5px;font-weight:700;background:var(--amber);color:#2B1B00;padding:2px 6px;border-radius:3px}
+
+/* cola */
+.colas{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+.fila-cola{display:flex;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:9px 12px;margin-bottom:7px;flex-wrap:wrap}
+.fila-cola .num{font-family:var(--display);font-style:italic;font-weight:800;font-size:20px;color:var(--navy);min-width:26px}
+.fila-cola .info{flex:1;min-width:180px}
+.fila-cola .niv{font-size:14.5px}
+
+/* mis trabajos */
+.saludo{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.saludo h1{flex:1;margin:0}
+.trabajo{background:var(--surface);border:1px solid var(--line);border-left:7px solid var(--navy);border-radius:var(--r);padding:14px;margin-bottom:14px}
+.trabajo.en_cola{border-left-color:var(--pend)}
+.trabajo.terminada{border-left-color:var(--lime)}
+.trabajo .fila1{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.donde{font-size:13px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.04em}
+.tarea{display:flex;gap:10px;align-items:flex-start;border-top:1px solid var(--line);padding:11px 0}
+.tarea:first-child{border-top:none}
+.tarea .chk{width:28px;height:28px;border-radius:50%;border:2px solid var(--line);flex-shrink:0;display:grid;place-items:center;font-weight:800;font-size:14px;color:var(--muted);margin-top:1px}
+.tarea.hecha .chk{background:var(--lime);border-color:var(--lime);color:#0A2A0E}
+.tarea.en_curso .chk{border-color:var(--navy);background:var(--navy);color:#fff}
+.tarea.detenida .chk{border-color:var(--red);background:var(--red);color:#fff}
+.tarea .txt{flex:1;min-width:0}
+.tarea .txt b{display:block;font-size:15px;font-weight:600}
+.tarea.hecha .txt b{color:var(--muted);text-decoration:line-through}
+.tarea .txt small{display:block;font-size:12.5px;color:var(--muted)}
+.tarea .txt .motivo{color:var(--red);font-weight:600}
+.tarea .bt{display:flex;flex-direction:column;gap:6px;align-items:stretch}
+.tarea .bt .btn{padding:10px 14px;font-size:14px;min-width:112px}
+.tarea.ajena{opacity:.6}
+.fotos-bt{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.fotos-bt label{margin:0;display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border:2px dashed var(--edge);border-radius:var(--r);font-weight:600;font-size:13.5px;color:var(--navy);cursor:pointer;background:var(--surface)}
+.fotos-bt input{display:none}
+.fotos-bt svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8}
+.opciones{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.opciones button{padding:7px 11px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-size:13px;font-weight:600}
+.opciones button:hover{border-color:var(--navy)}
+
+/* diálogo */
+.dialogo{position:fixed;inset:0;background:rgba(5,15,30,.55);z-index:50;display:none;align-items:center;justify-content:center;padding:16px}
+.dialogo.on{display:flex}
+.dialogo .caja{background:var(--surface);border:2px solid var(--edge);border-radius:var(--r);width:min(460px,100%);padding:18px}
+.dialogo .caja h3{font-size:17px}
+.dialogo .caja p{font-size:14px;color:var(--muted)}
+.dialogo .caja textarea{min-height:80px;margin-top:10px;width:100%}
+.dialogo .acciones{justify-content:flex-end;margin-top:14px;display:flex;gap:8px}
+
+/* modo pantalla (TV del taller) */
+body.pantalla main{max-width:none;padding:16px 22px 22px}
+body.pantalla .migaja,body.pantalla .pestanas,body.pantalla .salir,body.pantalla #selPatioWrap{display:none}
+body.pantalla .barra{max-width:none}
+body.pantalla .lin{min-height:300px}
+body.pantalla .niv{font-size:24px}
+body.pantalla .desc{font-size:17px}
+body.pantalla .sigue{font-size:18px}
+body.pantalla .fecha{font-size:16px}
+body.pantalla .tm{font-size:13px}
+body.pantalla .cifra .n{font-size:38px}
+body.pantalla .fila-cola .niv{font-size:18px}
+body:not(.pantalla) .solo-pantalla{display:none}
+
+@media (max-width:1000px){
+  .lineas{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .cifras{grid-template-columns:repeat(3,1fr)}
+  .colas{grid-template-columns:1fr}
+}
+@media (max-width:560px){
+  .lineas{grid-template-columns:1fr}
+  .cifras{grid-template-columns:repeat(2,1fr)}
+  main{padding:18px 14px 64px}
+  .tarea{flex-wrap:wrap}
+  .tarea .bt{flex-direction:row;width:100%;padding-left:38px}
+  .tarea .bt .btn{flex:1}
+}
+</style>
+</head>
+<body>
+
+<div id="sinAcceso" style="display:none;min-height:100%;place-items:center;padding:24px;background:var(--navy)">
+  <div class="placa"><div class="cinta"></div><div class="placa-cuerpo">
+    <div class="marca">Plataforma <span>HT</span></div>
+    <p class="aviso" id="msgSinAcceso" style="margin-top:20px"></p>
+    <a class="btn ancho navy" style="display:block;text-align:center;text-decoration:none" href="index.html">Ir al inicio</a>
+  </div></div>
+</div>
+
+<div id="app">
+  <header>
+    <div class="cinta"></div>
+    <div class="barra">
+      <div>
+        <div class="marca">Plataforma <span>HT</span></div>
+        <div class="modtit" id="modtit">Taller</div>
+      </div>
+      <div class="quien">
+        <b id="nombreUsuario">—</b><br>
+        <span class="eyebrow" id="rolUsuario"></span>
+      </div>
+      <div class="reloj solo-pantalla" id="reloj"></div>
+      <button class="salir" id="salir">Salir</button>
+    </div>
+  </header>
+
+  <main>
+    <a class="migaja" href="index.html">← Volver a módulos</a>
+    <div class="pestanas" role="tablist" id="tabs">
+      <button class="pestana" data-tab="mis" aria-selected="false" id="tabMis" hidden>Mis trabajos <span class="c" id="cMis">0</span></button>
+      <button class="pestana" data-tab="tablero" aria-selected="false">Tablero del taller</button>
+    </div>
+
+    <!-- ======================= MIS TRABAJOS ======================= -->
+    <section id="secMis" hidden>
+      <div class="saludo">
+        <h1 id="saludo">Mis trabajos</h1>
+        <span class="sello ok" id="hechasHoy"></span>
+        <button class="btn chico claro" id="refrescarMis">Actualizar</button>
+      </div>
+      <div id="listaMis"><p class="cargando">Cargando tus trabajos…</p></div>
+    </section>
+
+    <!-- ======================= TABLERO ======================= -->
+    <section id="secTablero" hidden>
+      <div class="cab-sec">
+        <h1 id="tituloTablero">Tablero del taller</h1>
+        <span class="actualizado" id="actualizado"></span>
+        <span id="selPatioWrap"><select id="selPatio" style="width:auto"></select></span>
+        <a class="btn chico claro" id="btnPantalla" href="taller.html?pantalla=1" target="_blank" rel="noopener" style="text-decoration:none">Abrir en pantalla del taller</a>
+      </div>
+      <div class="cifras" id="cifras"></div>
+      <div class="lineas" id="lineas"><p class="cargando">Cargando tablero…</p></div>
+      <div class="colas">
+        <div>
+          <h2 style="margin-bottom:8px">Siguen en cola</h2>
+          <div id="cola"></div>
+        </div>
+        <div>
+          <h2 style="margin-bottom:8px">En taller externo</h2>
+          <div id="externos"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="dialogo" id="dialogo">
+  <div class="caja">
+    <h3 id="dTitulo"></h3>
+    <p id="dTexto"></p>
+    <div class="opciones" id="dOpciones"></div>
+    <textarea id="dCampo" placeholder=""></textarea>
+    <p class="aviso" id="dError"></p>
+    <div class="acciones">
+      <button class="btn claro" id="dCancelar">Cancelar</button>
+      <button class="btn" id="dAceptar">Aceptar</button>
+    </div>
+  </div>
+</div>
+
+<div class="nota" id="nota"></div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const SUPABASE_URL  = 'https://ahfjstuwekcuxshclprl.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFoZmpzdHV3ZWtjdXhzaGNscHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwNDg2MjYsImV4cCI6MjEwMzYyNDYyNn0.lf1uw8WHPRy21GuYlK9NzeI5JgJK2be1LrODq22CodM';
+const BUCKET_FOTOS = 'fotos-equipos';
+const BUCKET_ADJ   = 'operaciones-adjuntos';
+
+const db   = createClient(SUPABASE_URL, SUPABASE_ANON, { db:{ schema:'operaciones' } });
+const core = db.schema('core');
+
+/* ============================ utilidades ============================ */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const errTxt = e => {
+  const m = (e && (e.message || e.error_description)) || String(e||'');
+  if(m.includes('Failed to fetch')) return 'Sin conexión. Inténtalo de nuevo.';
+  return m.replace(/^.*?ERROR:\s*/,'');
+};
+const uuid = () => crypto.randomUUID ? crypto.randomUUID() :
+  'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return (c==='x'?r:(r&3|8)).toString(16);});
+let notaT;
+function nota(txt, ms=3500){ const n=$('nota'); n.textContent=txt; n.classList.add('on'); clearTimeout(notaT); notaT=setTimeout(()=>n.classList.remove('on'), ms); }
+
+const hoyISO = () => new Date().toLocaleDateString('en-CA', { timeZone:'America/Monterrey' });
+const diasHasta = d => Math.round((new Date(d + 'T12:00:00') - new Date(hoyISO() + 'T12:00:00')) / 864e5);
+const fechaCorta = d => new Date(d + 'T12:00:00').toLocaleDateString('es-MX', { day:'2-digit', month:'short' });
+const hace = d => {
+  if(!d) return '';
+  const m = Math.round((Date.now() - new Date(d)) / 60000);
+  if(m < 60) return `hace ${Math.max(m,1)} min`;
+  const h = Math.round(m/60); if(h < 48) return `hace ${h} h`;
+  return `hace ${Math.round(h/24)} días`;
+};
+
+const TIPO = { reparacion:'Reparación', adecuacion:'Adecuación' };
+const PRIORIDAD = { ticket:'Con ticket', sin_asignar:'Sin asignar' };
+const EST_TAREA = { pendiente:'Pendiente', en_curso:'En curso', hecha:'Hecha', detenida:'Detenida' };
+
+/* semáforo de la fecha de entrega */
+function semaforo(o){
+  if(o.estatus === 'terminada') return '<span class="fecha ok">Terminada</span>';
+  if(!o.fecha_compromiso) return '<span class="fecha sin">Sin fecha de entrega</span>';
+  const d = diasHasta(o.fecha_compromiso);
+  if(d < 0) return `<span class="fecha mal">Atrasada ${-d} día${d === -1 ? '' : 's'}</span>`;
+  if(d === 0) return '<span class="fecha hoy">Entrega hoy</span>';
+  if(d === 1) return '<span class="fecha hoy">Entrega mañana</span>';
+  return `<span class="fecha ok">Entrega ${fechaCorta(o.fecha_compromiso)}</span>`;
+}
+function avance(o){
+  const t = o.tareas || [];
+  const hechas = t.filter(x => x.estatus === 'hecha').length;
+  const pct = t.length ? Math.round(hechas * 100 / t.length) : 0;
+  const det = t.find(x => x.estatus === 'detenida');
+  const sig = det || t.find(x => x.estatus === 'en_curso') || t.find(x => x.estatus === 'pendiente');
+  return { total:t.length, hechas, pct, det, sig };
+}
+const etiquetaFolio = o => `<span class="folio">${esc(o.folio)}</span>${o.es_prueba ? '<span class="prueba-tag">Prueba</span>' : ''}`;
+const equipoTxt = o => [o.tipo_equipo, o.marca, o.anio].filter(Boolean).join(' ') + (o.placa ? ' · ' + o.placa : '');
+
+/* ============================ estado ============================ */
+const S = { yo:null, nivelTaller:null, encargado:false, puedoAvanzar:false, tab:null, patio:null,
+            tablero:null, mis:null, pantalla:false, ocupado:false };
+
+/* ============================ arranque ============================ */
+async function iniciar(){
+  const q = new URLSearchParams(location.search);
+  S.pantalla = q.get('pantalla') === '1';
+  if(S.pantalla) document.body.classList.add('pantalla');
+  if(q.get('patio')) S.patio = Number(q.get('patio'));
+
+  const { data:{ session } } = await db.auth.getSession();
+  if(!session){ location.href = 'index.html'; return; }
+  S.yo = { id: session.user.id, correo: session.user.email };
+
+  const [perfil, nT, nO, enc] = await Promise.all([
+    core.from('perfiles').select('nombre').eq('id', S.yo.id).maybeSingle(),
+    core.rpc('nivel_modulo', { p_modulo:'taller' }),
+    core.rpc('nivel_modulo', { p_modulo:'operaciones' }),
+    db.rpc('es_encargado_taller')
+  ]);
+  S.yo.nombre = perfil.data?.nombre || S.yo.correo;
+  S.nivelTaller = nT.data || null;
+  S.encargado = !!enc.data;
+  if(!S.nivelTaller && !nO.data){
+    $('msgSinAcceso').textContent = nT.error ? 'No se pudo validar tu acceso: ' + errTxt(nT.error)
+      : 'Tu usuario no tiene acceso al Taller. Pídele a un administrador que te asigne el rol de Mecánico.';
+    $('sinAcceso').style.display = 'grid';
+    return;
+  }
+  S.puedoAvanzar = S.encargado || S.nivelTaller === 'escritura' || S.nivelTaller === 'admin';
+
+  $('app').style.display = 'flex';
+  $('nombreUsuario').textContent = S.yo.nombre;
+  $('rolUsuario').textContent = S.pantalla ? 'Pantalla del taller' : (S.encargado ? 'Encargado / Operaciones' : (S.puedoAvanzar ? 'Taller' : 'Solo consulta'));
+  $('modtit').textContent = S.pantalla ? 'Taller · tablero' : 'Taller';
+  $('tabMis').hidden = !S.puedoAvanzar || S.pantalla;
+
+  const inicial = q.get('tab') || (S.pantalla ? 'tablero' : (S.puedoAvanzar && !S.encargado ? 'mis' : 'tablero'));
+  await cambiarTab(inicial === 'mis' && !$('tabMis').hidden ? 'mis' : 'tablero');
+
+  if(S.pantalla){
+    reloj(); setInterval(reloj, 15000);
+    setInterval(() => cargarTablero(), 30000);
+    try{ if('wakeLock' in navigator) await navigator.wakeLock.request('screen'); }catch(_){}
+    document.addEventListener('visibilitychange', async () => {
+      if(document.visibilityState === 'visible'){ try{ await navigator.wakeLock?.request('screen'); }catch(_){} cargarTablero(); }
+    });
+  } else {
+    setInterval(() => { if(document.visibilityState === 'visible' && !S.ocupado) refrescar(); }, 60000);
+  }
+}
+
+function reloj(){
+  $('reloj').textContent = new Date().toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit', timeZone:'America/Monterrey' });
+}
+
+async function cambiarTab(t){
+  S.tab = t;
+  $('tabs').querySelectorAll('.pestana').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
+  $('secMis').hidden = t !== 'mis';
+  $('secTablero').hidden = t !== 'tablero';
+  const u = new URL(location); u.searchParams.set('tab', t); history.replaceState(null, '', u);
+  await refrescar();
+}
+$('tabs').onclick = e => { const b = e.target.closest('[data-tab]'); if(b && !b.hidden) cambiarTab(b.dataset.tab); };
+
+async function refrescar(){
+  if(S.tab === 'mis') await cargarMis();
+  else await cargarTablero();
+  if(S.puedoAvanzar && !S.pantalla && S.tab !== 'mis') cargarMis(true);
+}
+
+/* ============================ TABLERO ============================ */
+async function cargarTablero(){
+  const { data, error } = await db.rpc('taller_tablero', { p_patio: S.patio });
+  if(error){ $('lineas').innerHTML = `<p class="vacio">No se pudo leer el tablero: ${esc(errTxt(error))}</p>`; return; }
+  S.tablero = data; S.patio = data.patio_id;
+  pintarTablero();
+}
+
+function pintarTablero(){
+  const T = S.tablero;
+  $('selPatio').innerHTML = (T.patios || []).map(p => `<option value="${p.id}" ${p.id === T.patio_id ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('');
+  $('selPatioWrap').hidden = (T.patios || []).length < 2;
+  $('tituloTablero').textContent = S.pantalla ? (T.patio || 'Taller') : 'Tablero del taller';
+  $('actualizado').textContent = 'Actualizado ' + new Date().toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit' });
+  $('btnPantalla').href = `taller.html?pantalla=1&patio=${T.patio_id}`;
+
+  const enLinea = (T.lineas || []).map(l => l.orden).filter(Boolean);
+  const todas = [...enLinea, ...(T.cola || []), ...(T.externos || [])];
+  const hoy = hoyISO();
+  const entreganHoy = todas.filter(o => o.fecha_compromiso === hoy).length;
+  const atrasadas = todas.filter(o => o.atrasada).length;
+  const detenidas = enLinea.filter(o => (o.tareas || []).some(t => t.estatus === 'detenida')).length;
+  $('cifras').innerHTML = [
+    ['', enLinea.length + ' / ' + (T.lineas || []).length, 'líneas ocupadas'],
+    ['', (T.cola || []).length, 'en cola'],
+    [entreganHoy ? 'ojo' : '', entreganHoy, 'entregan hoy'],
+    [atrasadas ? 'mal' : '', atrasadas, 'atrasadas'],
+    [detenidas ? 'mal' : '', detenidas, 'con trabajo detenido']
+  ].map(([c, n, t]) => `<div class="cifra ${c}"><div class="n">${n}</div><div class="t">${t}</div></div>`).join('');
+
+  $('lineas').innerHTML = (T.lineas || []).map(l => {
+    const o = l.orden;
+    const cab = `<div class="cab"><b>${esc(l.nombre)}</b><span class="sp"></span><span>${l.uso === 'prioritaria' ? 'Con ticket' : 'Sin asignar'}</span></div>`;
+    if(!o) return `<div class="lin ${l.uso} libre">${cab}<div class="cuerpo">Libre</div></div>`;
+    const a = avance(o);
+    const mecanicos = [...new Set((o.tareas || []).map(t => t.mecanico).filter(Boolean))];
+    return `<div class="lin ${l.uso}">${cab}<div class="cuerpo">
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">${etiquetaFolio(o)}<span class="pri ${o.prioridad}">${PRIORIDAD[o.prioridad]}</span></div>
+      <div class="niv">${esc(o.niv)}</div>
+      <div class="equipo">${esc(equipoTxt(o))}</div>
+      <div class="desc">${esc(o.descripcion)}</div>
+      ${a.total ? `<div class="barra-av ${a.det ? 'det' : ''}"><i style="width:${a.pct}%"></i></div>
+        <div class="pct"><span>${a.hechas} de ${a.total} trabajos</span><b>${a.pct}%</b></div>
+        <div class="tareas-mini">${o.tareas.map(t => `<span class="tm ${t.estatus}">${t.estatus === 'hecha' ? '✓ ' : ''}${esc(t.descripcion)}</span>`).join('')}</div>`
+        : '<div class="quien">Sin tareas capturadas todavía.</div>'}
+      ${a.det ? `<div class="sigue det">Detenido: ${esc(a.det.descripcion)} — ${esc(a.det.nota || '')}</div>`
+        : a.sig ? `<div class="sigue">Sigue: ${esc(a.sig.descripcion)}</div>`
+        : a.total ? '<div class="sigue">Todo hecho · por revisar y terminar</div>' : ''}
+      <div class="quien">${mecanicos.length ? esc(mecanicos.join(', ')) : esc(o.responsable || 'Sin asignar')} · entró ${hace(o.fecha_inicio)}</div>
+      ${semaforo(o)}
+    </div></div>`;
+  }).join('') || '<p class="vacio">Este patio no tiene líneas configuradas.</p>';
+
+  $('cola').innerHTML = (T.cola || []).map((o, i) => `<div class="fila-cola">
+      <span class="num">${i + 1}</span>
+      <div class="info">
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">${etiquetaFolio(o)}<span class="niv">${esc(o.niv)}</span><span class="pri ${o.prioridad}">${PRIORIDAD[o.prioridad]}</span></div>
+        <div class="quien">${esc(equipoTxt(o))} · ${TIPO[o.tipo] || ''} · ${esc(o.descripcion)}${o.tareas?.length ? ' · ' + o.tareas.length + ' tareas' : ''}</div>
+      </div>
+      ${semaforo(o)}
+    </div>`).join('') || `<p class="vacio">Nada en cola.${T.por_autorizar ? ` Hay ${T.por_autorizar} ${T.por_autorizar > 1 ? 'órdenes' : 'orden'} esperando autorización.` : ''}</p>`;
+  if((T.cola || []).length && T.por_autorizar) $('cola').insertAdjacentHTML('beforeend', `<p class="quien">Además, ${T.por_autorizar} ${T.por_autorizar > 1 ? 'órdenes' : 'orden'} esperando autorización.</p>`);
+
+  $('externos').innerHTML = (T.externos || []).map(o => {
+    const a = avance(o);
+    return `<div class="fila-cola"><div class="info">
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">${etiquetaFolio(o)}<span class="niv">${esc(o.niv)}</span></div>
+      <div class="quien">${esc(o.taller || 'Taller externo')} · ${esc(o.descripcion)}${a.total ? ` · ${a.pct}%` : ''}</div></div>
+      ${semaforo(o)}</div>`;
+  }).join('') || '<p class="vacio">Nada en talleres externos.</p>';
+}
+$('selPatio').onchange = () => { S.patio = Number($('selPatio').value); cargarTablero(); };
+
+/* ============================ MIS TRABAJOS ============================ */
+async function cargarMis(soloContador = false){
+  const { data, error } = await db.rpc('mis_trabajos');
+  if(error){ if(!soloContador) $('listaMis').innerHTML = `<p class="vacio">No se pudieron leer tus trabajos: ${esc(errTxt(error))}</p>`; return; }
+  S.mis = data;
+  const pend = (data.ordenes || []).reduce((a, o) => a + (o.tareas || []).filter(t => t.estatus !== 'hecha' && (t.mecanico_id === data.yo || !t.mecanico_id)).length, 0);
+  $('cMis').textContent = pend;
+  if(!soloContador) pintarMis();
+}
+
+function pintarMis(){
+  const M = S.mis;
+  const nombre = (M.nombre || S.yo.nombre || '').split(' ')[0];
+  $('saludo').textContent = nombre ? `Hola, ${nombre}` : 'Mis trabajos';
+  $('hechasHoy').textContent = M.hechas_hoy ? `Hoy llevas ${M.hechas_hoy} tarea${M.hechas_hoy > 1 ? 's' : ''} hecha${M.hechas_hoy > 1 ? 's' : ''}` : '';
+  $('hechasHoy').hidden = !M.hechas_hoy;
+
+  const ords = M.ordenes || [];
+  if(!ords.length){
+    $('listaMis').innerHTML = `<div class="bloque"><p style="font-size:15px"><b>No tienes trabajos asignados por ahora.</b></p>
+      <p class="sub" style="margin-top:4px">Cuando el encargado te asigne tareas de una unidad, aparecen aquí. Mientras, revisa el tablero para ver qué sigue.</p>
+      <div class="acciones" style="margin-top:10px"><button class="btn chico navy" data-ir="tablero">Ver tablero del taller</button></div></div>`;
+    return;
+  }
+
+  $('listaMis').innerHTML = ords.map(o => {
+    const a = avance(o);
+    const enTrabajo = o.estatus === 'en_proceso';
+    const clase = o.estatus === 'terminada' ? 'terminada' : (enTrabajo ? '' : 'en_cola');
+    const donde = o.estatus === 'terminada' ? 'Terminada' : enTrabajo ? (o.linea || (o.taller ? 'Taller externo: ' + o.taller : 'En trabajo')) : 'En cola · todavía no entra a línea';
+    const tareas = (o.tareas || []).map(t => {
+      const mia = t.mecanico_id === M.yo, libre = !t.mecanico_id;
+      const puedo = enTrabajo && (mia || libre || S.encargado);
+      let bt = '';
+      if(puedo){
+        if(t.estatus === 'pendiente') bt = `<button class="btn" data-t="${t.id}" data-e="en_curso">${libre && !S.encargado ? 'Tomar y empezar' : 'Empezar'}</button>`;
+        else if(t.estatus === 'en_curso') bt = `<button class="btn" data-t="${t.id}" data-e="hecha">Terminé</button><button class="btn claro" data-t="${t.id}" data-e="detenida">Detener</button>`;
+        else if(t.estatus === 'detenida') bt = `<button class="btn navy" data-t="${t.id}" data-e="en_curso">Reanudar</button>`;
+        else if(t.estatus === 'hecha' && (mia || S.encargado)) bt = `<button class="btn claro" data-t="${t.id}" data-e="en_curso" data-deshacer="1">Deshacer</button>`;
+      }
+      const quien = mia ? 'Tú' : (t.mecanico || 'Sin asignar · cualquiera puede tomarla');
+      const icono = t.estatus === 'hecha' ? '✓' : t.estatus === 'detenida' ? '!' : t.estatus === 'en_curso' ? '▶' : t.posicion;
+      return `<div class="tarea ${t.estatus} ${!mia && !libre && !S.encargado ? 'ajena' : ''}">
+        <span class="chk">${icono}</span>
+        <div class="txt"><b>${esc(t.descripcion)}</b>
+          <small>${EST_TAREA[t.estatus]} · ${esc(quien)}${t.horas ? ` · ${t.horas} h estimadas` : ''}${t.estatus === 'hecha' && t.terminada_en ? ' · ' + hace(t.terminada_en) : ''}</small>
+          ${t.estatus === 'detenida' && t.nota ? `<small class="motivo">Motivo: ${esc(t.nota)}</small>` : ''}
+        </div>
+        ${bt ? `<div class="bt">${bt}</div>` : ''}
+      </div>`;
+    }).join('');
+    const fotos = enTrabajo || o.estatus === 'terminada' ? `<div class="fotos-bt">
+        <label><svg viewBox="0 0 24 24"><path d="M3 7h3l2-3h8l2 3h3v13H3z"/><circle cx="12" cy="13" r="4"/></svg>Foto de avance
+          <input type="file" accept="image/*" capture="environment" multiple data-foto="${o.id}" data-etapa="avance"></label>
+        <label><svg viewBox="0 0 24 24"><path d="M3 7h3l2-3h8l2 3h3v13H3z"/><circle cx="12" cy="13" r="4"/></svg>Foto de terminado
+          <input type="file" accept="image/*" capture="environment" multiple data-foto="${o.id}" data-etapa="terminado"></label>
+        <span class="quien" style="align-self:center">${o.fotos ? o.fotos + ' foto' + (o.fotos > 1 ? 's' : '') + ' en la orden' : 'Sin fotos todavía'}</span>
+      </div>` : '';
+    return `<div class="trabajo ${clase}">
+      <div class="fila1">${etiquetaFolio(o)}<span class="pri ${o.prioridad}">${PRIORIDAD[o.prioridad]}</span><span class="sp"></span>${semaforo(o)}</div>
+      <div class="donde">${esc(donde)}</div>
+      <div class="niv" style="margin-top:2px">${esc(o.niv)}</div>
+      <div class="equipo">${esc(equipoTxt(o))} · ${TIPO[o.tipo] || ''}</div>
+      <div class="desc" style="margin:6px 0 10px">${esc(o.descripcion)}</div>
+      ${a.total ? `<div class="barra-av ${a.det ? 'det' : ''}"><i style="width:${a.pct}%"></i></div>
+        <div class="pct" style="margin:4px 0 6px"><span>${a.hechas} de ${a.total} trabajos</span><b>${a.pct}%</b></div>` : ''}
+      <div>${tareas}</div>
+      ${fotos}
+    </div>`;
+  }).join('');
+}
+
+$('listaMis').addEventListener('click', async e => {
+  const ir = e.target.closest('[data-ir]'); if(ir){ cambiarTab(ir.dataset.ir); return; }
+  const b = e.target.closest('[data-t]'); if(!b || S.ocupado) return;
+  const est = b.dataset.e;
+  let notaTxt = null;
+  if(est === 'detenida'){
+    notaTxt = await pedirTexto('¿Por qué se detiene?', 'Le avisamos al encargado del taller y a la jefatura.', 'Ej. Falta manguera de aire de 1/2"', true,
+      ['Falta refacción', 'Hallazgo adicional', 'Falta herramienta', 'Espera de otro trabajo']);
+    if(notaTxt === null) return;
+  }
+  if(est === 'hecha'){
+    notaTxt = await pedirTexto('Tarea terminada', 'Si quieres, anota algo que deba saber el encargado. Recuerda tomar foto si aplica.', 'Nota opcional', false);
+    if(notaTxt === null) return;
+  }
+  if(b.dataset.deshacer && !confirm('¿Regresar esta tarea a "en curso"?')) return;
+  S.ocupado = true; b.disabled = true;
+  const { error } = await db.rpc('tarea_avance', { p_id:b.dataset.t, p_estatus:est, p_nota:notaTxt || null });
+  S.ocupado = false;
+  if(error){ b.disabled = false; nota(errTxt(error), 7000); return; }
+  nota(est === 'hecha' ? 'Tarea hecha' : est === 'detenida' ? 'Avisamos al encargado' : est === 'en_curso' ? 'Tarea en curso' : 'Listo');
+  await cargarMis();
+});
+
+$('listaMis').addEventListener('change', async e => {
+  const inp = e.target.closest('input[data-foto]'); if(!inp) return;
+  const files = [...inp.files]; inp.value = '';
+  if(!files.length) return;
+  const o = (S.mis?.ordenes || []).find(x => x.id === inp.dataset.foto); if(!o) return;
+  await subirFotos(files, o, inp.dataset.etapa);
+  await cargarMis();
+});
+$('refrescarMis').onclick = () => cargarMis();
+
+/* ============================ FOTOS ============================ */
+function comprimir(file, max = 1600, q = 0.78){
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      const r = Math.min(1, max / Math.max(img.width, img.height));
+      const cv = document.createElement('canvas'); cv.width = Math.round(img.width * r); cv.height = Math.round(img.height * r);
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      cv.toBlob(b => { URL.revokeObjectURL(url); b ? res({ blob:b, w:cv.width, h:cv.height }) : rej(new Error('No se pudo procesar la imagen')); }, 'image/jpeg', q);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('Formato de imagen no soportado')); };
+    img.src = url;
+  });
+}
+async function subirFotos(files, o, etapa){
+  if(o.es_prueba && !S.encargado){ nota('Esta orden es de prueba: las fotos se suben desde Operaciones.', 6000); return; }
+  S.ocupado = true;
+  let hechas = 0; const fallas = [];
+  for(const f of files){
+    nota(`Subiendo foto ${hechas + fallas.length + 1} de ${files.length}…`, 60000);
+    try{
+      const c = await comprimir(f);
+      const id = uuid();
+      const bucket = o.es_prueba ? BUCKET_ADJ : BUCKET_FOTOS;
+      const ruta = o.es_prueba ? `prueba/${o.id}/${id}.jpg` : `${o.niv || 'SIN_NIV'}/operaciones/${o.id}/${id}.jpg`;
+      const up = await db.storage.from(bucket).upload(ruta, c.blob, { contentType:'image/jpeg', upsert:true });
+      if(up.error) throw up.error;
+      const { error } = await db.rpc('taller_foto', { p_orden:o.id, p_foto:id, p_ruta:ruta, p_etapa:etapa,
+        p_ancho:c.w, p_alto:c.h, p_bytes:c.blob.size, p_tomada:new Date(f.lastModified || Date.now()).toISOString(), p_nota:null });
+      if(error) throw error;
+      hechas++;
+    }catch(err){ fallas.push(errTxt(err)); }
+  }
+  S.ocupado = false;
+  nota(fallas.length ? `Subieron ${hechas}; fallaron ${fallas.length}: ${fallas[0]}` : `${hechas} foto${hechas > 1 ? 's' : ''} guardada${hechas > 1 ? 's' : ''}`, 6000);
+}
+
+/* ============================ diálogo ============================ */
+function pedirTexto(titulo, texto, placeholder, obligatorio, opciones = []){
+  return new Promise(res => {
+    $('dTitulo').textContent = titulo; $('dTexto').textContent = texto;
+    $('dCampo').value = ''; $('dCampo').placeholder = placeholder || ''; $('dError').textContent = '';
+    $('dOpciones').innerHTML = opciones.map(o => `<button type="button" data-op="${esc(o)}">${esc(o)}</button>`).join('');
+    $('dOpciones').onclick = e => { const b = e.target.closest('[data-op]'); if(!b) return;
+      const v = $('dCampo').value.trim(); $('dCampo').value = v ? `${b.dataset.op}: ${v}` : b.dataset.op + ': '; $('dCampo').focus(); };
+    $('dialogo').classList.add('on'); setTimeout(() => $('dCampo').focus(), 50);
+    const cerrar = v => { $('dialogo').classList.remove('on'); $('dAceptar').onclick = $('dCancelar').onclick = null; res(v); };
+    $('dCancelar').onclick = () => cerrar(null);
+    $('dAceptar').onclick = () => {
+      const v = $('dCampo').value.trim().replace(/:\s*$/, '');
+      if(obligatorio && !v){ $('dError').textContent = 'Escribe el motivo.'; return; }
+      cerrar(v);
+    };
+  });
+}
+document.addEventListener('keydown', e => { if(e.key === 'Escape' && $('dialogo').classList.contains('on')) $('dCancelar').click(); });
+
+/* ============================ sesión ============================ */
+$('salir').onclick = async () => { await db.auth.signOut(); location.href = 'index.html'; };
+iniciar().catch(err => { console.error(err); nota('Error al iniciar: ' + errTxt(err), 10000); });
+</script>
+</body>
+</html>

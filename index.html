@@ -93,13 +93,14 @@ const acceso = $('acceso'), app = $('app'), aviso = $('avisoAcceso');
 
 /* Cambia esta versión cada vez que se suba una página nueva:
    obliga al navegador de todos a traer la versión actualizada. */
-const VERSION = '2026-10-19a';
+const VERSION = '2026-10-19b';
 
 const DESTINOS = {
   clientes:    { nombre:'Servicio a Clientes', url:'https://ht-rent-mx.github.io/seguimiento-clientes-equipo/' },
   documentos:  { nombre:'Control de equipos y expedientes', url:'documentos.html' },
   patios:      { nombre:'Levantamiento de patios', url:'https://ht-rent-mx.github.io/levantamiento-patio/' },
   operaciones: { nombre:'Operaciones y taller', url:'operaciones.html' },
+  taller:      { nombre:'Taller · avance de unidades', url:'taller.html' },
   fotos:       { nombre:'Imágenes HT', url:'https://ht-rent-mx.github.io/imagenes-ht/?t=8a578d88491c462bb93198ccfa923a49' },
   mapa_patios: { nombre:'Mapa de patios', url:'mapa-patios.html' },
   movimientos: { nombre:'Entradas y salidas de patio', url:'movimientos.html' },
@@ -171,6 +172,13 @@ async function cargarModulos(){
   if(!data || !data.length){
     cont.innerHTML = `<p class="vacio">Todavía no tienes módulos asignados. Pídele a un administrador que te dé un rol.</p>`;
     return;
+  }
+
+  // Mecánicos: si solo tienen el Taller (y salas), entran directo a sus trabajos una vez por sesión.
+  const claves = data.map(m => m.clave);
+  if(claves.includes('taller') && claves.every(c => ['taller','salas'].includes(c))){
+    let ya = false; try{ ya = sessionStorage.getItem('ht_taller_directo') === '1'; sessionStorage.setItem('ht_taller_directo', '1'); }catch(_){}
+    if(!ya){ location.href = `taller.html?v=${VERSION}`; return; }
   }
 
   cont.innerHTML = data.map(m => {
