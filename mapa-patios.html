@@ -1043,7 +1043,24 @@ $('#zMenos').onclick=()=>zoom(-1); $('#zMas').onclick=()=>zoom(+1); zoom(0);
    ===================================================================== */
 const EXP={ CELDA:40, ESCALA:2, MAX_PX:14000,
   JSPDF:'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js',
-  AUTOTABLE:'https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js' };
+  AUTOTABLE:'https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js',
+  PAKO:'https://cdn.jsdelivr.net/npm/pako@1.0.11/dist/pako.min.js',
+  UPNG:'https://cdn.jsdelivr.net/npm/upng-js@2.1.0/UPNG.js',
+  COLORES:256 };  // paleta del PNG comprimido: el plano usa pocos colores, así pesa ~la mitad sin perder nitidez
+// PNG de paleta (como TinyPNG): mismo tamaño en pixeles y texto igual de nítido, archivo mucho más ligero.
+// Si las librerías no cargan se usa el PNG normal del navegador.
+async function pngLigero(cv){
+  try{
+    await cargarScript(EXP.PAKO); await cargarScript(EXP.UPNG);
+    const d=cv.getContext('2d').getImageData(0,0,cv.width,cv.height).data.buffer;
+    return new Uint8Array(window.UPNG.encode([d],cv.width,cv.height,EXP.COLORES));
+  }catch(err){
+    console.warn('PNG ligero no disponible, se usa el normal',err);
+    const b=await new Promise((res,rej)=>{ try{ cv.toBlob(b=>b?res(b):rej(new Error('El plano es demasiado grande para la imagen')),'image/png'); }catch(e){ rej(e); } });
+    return new Uint8Array(await b.arrayBuffer());
+  }
+}
+const kb=n=>n>=1048576?(n/1048576).toFixed(1)+' MB':Math.round(n/1024)+' KB';
 const cssVar=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim()||'#8A8F95';
 function colorEstatusExp(e=''){ const s=e.toUpperCase(); return cssVar(s==='LIBRE'?'--libre':s.startsWith('ASIGNADO')?'--asignado':s.startsWith('EN_TRANS')?'--transito':'--otro'); }
 const cargarImg=(src,cors)=>new Promise(res=>{ const i=new Image(); if(cors) i.crossOrigin='anonymous'; i.onload=()=>res(i); i.onerror=()=>res(null); i.src=src; });
@@ -1173,9 +1190,9 @@ async function exportarPNG(){
   try{
     await document.fonts?.ready;
     const { cv, sinFondo }=await canvasPatio(patioActivo);
-    const blob=await new Promise((res,rej)=>{ try{ cv.toBlob(b=>b?res(b):rej(new Error('El plano es demasiado grande para la imagen')),'image/png'); }catch(e){ rej(e); } });
-    descargar(blob,`Mapa_${nombreArchivo(nombrePatio(patioActivo))}_${hoyArchivo()}.png`);
-    estadoExp('Imagen descargada'+(sinFondo?' (sin la imagen de fondo, que no se pudo leer)':'')+'.');
+    const png=await pngLigero(cv);
+    descargar(new Blob([png],{type:'image/png'}),`Mapa_${nombreArchivo(nombrePatio(patioActivo))}_${hoyArchivo()}.png`);
+    estadoExp(`Imagen descargada (${cv.width}×${cv.height} px, ${kb(png.length)})`+(sinFondo?' (sin la imagen de fondo, que no se pudo leer)':'')+'.');
   }catch(err){ console.error(err); estadoExp('No se pudo generar la imagen: '+(err.message||err),true); }
   bloquearExp(false);
 }
@@ -1206,7 +1223,7 @@ async function exportarPDF(){
       const { cv, L, sinFondo:sf }=await canvasPatio(p.id); if(sf) sinFondo++;
       doc.addPage('tabloid','landscape');
       const r=Math.min((PW-M*2)/cv.width,(PH-M*2)/cv.height), w=cv.width*r, h=cv.height*r;
-      doc.addImage(cv.toDataURL('image/jpeg',.92),'JPEG',(PW-w)/2,M,w,h,undefined,'FAST');
+      doc.addImage(await pngLigero(cv),'PNG',(PW-w)/2,M,w,h,undefined,'NONE');
       cv.width=cv.height=0;
       if($('#expAnexo').checked){
         doc.addPage('tabloid','landscape');
@@ -1219,8 +1236,8 @@ async function exportarPDF(){
       }
     }
     estadoExp('Guardando PDF…');
-    doc.save(`Mapa_de_patios_${hoyArchivo()}.pdf`);
-    estadoExp(`PDF descargado: ${lista.length} patios`+(sinFondo?` (en ${sinFondo} no se pudo incluir la imagen de fondo)`:'')+'.');
+    const pdf=doc.output('blob'); descargar(pdf,`Mapa_de_patios_${hoyArchivo()}.pdf`);
+    estadoExp(`PDF descargado: ${lista.length} patios, ${kb(pdf.size)}`+(sinFondo?` (en ${sinFondo} no se pudo incluir la imagen de fondo)`:'')+'.');
   }catch(err){ console.error(err); estadoExp('No se pudo generar el PDF: '+(err.message||err),true); }
   bloquearExp(false);
 }
