@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B3D66">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Patio HT">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>Operaciones en patio · Plataforma HT</title>
+<link rel="manifest" href="manifest-campo.json">
+<link rel="apple-touch-icon" href="icon-mov-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Saira:ital,wght@1,700;1,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="ht.css?v=2026-09-25b">
+<style>
+/* =====================================================================
+   Operaciones en patio · app de celular para los asistentes de Operaciones
+   Mis equipos hoy · inspección de recepción con evidencia · avance de taller
+   Funciona sin señal: lo capturado se guarda en el teléfono y se sube solo.
+   ===================================================================== */
+html,body{background:var(--bg)}
+body{padding-bottom:calc(68px + env(safe-area-inset-bottom))}
+#app{display:none;max-width:640px;margin:0 auto;min-height:100%}
+.top{background:var(--navy);color:#fff;padding:calc(12px + env(safe-area-inset-top)) 16px 14px;border-bottom:4px solid var(--lime);position:sticky;top:0;z-index:20}
+.top .quien{font-size:13px;color:#B9C8DC;margin:0;text-align:left;line-height:1.3}
+.top h1{font-family:var(--display);font-style:italic;font-weight:800;font-size:24px;color:#fff;margin:2px 0 0;line-height:1.1;text-transform:none}
+.top .volver{background:transparent;color:#C8D6E5;font-size:14px;font-weight:600;padding:0 0 4px;display:inline-flex;align-items:center;gap:4px}
+.top .sub2{font-size:13.5px;color:#C8D6E5;margin-top:2px}
+body.prueba .top{border-bottom-color:var(--amber)}
+
+.cinta-sync{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--amber-soft);border-bottom:1px solid var(--amber);color:#6B4A00;font-size:13.5px;font-weight:600}
+.cinta-sync svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;flex-shrink:0}
+.cinta-sync.ok{background:var(--lime-soft);border-color:var(--lime);color:var(--lime-ink)}
+.cinta-sync.mal{background:var(--red-soft);border-color:var(--red);color:var(--red)}
+.cinta-sync button{margin-left:auto;background:transparent;font-weight:700;color:inherit;text-decoration:underline;font-size:13px}
+.cinta-prueba{padding:8px 16px;background:var(--amber);color:#2B1B00;font-size:13px;font-weight:700}
+
+.cuerpo{padding:14px 14px 24px}
+.filtro{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto}
+.filtro button{padding:7px 14px;border-radius:999px;background:transparent;font-weight:600;font-size:14px;color:var(--muted);white-space:nowrap}
+.filtro button[aria-pressed="true"]{background:var(--navy);color:#fff}
+.filtro .n{margin-left:4px}
+
+.eq{display:block;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:13px 14px;margin-bottom:10px}
+.eq:active{transform:scale(.99)}
+.eq.vencida{border-color:var(--red);box-shadow:inset 4px 0 0 var(--red)}
+.eq.tenue{opacity:.62}
+.eq .f1{display:flex;align-items:center;gap:8px}
+.eq .niv{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--ink);flex:1;min-width:0}
+.eq .niv small{font-size:12px;color:var(--muted);font-weight:400;margin-left:4px}
+.eq .l2{font-size:14.5px;color:var(--text);margin-top:4px}
+.eq .l3{font-size:14px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:6px}
+.eq .l3.mal{color:var(--red);font-weight:600}
+.eq .l3 svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8}
+.chip{font-size:12.5px;font-weight:700;padding:3px 10px;border-radius:999px;white-space:nowrap}
+.chip.vencida{background:var(--red-soft);color:var(--red)}
+.chip.inspeccionar{background:#E1ECF8;color:#0C447C}
+.chip.fotos{background:var(--amber-soft);color:#7A5200}
+.chip.diagnostico{background:#ECE8F7;color:#3C3489}
+.chip.reparacion{background:var(--amber-soft);color:#7A5200}
+.chip.terminado{background:var(--lime-soft);color:var(--lime-ink)}
+.chip.listo{background:var(--lime-soft);color:var(--lime-ink)}
+
+.btn-linea{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;border:1px solid var(--edge);border-radius:10px;background:var(--surface);font-weight:700;font-size:15px;color:var(--ink);text-decoration:none;margin-top:6px}
+.btn-linea svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
+.btn-grande{display:block;width:100%;padding:15px;border-radius:10px;font-weight:700;font-size:16px;background:var(--lime);color:#0A2A0E;border:1px solid var(--lime)}
+.btn-grande.navy{background:var(--navy);border-color:var(--navy);color:#fff}
+.btn-grande.claro{background:var(--surface);border-color:var(--edge);color:var(--ink)}
+.btn-grande[disabled]{opacity:.55}
+.vacio2{text-align:center;color:var(--muted);padding:34px 10px;font-size:15px}
+
+/* inspección */
+.sec{margin:18px 0 8px;font-size:16px;font-weight:700;color:var(--ink)}
+.sec small{font-weight:500;color:var(--muted);font-size:13px;margin-left:6px}
+.evid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.slot{position:relative;aspect-ratio:1.05;border:2px dashed var(--line);border-radius:10px;background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--muted);font-size:13px;font-weight:600;text-align:center;cursor:pointer;overflow:hidden;margin:0}
+.slot svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.7}
+.slot input{display:none}
+.slot.ok{border:2px solid var(--lime);background:var(--lime-soft);color:var(--lime-ink)}
+.slot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.35}
+.slot span{position:relative}
+.slot.ok .marca-ok{position:relative;font-size:22px;font-weight:800;line-height:1}
+.slot.subida{border-color:var(--navy);background:#E7EDF4;color:var(--navy)}
+.pista{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);margin-top:8px}
+.pista svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8}
+.danos{display:flex;gap:8px;flex-wrap:wrap}
+.danos .mini{position:relative;width:74px;height:74px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+.danos .mini img{width:100%;height:100%;object-fit:cover}
+.danos .mini button{position:absolute;top:2px;right:2px;width:22px;height:22px;border-radius:50%;background:rgba(8,24,38,.75);color:#fff;font-size:13px;line-height:1}
+.danos label{margin:0;width:74px;height:74px;border:2px dashed var(--line);border-radius:8px;display:grid;place-items:center;color:var(--muted);cursor:pointer;font-size:26px}
+.danos input{display:none}
+
+.lista-chk{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.pto{border-top:1px solid var(--line)}
+.pto:first-child{border-top:none}
+.pto .f{display:flex;align-items:center;gap:12px;width:100%;padding:13px 14px;background:transparent;text-align:left;font-size:15.5px}
+.pto .f b{flex:1;font-weight:500}
+.pto .ic{width:22px;height:22px;border-radius:50%;border:2px solid var(--muted);flex-shrink:0;display:grid;place-items:center;font-size:12px;font-weight:800}
+.pto.ok .ic{border-color:var(--lime-ink);color:var(--lime-ink)}
+.pto.dano .ic{border-color:var(--red);color:var(--red)}
+.pto.na .ic{border-color:var(--line);color:var(--muted)}
+.pto .val{font-size:13.5px;color:var(--muted)}
+.pto.dano .val{background:var(--red-soft);color:var(--red);font-weight:700;padding:2px 10px;border-radius:999px}
+.pto .op{display:none;padding:0 14px 12px 48px}
+.pto.abierto .op{display:block}
+.pto .tri{display:flex;gap:6px}
+.pto .tri button{flex:1;padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--surface);font-weight:700;font-size:14px}
+.pto .tri button[aria-pressed="true"][data-v="ok"]{background:var(--lime);border-color:var(--lime);color:#0A2A0E}
+.pto .tri button[aria-pressed="true"][data-v="falla"]{background:var(--red);border-color:var(--red);color:#fff}
+.pto .tri button[aria-pressed="true"][data-v="na"]{background:var(--pend);border-color:var(--pend)}
+.pto .op input{margin-top:8px}
+
+.resumen{background:#E7EDF4;border-radius:10px;padding:12px 14px;margin:16px 0 10px;font-size:14px;color:var(--muted)}
+.resumen b{display:block;color:var(--ink);font-size:15.5px;margin-top:2px}
+.resumen.mal{background:var(--red-soft)}
+.resumen.mal b{color:var(--red)}
+.campo2{display:block;margin:10px 0 0}
+.campo2 span{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:4px}
+.toggle{display:flex;align-items:center;gap:10px;margin-top:12px;padding:12px 14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;font-size:14.5px}
+.toggle input{width:22px;height:22px;margin:0}
+.caseta{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13.5px;color:var(--muted)}
+
+/* avance */
+.tarea2{display:flex;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line);font-size:14.5px}
+.tarea2:first-child{border-top:none}
+.tarea2 .ic{width:22px;height:22px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-size:11px;font-weight:800;flex-shrink:0}
+.tarea2.hecha .ic{background:var(--lime);border-color:var(--lime)}
+.tarea2.en_curso .ic{background:var(--navy);border-color:var(--navy);color:#fff}
+.tarea2.detenida .ic{background:var(--red);border-color:var(--red);color:#fff}
+.tarea2 small{display:block;color:var(--muted);font-size:12.5px}
+.caja{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.barra-av{height:8px;background:var(--pend);border-radius:4px;overflow:hidden;margin:8px 0 4px}
+.barra-av i{display:block;height:100%;background:var(--lime-ink)}
+.fecha{display:inline-block;font-size:12.5px;font-weight:700;padding:3px 9px;border-radius:999px}
+.fecha.ok{background:var(--lime-soft);color:var(--lime-ink)}
+.fecha.hoy{background:var(--amber-soft);color:#7A5200}
+.fecha.mal{background:var(--red);color:#fff}
+.fecha.sin{background:var(--pend);color:var(--muted)}
+
+/* buscar */
+.busca{display:flex;gap:8px;margin-bottom:12px}
+.busca input{font-size:17px;text-transform:uppercase;font-family:var(--mono)}
+
+/* navegación inferior */
+.nav{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:flex;justify-content:center;padding:6px 0 calc(6px + env(safe-area-inset-bottom));z-index:25}
+.nav .in{display:flex;width:100%;max-width:640px}
+.nav button{flex:1;background:transparent;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:12.5px;font-weight:600;color:var(--muted);padding:4px 0}
+.nav button svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.8}
+.nav button[aria-current="page"]{color:var(--navy)}
+.nav .pt{position:relative}
+.nav .pt i{position:absolute;top:-4px;right:-8px;background:var(--amber);color:#2B1B00;font-style:normal;font-size:10.5px;font-weight:800;border-radius:999px;min-width:17px;height:17px;display:grid;place-items:center;padding:0 4px}
+.nav .pt i:empty{display:none}
+
+.hoja{position:fixed;inset:0;background:rgba(5,15,30,.55);z-index:50;display:none;align-items:flex-end;justify-content:center}
+.hoja.on{display:flex}
+.hoja .caja{width:100%;max-width:640px;border-radius:16px 16px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
+.hoja h3{font-size:17px;margin-bottom:4px}
+.hoja p{font-size:14px;color:var(--muted)}
+.hoja textarea{min-height:90px;margin-top:10px;width:100%}
+.hoja .acc{display:flex;gap:8px;margin-top:12px}
+.hoja .acc .btn-grande{padding:13px}
+
+.visor{position:fixed;inset:0;background:#081826;z-index:60;display:none;align-items:center;justify-content:center}
+.visor.on{display:flex}
+.visor img{max-width:100%;max-height:100%}
+</style>
+</head>
+<body>
+
+<div id="sinAcceso" style="display:none;min-height:100%;place-items:center;padding:24px;background:var(--navy)">
+  <div class="placa"><div class="cinta"></div><div class="placa-cuerpo">
+    <div class="marca">Plataforma <span>HT</span></div>
+    <p class="aviso" id="msgSinAcceso" style="margin-top:20px"></p>
+    <a class="btn ancho navy" style="display:block;text-align:center;text-decoration:none" href="index.html">Ir al inicio</a>
+  </div></div>
+</div>
+
+<div id="app">
+  <div class="top" id="top"></div>
+  <div id="cintaSync"></div>
+  <div class="cinta-prueba" id="cintaPrueba" hidden>Modo prueba activo: lo que captures se guarda aparte, como en Operaciones.</div>
+  <div class="cuerpo" id="vista"></div>
+</div>
+
+<nav class="nav" id="nav" hidden><div class="in">
+  <button data-v="equipos" aria-current="page"><svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M3.5 6l1.2 1.2L7 5M3.5 12l1.2 1.2L7 11M3.5 18l1.2 1.2L7 17"/></svg>Equipos</button>
+  <button data-v="capturar"><svg viewBox="0 0 24 24"><path d="M3 8h3l2-3h8l2 3h3v11H3z"/><circle cx="12" cy="13" r="3.6"/></svg>Capturar</button>
+  <button data-v="buscar"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>Buscar</button>
+  <button data-v="yo" class="pt"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Yo<i id="navPend"></i></button>
+</div></nav>
+
+<div class="hoja" id="hoja"><div class="caja">
+  <h3 id="hTitulo"></h3><p id="hTexto"></p>
+  <textarea id="hCampo"></textarea>
+  <p class="aviso" id="hError"></p>
+  <div class="acc"><button class="btn-grande claro" id="hCancelar">Cancelar</button><button class="btn-grande" id="hAceptar">Aceptar</button></div>
+</div></div>
+<div class="visor" id="visor"><img id="visorImg" alt=""></div>
+<div class="nota" id="nota"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+(() => {
+'use strict';
+const SUPABASE_URL  = 'https://ahfjstuwekcuxshclprl.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFoZmpzdHV3ZWtjdXhzaGNscHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwNDg2MjYsImV4cCI6MjEwMzYyNDYyNn0.lf1uw8WHPRy21GuYlK9NzeI5JgJK2be1LrODq22CodM';
+const BUCKET_FOTOS = 'fotos-equipos';
+const BUCKET_ADJ   = 'operaciones-adjuntos';
+
+const db   = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, { db:{ schema:'operaciones' } });
+const core = db.schema('core');
+
+/* ============================ utilidades ============================ */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uuid = () => crypto.randomUUID ? crypto.randomUUID() :
+  'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return (c==='x'?r:(r&3|8)).toString(16);});
+const errTxt = e => ((e && (e.message || e.error_description)) || String(e || '')).replace(/^.*?ERROR:\s*/,'');
+const esRed = e => { const m = errTxt(e); return !navigator.onLine || /Failed to fetch|NetworkError|Load failed|network|fetch/i.test(m); };
+let notaT;
+function nota(txt, ms = 3500){ const n = $('nota'); n.textContent = txt; n.classList.add('on'); clearTimeout(notaT); notaT = setTimeout(() => n.classList.remove('on'), ms); }
+const hoyISO = () => new Date().toLocaleDateString('en-CA', { timeZone:'America/Monterrey' });
+const inicioHoy = () => new Date(hoyISO() + 'T00:00:00-06:00').toISOString();
+const esHoy = d => d && new Date(d).toLocaleDateString('en-CA', { timeZone:'America/Monterrey' }) === hoyISO();
+const hace = d => {
+  if(!d) return '';
+  const m = Math.round((Date.now() - new Date(d)) / 60000);
+  if(m < 60) return `hace ${Math.max(m,1)} min`;
+  const h = Math.round(m/60); if(h < 48) return `hace ${h} h`;
+  return `hace ${Math.round(h/24)} días`;
+};
+const ultimos = niv => esc(String(niv || '').slice(-4));
+const fechaCorta = d => new Date(d + 'T12:00:00').toLocaleDateString('es-MX', { day:'2-digit', month:'short' });
+function semaforo(f){
+  if(!f) return '<span class="fecha sin">Sin fecha de entrega</span>';
+  const d = Math.round((new Date(f + 'T12:00:00') - new Date(hoyISO() + 'T12:00:00')) / 864e5);
+  if(d < 0) return `<span class="fecha mal">Atrasada ${-d} día${d === -1 ? '' : 's'}</span>`;
+  if(d === 0) return '<span class="fecha hoy">Entrega hoy</span>';
+  if(d === 1) return '<span class="fecha hoy">Entrega mañana</span>';
+  return `<span class="fecha ok">Entrega ${fechaCorta(f)}</span>`;
+}
+const ICO_CAM = '<svg viewBox="0 0 24 24"><path d="M3 8h3l2-3h8l2 3h3v11H3z"/><circle cx="12" cy="13" r="3.6"/><path d="M18.5 4.5v3M17 6h3"/></svg>';
+const ICO_GPS = '<svg viewBox="0 0 24 24"><path d="M12 21s-6.5-6-6.5-11a6.5 6.5 0 0 1 13 0c0 5-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></svg>';
+const ICO_NUBE = '<svg viewBox="0 0 24 24"><path d="M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.1 9.6 4.2 4.2 0 0 0 7 18z"/><path d="M3 3l18 18"/></svg>';
+const ICO_FLECHA = '<svg viewBox="0 0 24 24"><path d="M7 17L17 7M9 7h8v8"/></svg>';
+
+/* catálogo (el mismo de Operaciones para que la revisión se lea igual allá) */
+const PUNTOS = [
+  ['llantas','Llantas y rines'],['suspension','Suspensión'],['frenos','Sistema de frenos'],['piso','Piso'],
+  ['luces','Luces'],['chasis','Estructura / chasis'],['electrico','Sistema eléctrico'],['puertas','Puertas y herrajes'],
+  ['lamina','Lámina y pintura'],['patines','Patines / king pin'],['placas','Placas y engomado'],['adicionales','Adicionales']
+];
+const PUNTO_TRABAJO = { llantas:'llantas', frenos:'frenos', luces:'electrica', electrico:'electrica', suspension:'suspension',
+  chasis:'estructural', piso:'piso', puertas:'puertas', lamina:'lamina', patines:'mecanica' };
+const EVID = [['frente','Frente'],['lateral_izq','Lateral izq'],['lateral_der','Lateral der'],['trasera','Trasera'],['niv','NIV'],['kilometraje','Kilometraje']];
+const EST_TAREA = { pendiente:'Pendiente', en_curso:'En curso', hecha:'Hecha', detenida:'Detenida' };
+
+/* ============================ almacén local (IndexedDB) ============================ */
+const IDB = {
+  _db:null,
+  abrir(){ return this._db || (this._db = new Promise((res, rej) => {
+    const r = indexedDB.open('ht-campo', 1);
+    r.onupgradeneeded = () => { const d = r.result;
+      d.createObjectStore('cola', { keyPath:'id' });        // capturas por subir
+      d.createObjectStore('fotos', { keyPath:'id' });       // fotos de borradores
+      d.createObjectStore('borradores', { keyPath:'clave' }); };
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  })); },
+  async op(store, modo, fn){ const d = await this.abrir(); return new Promise((res, rej) => {
+    const tx = d.transaction(store, modo); const st = tx.objectStore(store); const r = fn(st);
+    tx.oncomplete = () => res(r && r.result); tx.onerror = () => rej(tx.error); }); },
+  put(s, v){ return this.op(s, 'readwrite', st => st.put(v)); },
+  del(s, k){ return this.op(s, 'readwrite', st => st.delete(k)); },
+  get(s, k){ return this.op(s, 'readonly', st => st.get(k)); },
+  all(s){ return this.op(s, 'readonly', st => st.getAll()); }
+};
+
+/* ============================ estado ============================ */
+const S = {
+  yo:null, nivel:null, prueba:false, patios:[], tipos:{}, patioSel:null,
+  porRevisar:[], ordenes:[], revisiones:[], fotosRev:{}, avanceHoy:new Set(), tareas:{},
+  vista:'equipos', filtro:'pendientes', pila:[], cola:[], subiendo:false, cargado:false
+};
+try{ S.patioSel = JSON.parse(localStorage.getItem('campo_patio') || 'null'); }catch(_){}
+const puedeEscribir = () => S.nivel === 'escritura' || S.nivel === 'admin';
+const nombrePatio = id => (S.patios.find(p => p.id === id) || {}).nombre || '';
+
+/* ============================ arranque ============================ */
+async function iniciar(){
+  let session = null;
+  try{ ({ data:{ session } } = await db.auth.getSession()); }catch(_){}
+  let yoGuardado = null; try{ yoGuardado = JSON.parse(localStorage.getItem('campo_yo') || 'null'); }catch(_){}
+  if(!session && !(navigator.onLine === false && yoGuardado)){ location.href = 'index.html'; return; }
+  S.yo = session ? { id:session.user.id, correo:session.user.email } : { id:yoGuardado.id, correo:yoGuardado.correo || '' };
+  let cache = null; try{ cache = JSON.parse(localStorage.getItem('campo_cache') || 'null'); }catch(_){}
+
+  try{
+    const [perfil, nivel, pru] = await Promise.all([
+      core.from('perfiles').select('nombre').eq('id', S.yo.id).maybeSingle(),
+      core.rpc('nivel_modulo', { p_modulo:'operaciones' }),
+      db.rpc('en_prueba')
+    ]);
+    if(nivel.error) throw nivel.error;
+    S.yo.nombre = perfil.data?.nombre || S.yo.correo;
+    S.nivel = nivel.data || null;
+    S.prueba = !!pru.data;
+    try{ localStorage.setItem('campo_yo', JSON.stringify({ id:S.yo.id, correo:S.yo.correo, nombre:S.yo.nombre, nivel:S.nivel, prueba:S.prueba })); }catch(_){}
+  }catch(e){
+    // sin señal: trabajamos con lo último guardado en el teléfono
+    const yo = yoGuardado;
+    if(!yo || yo.id !== S.yo.id){ $('msgSinAcceso').textContent = 'Necesitas señal la primera vez que abres la app.'; $('sinAcceso').style.display = 'grid'; return; }
+    S.yo.nombre = yo.nombre; S.nivel = yo.nivel; S.prueba = yo.prueba;
+  }
+  if(!S.nivel){
+    $('msgSinAcceso').textContent = 'Tu usuario no tiene acceso a Operaciones. Pídele a un administrador que te asigne el rol.';
+    $('sinAcceso').style.display = 'grid'; return;
+  }
+  if(cache && cache.yo === S.yo.id) Object.assign(S, aplicarCache(cache));
+  document.body.classList.toggle('prueba', S.prueba);
+  $('cintaPrueba').hidden = !S.prueba;
+  $('app').style.display = 'block'; $('nav').hidden = false;
+
+  await refrescarCola();
+  ir(new URLSearchParams(location.search).get('v') || 'equipos');
+  cargar();
+  subirCola();
+  setInterval(() => { if(document.visibilityState === 'visible'){ subirCola(); } }, 30000);
+  setInterval(() => { if(document.visibilityState === 'visible' && !S.pila.length) cargar(); }, 120000);
+  window.addEventListener('online', () => { nota('Volvió la señal: subiendo capturas…'); subirCola().then(cargar); });
+  window.addEventListener('offline', pintarCinta);
+  if('serviceWorker' in navigator && location.protocol.startsWith('http')){ navigator.serviceWorker.register('sw-movimientos.js').catch(() => {}); }
+}
+
+function aplicarCache(c){
+  return { patios:c.patios || [], tipos:c.tipos || {}, porRevisar:c.porRevisar || [], ordenes:c.ordenes || [],
+    revisiones:c.revisiones || [], fotosRev:c.fotosRev || {}, avanceHoy:new Set(c.avanceHoy || []), tareas:c.tareas || {}, cargado:true };
+}
+
+async function cargar(){
+  try{
+    const desde = new Date(Date.now() - 7 * 864e5).toISOString();
+    const [pa, ti, pr, ord, rev] = await Promise.all([
+      core.from('patios').select('id,nombre').eq('activo', true).order('nombre'),
+      core.from('tipos_equipo').select('id,nombre'),
+      db.rpc('entradas_por_revisar', { p_dias:15 }),
+      db.from('v_ordenes').select('id,folio_txt,equipo_id,niv,placa,tipo_equipo,patio_id,patio,tipo,prioridad,descripcion,estatus,linea,taller,fecha_compromiso,fecha_inicio,fecha_termino,actualizado_en,creado_en,revision_id')
+        .eq('es_prueba', S.prueba).in('estatus', ['abierta','cotizacion','por_autorizar','autorizada','en_proceso','terminada']).order('creado_en', { ascending:false }).limit(400),
+      db.from('v_revisiones').select('id,equipo_id,niv,placa,patio_id,patio,puntos,resultado,condicion,creado_en,creado_por_nombre,orden_id')
+        .eq('es_prueba', S.prueba).gte('creado_en', desde).order('creado_en', { ascending:false }).limit(200)
+    ]);
+    for(const r of [pa, pr, ord, rev]) if(r.error) throw r.error;
+    S.patios = pa.data || [];
+    S.tipos = Object.fromEntries((ti.data || []).map(t => [t.id, t.nombre]));
+    S.porRevisar = pr.data || [];
+    S.ordenes = ord.data || [];
+    S.revisiones = (rev.data || []).filter(r => Array.isArray(r.puntos?._evidencia));
+
+    // tipo de equipo de las entradas por revisar
+    const ids = [...new Set(S.porRevisar.map(m => m.equipo_id))];
+    if(ids.length){
+      const { data:eqs } = await core.from('equipos').select('id,tipo_id').in('id', ids);
+      const t = Object.fromEntries((eqs || []).map(e => [e.id, S.tipos[e.tipo_id] || '']));
+      S.porRevisar.forEach(m => m.tipo_equipo = t[m.equipo_id] || '');
+    }
+    // ángulos de las fotos de recepción ya tomadas
+    S.fotosRev = {};
+    const revIds = S.revisiones.map(r => r.id);
+    if(revIds.length){
+      const { data:of } = await db.from('orden_fotos').select('foto_id,revision_id').in('revision_id', revIds);
+      const fIds = (of || []).map(x => x.foto_id);
+      const { data:fs } = fIds.length ? await core.from('fotos').select('id,angulo').in('id', fIds) : { data:[] };
+      const ang = Object.fromEntries((fs || []).map(f => [f.id, f.angulo]));
+      (of || []).forEach(x => (S.fotosRev[x.revision_id] ||= []).push(ang[x.foto_id]));
+    }
+    // avance reportado hoy y tareas del taller
+    const activas = S.ordenes.filter(o => ['autorizada','en_proceso'].includes(o.estatus)).map(o => o.id);
+    S.avanceHoy = new Set(); S.tareas = {};
+    if(activas.length){
+      const [bi, ta, fo] = await Promise.all([
+        db.from('v_bitacora').select('orden_id,tipo,en').in('orden_id', activas).in('tipo', ['comentario','tarea']).gte('en', inicioHoy()),
+        db.from('v_tareas').select('id,orden_id,posicion,descripcion,estatus,mecanico,nota').in('orden_id', activas).order('posicion'),
+        db.from('v_fotos').select('orden_id,tomada_en').in('orden_id', activas).gte('tomada_en', inicioHoy())
+      ]);
+      [...(bi.data || []), ...(fo.data || [])].forEach(b => S.avanceHoy.add(b.orden_id));
+      (ta.data || []).forEach(t => (S.tareas[t.orden_id] ||= []).push(t));
+    }
+    S.cargado = true;
+    try{ localStorage.setItem('campo_cache', JSON.stringify({ yo:S.yo.id, patios:S.patios, tipos:S.tipos, porRevisar:S.porRevisar,
+      ordenes:S.ordenes, revisiones:S.revisiones, fotosRev:S.fotosRev, avanceHoy:[...S.avanceHoy], tareas:S.tareas, en:new Date().toISOString() })); }catch(_){}
+  }catch(e){
+    if(!esRed(e)) nota('No se pudo actualizar: ' + errTxt(e), 6000);
+  }
+  if(!S.pila.length) pintar();
+}
+
+/* ============================ lista "Mis equipos hoy" ============================ */
+function items(){
+  const lista = [];
+  const enPatio = p => !S.patioSel || p === S.patioSel;
+  const enCola = new Set(S.cola.filter(c => c.tipo === 'revision').map(c => c.datos.fila.movimiento_id || c.datos.fila.equipo_id));
+  for(const m of S.porRevisar){
+    if(!enPatio(m.patio_id) || enCola.has(m.movimiento_id)) continue;
+    const vencida = Date.now() - new Date(m.fecha) > 24 * 36e5;
+    lista.push({ clave:'m:' + m.movimiento_id, tipo:'inspeccionar', niv:m.niv, placa:m.placa, fecha:m.fecha, vencida, pendiente:true, hoy:esHoy(m.fecha),
+      chip: vencida ? ['vencida','Vencida'] : ['inspeccionar','Por inspeccionar'],
+      l2:[m.tipo_equipo, m.patio, 'llegó ' + hace(m.fecha)].filter(Boolean).join(' · '),
+      l3: borradorDe('m:' + m.movimiento_id) ? 'Inspección empezada, sin cerrar' : 'Check list fisicomecánico sin iniciar', l3mal:false, dato:m });
+  }
+  for(const r of S.revisiones){
+    if(!enPatio(r.patio_id)) continue;
+    const tiene = new Set(S.fotosRev[r.id] || []);
+    const enCamino = S.cola.filter(c => c.tipo === 'foto' && c.datos.revision_id === r.id).map(c => c.datos.angulo);
+    enCamino.forEach(a => tiene.add(a));
+    const faltan = (r.puntos._evidencia || []).filter(a => !tiene.has(a));
+    if(!faltan.length) continue;
+    const vencida = Date.now() - new Date(r.creado_en) > 24 * 36e5;
+    lista.push({ clave:'r:' + r.id, tipo:'fotos', niv:r.niv, placa:r.placa, fecha:r.creado_en, vencida, pendiente:true, hoy:esHoy(r.creado_en),
+      chip: vencida ? ['vencida','Vencida'] : ['fotos','Faltan fotos'],
+      l2:[r.patio, 'inspeccionada ' + hace(r.creado_en)].filter(Boolean).join(' · '),
+      l3:`Faltan ${faltan.length} foto${faltan.length > 1 ? 's' : ''} de recepción`, l3mal:true, ico:true, dato:r, faltan });
+  }
+  for(const o of S.ordenes){
+    if(!enPatio(o.patio_id)) continue;
+    const base = { niv:o.niv, placa:o.placa, fecha:o.actualizado_en, dato:o, l2:[o.tipo_equipo || (o.tipo === 'adecuacion' ? 'Adecuación' : 'Reparación'), o.linea || o.taller || o.patio].filter(Boolean).join(' · ') };
+    if(['abierta','cotizacion','por_autorizar'].includes(o.estatus)){
+      lista.push({ ...base, clave:'o:' + o.id, tipo:'diagnostico', chip:['diagnostico','En diagnóstico'], pendiente:false, hoy:esHoy(o.creado_en),
+        l3: o.estatus === 'por_autorizar' ? 'Cotización en autorización' : 'Ilse revisa y cotiza' });
+    } else if(['autorizada','en_proceso'].includes(o.estatus)){
+      const avanzo = S.avanceHoy.has(o.id) || S.cola.some(c => c.datos?.orden_id === o.id);
+      const enTrabajo = o.estatus === 'en_proceso';
+      lista.push({ ...base, clave:'o:' + o.id, tipo:'reparacion', chip:['reparacion','En reparación'], pendiente: enTrabajo && !avanzo, hoy: avanzo || esHoy(o.fecha_inicio),
+        l3: !enTrabajo ? 'Autorizada · espera pasar a taller' : avanzo ? 'Avance reportado hoy' : 'Toca reportar avance del día' });
+    } else if(o.estatus === 'terminada'){
+      lista.push({ ...base, clave:'o:' + o.id, tipo:'terminado', chip:['terminado','Terminado'], pendiente:false, hoy:esHoy(o.fecha_termino), tenue:true,
+        l3:'Enviado a Ilse para liberar' });
+    }
+  }
+  const peso = i => (i.vencida ? 0 : 10) + ({ inspeccionar:1, fotos:2, reparacion:3, diagnostico:4, terminado:5 })[i.tipo];
+  return lista.sort((a, b) => peso(a) - peso(b) || new Date(a.fecha) - new Date(b.fecha));
+}
+
+let borradores = {};
+const borradorDe = clave => borradores[clave];
+
+function pintarTop(html){ $('top').innerHTML = html; }
+function topLista(titulo){
+  const patio = S.patioSel ? nombrePatio(S.patioSel) : 'Todos los patios';
+  pintarTop(`<p class="quien">${esc(S.yo.nombre)} · ${esc(patio)}</p><h1>${esc(titulo)}</h1>`);
+}
+
+function pintar(){
+  if(S.pila.length) return;
+  ({ equipos:vistaEquipos, capturar:vistaCapturar, buscar:vistaBuscar, yo:vistaYo })[S.vista]();
+  pintarCinta();
+}
+function ir(v){
+  S.vista = v; S.pila = [];
+  $('nav').querySelectorAll('button').forEach(b => b.setAttribute('aria-current', b.dataset.v === v ? 'page' : 'false'));
+  const u = new URL(location); u.searchParams.set('v', v); history.replaceState(null, '', u);
+  window.scrollTo(0, 0);
+  pintar();
+}
+$('nav').onclick = e => { const b = e.target.closest('[data-v]'); if(b) ir(b.dataset.v); };
+
+function tarjeta(i){
+  return `<button class="eq ${i.vencida ? 'vencida' : ''} ${i.tenue ? 'tenue' : ''}" data-item="${esc(i.clave)}">
+    <div class="f1"><span class="niv">NIV ·${ultimos(i.niv)}<small>${esc(i.placa || '')}</small></span><span class="chip ${i.chip[0]}">${i.chip[1]}</span></div>
+    <div class="l2">${esc(i.l2)}</div>
+    <div class="l3 ${i.l3mal ? 'mal' : ''}">${i.ico ? ICO_CAM : ''}${esc(i.l3)}</div>
+  </button>`;
+}
+
+function vistaEquipos(){
+  topLista('Mis equipos hoy');
+  const todos = items();
+  const pend = todos.filter(i => i.pendiente), hoy = todos.filter(i => i.hoy);
+  const lista = S.filtro === 'pendientes' ? pend : S.filtro === 'hoy' ? hoy : todos;
+  $('vista').innerHTML = `
+    <div class="filtro" id="filtro">
+      <button data-f="pendientes" aria-pressed="${S.filtro === 'pendientes'}">Pendientes <span class="n">${pend.length}</span></button>
+      <button data-f="hoy" aria-pressed="${S.filtro === 'hoy'}">Hoy <span class="n">${hoy.length}</span></button>
+      <button data-f="todos" aria-pressed="${S.filtro === 'todos'}">Todos <span class="n">${todos.length}</span></button>
+    </div>
+    ${lista.map(tarjeta).join('') || `<div class="vacio2">${!S.cargado ? 'Cargando…' : S.filtro === 'pendientes' ? '<b>Sin pendientes.</b><br>Todo lo que llegó ya está inspeccionado y con su avance del día.' : 'Nada por aquí.'}</div>`}
+    <a class="btn-linea" href="movimientos.html">Registrar arribo de unidad ${ICO_FLECHA}</a>`;
+  $('filtro').onclick = e => { const b = e.target.closest('[data-f]'); if(!b) return; S.filtro = b.dataset.f; vistaEquipos(); };
+  const mapa = Object.fromEntries(todos.map(i => [i.clave, i]));
+  $('vista').querySelectorAll('[data-item]').forEach(b => b.onclick = () => abrirItem(mapa[b.dataset.item]));
+}
+
+function abrirItem(i){
+  if(!i) return;
+  if(i.tipo === 'inspeccionar') abrirInspeccion({ mov:i.dato });
+  else if(i.tipo === 'fotos') abrirFaltantes(i.dato, i.faltan);
+  else abrirOrden(i.dato);
+}
+
+/* ============================ Capturar ============================ */
+function vistaCapturar(){
+  topLista('Capturar');
+  const it = items();
+  const insp = it.filter(i => i.tipo === 'inspeccionar' || i.tipo === 'fotos');
+  const rep = it.filter(i => i.tipo === 'reparacion' && i.dato.estatus === 'en_proceso');
+  $('vista').innerHTML = `
+    <div class="sec">Inspección de recepción <small>${insp.length} por hacer</small></div>
+    ${insp.map(tarjeta).join('') || '<div class="vacio2" style="padding:14px">No hay unidades por inspeccionar.</div>'}
+    <button class="btn-grande claro" id="otraInsp" style="margin-top:4px">Inspeccionar otra unidad (buscar NIV)</button>
+    <div class="sec" style="margin-top:24px">Avance del taller <small>${rep.length} en trabajo</small></div>
+    ${rep.map(tarjeta).join('') || '<div class="vacio2" style="padding:14px">No hay unidades en reparación.</div>'}`;
+  const mapa = Object.fromEntries(it.map(i => [i.clave, i]));
+  $('vista').querySelectorAll('[data-item]').forEach(b => b.onclick = () => abrirItem(mapa[b.dataset.item]));
+  $('otraInsp').onclick = () => ir('buscar');
+}
+
+/* ============================ Buscar ============================ */
+let ultimaBusqueda = '';
+function vistaBuscar(){
+  topLista('Buscar equipo');
+  $('vista').innerHTML = `<div class="busca"><input id="bq" placeholder="NIV o placa" autocomplete="off" spellcheck="false" inputmode="text" value="${esc(ultimaBusqueda)}"></div>
+    <div id="bqRes"><p class="vacio2" style="padding:14px">Escribe al menos 3 caracteres (por ejemplo los últimos 4 del NIV).</p></div>`;
+  let t;
+  const buscar = async () => {
+    const q = $('bq').value.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
+    ultimaBusqueda = q;
+    if(q.length < 3){ $('bqRes').innerHTML = '<p class="vacio2" style="padding:14px">Escribe al menos 3 caracteres.</p>'; return; }
+    const { data, error } = await core.from('equipos').select('id,niv,placa,tipo_id,patio_id,patio_fisico_id,estatus_operativo,estatus_asignacion')
+      .eq('activo', true).or(`niv.ilike.%${q}%,placa.ilike.%${q}%`).order('niv').limit(20);
+    if(q !== ultimaBusqueda) return;
+    if(error){ $('bqRes').innerHTML = `<p class="vacio2">${esRed(error) ? 'Sin señal: la búsqueda necesita conexión.' : esc(errTxt(error))}</p>`; return; }
+    $('bqRes').innerHTML = (data || []).map((e, n) => {
+      const ords = S.ordenes.filter(o => o.equipo_id === e.id);
+      return `<div class="eq" style="cursor:default"><div class="f1"><span class="niv">${esc(e.niv)}</span></div>
+        <div class="l2">${esc([S.tipos[e.tipo_id], e.placa, nombrePatio(e.patio_fisico_id || e.patio_id)].filter(Boolean).join(' · '))}</div>
+        <div class="l3">${esc([e.estatus_operativo, e.estatus_asignacion].filter(Boolean).join(' · '))}${ords.length ? ' · ' + ords.map(o => o.folio_txt).join(', ') : ''}</div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          ${puedeEscribir() ? `<button class="btn chico" data-insp="${n}">Inspeccionar</button>` : ''}
+          ${ords.map(o => `<button class="btn chico claro" data-ord="${o.id}">${esc(o.folio_txt)}</button>`).join('')}
+        </div></div>`;
+    }).join('') || '<p class="vacio2">Ningún equipo coincide.</p>';
+    $('bqRes').querySelectorAll('[data-insp]').forEach(b => b.onclick = () => {
+      const e = data[Number(b.dataset.insp)];
+      abrirInspeccion({ equipo:{ ...e, tipo_equipo:S.tipos[e.tipo_id] || '' } });
+    });
+    $('bqRes').querySelectorAll('[data-ord]').forEach(b => b.onclick = () => abrirOrden(S.ordenes.find(o => o.id === b.dataset.ord)));
+  };
+  $('bq').oninput = () => { clearTimeout(t); t = setTimeout(buscar, 300); };
+  if(ultimaBusqueda.length >= 3) buscar(); else setTimeout(() => $('bq').focus(), 60);
+}
+
+/* ============================ Yo ============================ */
+function vistaYo(){
+  topLista('Yo');
+  const errores = S.cola.filter(c => c.error);
+  $('vista').innerHTML = `
+    <div class="caja"><b style="font-size:16px">${esc(S.yo.nombre)}</b><div class="pista" style="margin-top:2px">${esc(S.yo.correo)} · ${S.nivel === 'lectura' ? 'Solo consulta' : 'Captura'}</div></div>
+    <label class="campo2"><span>Mi patio (filtra la lista)</span>
+      <select id="selPatio"><option value="">Todos los patios</option>${S.patios.map(p => `<option value="${p.id}" ${p.id === S.patioSel ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('')}</select></label>
+    <div class="sec">Capturas en el teléfono</div>
+    <div class="caja">
+      ${S.cola.length ? `<p style="font-size:14.5px"><b>${S.cola.length}</b> por subir${errores.length ? ` · <span style="color:var(--red)">${errores.length} con error</span>` : ''}</p>
+        ${errores.map(c => `<div class="tarea2" style="display:block"><b>${esc(c.titulo || c.tipo)}</b><small style="color:var(--red)">${esc(c.error)}</small>
+          <div style="display:flex;gap:6px;margin-top:6px"><button class="btn chico claro" data-reint="${c.id}">Reintentar</button><button class="btn chico alerta" data-desc="${c.id}">Descartar</button></div></div>`).join('')}
+        <button class="btn-grande navy" id="subirYa" style="margin-top:10px">Subir ahora</button>`
+      : '<p style="font-size:14.5px;color:var(--lime-ink);font-weight:600">Todo está subido.</p>'}
+    </div>
+    <a class="btn-linea" href="movimientos.html" style="margin-top:14px">Entradas y salidas de patio ${ICO_FLECHA}</a>
+    <a class="btn-linea" href="operaciones.html">Operaciones completo (pantalla grande) ${ICO_FLECHA}</a>
+    <a class="btn-linea" href="taller.html">Tablero del taller ${ICO_FLECHA}</a>
+    <p class="pista" style="margin-top:14px">Para instalarla como app: en el navegador del celular, menú → "Agregar a pantalla de inicio".</p>
+    <button class="btn-grande claro" id="salir" style="margin-top:14px">Cerrar sesión</button>`;
+  $('selPatio').onchange = () => { S.patioSel = $('selPatio').value ? Number($('selPatio').value) : null;
+    try{ localStorage.setItem('campo_patio', JSON.stringify(S.patioSel)); }catch(_){} nota('Listo'); };
+  if($('subirYa')) $('subirYa').onclick = () => subirCola(true);
+  $('vista').querySelectorAll('[data-reint]').forEach(b => b.onclick = async () => {
+    const c = S.cola.find(x => x.id === b.dataset.reint); if(!c) return; delete c.error; await IDB.put('cola', c); await subirCola(true); });
+  $('vista').querySelectorAll('[data-desc]').forEach(b => b.onclick = async () => {
+    if(!confirm('¿Descartar esta captura? No se va a subir.')) return;
+    await IDB.del('cola', b.dataset.desc); await refrescarCola(); vistaYo(); });
+  $('salir').onclick = async () => {
+    if(S.cola.length && !confirm(`Tienes ${S.cola.length} captura(s) sin subir. Si cierras sesión se quedan en el teléfono hasta que vuelvas a entrar. ¿Cerrar?`)) return;
+    await db.auth.signOut(); location.href = 'index.html'; };
+}
+
+/* ============================ INSPECCIÓN ============================ */
+async function abrirInspeccion(pre){
+  if(!puedeEscribir()){ nota('Tu usuario es de solo consulta.'); return; }
+  const m = pre.mov || null, eq = pre.equipo || null;
+  const clave = m ? 'm:' + m.movimiento_id : 'e:' + eq.id;
+  let b = await IDB.get('borradores', clave);
+  if(!b){
+    b = { clave, id:uuid(), creado:new Date().toISOString(),
+      equipo_id: m ? m.equipo_id : eq.id, niv: m ? m.niv : eq.niv, placa: m ? m.placa : eq.placa,
+      tipo_equipo: m ? m.tipo_equipo : eq.tipo_equipo, patio_id: m ? m.patio_id : (eq.patio_fisico_id || eq.patio_id),
+      movimiento_id: m ? m.movimiento_id : null, procedencia: m ? [m.origen_tipo, m.origen_nombre].filter(Boolean).join(': ') : '',
+      obs_caseta: m ? m.obs : null, fecha_caseta: m ? m.fecha : null,
+      puntos:{}, fotos:{}, danos:[], obs:'', ticket:false, resultado:'', gps:null };
+    await IDB.put('borradores', b);
+  }
+  borradores[clave] = true;
+  S.pila = ['inspeccion'];
+  pedirGps(b);
+  pintarInspeccion(b);
+}
+
+function pedirGps(b){
+  if(!('geolocation' in navigator) || b.gps) return;
+  navigator.geolocation.getCurrentPosition(async p => {
+    b.gps = { lat:p.coords.latitude, lng:p.coords.longitude, prec:Math.round(p.coords.accuracy) };
+    await IDB.put('borradores', b);
+  }, () => {}, { enableHighAccuracy:true, timeout:15000, maximumAge:120000 });
+}
+
+const urlsBorrador = new Map();
+async function urlFotoLocal(id){
+  if(urlsBorrador.has(id)) return urlsBorrador.get(id);
+  const f = await IDB.get('fotos', id); if(!f) return '';
+  const u = URL.createObjectURL(f.blob); urlsBorrador.set(id, u); return u;
+}
+
+function resultadoSugerido(b){
+  const danos = Object.values(b.puntos).filter(p => p.estado === 'falla').length;
+  return danos ? 'reparacion' : 'listo';
+}
+const TXT_RES = { listo:'Listo para operar', reparacion:'En diagnóstico · avisa a Ilse Cortés', adecuacion:'En diagnóstico (adecuación) · avisa a Ilse Cortés', baja:'Para baja · avisa a Ilse Cortés' };
+
+async function pintarInspeccion(b){
+  window.scrollTo(0, 0);
+  pintarTop(`<button class="volver" id="volver">‹ Mis equipos</button>
+    <h1>Inspección · NIV ·${ultimos(b.niv)}</h1>
+    <div class="sub2">${esc([b.tipo_equipo, nombrePatio(b.patio_id)].filter(Boolean).join(' · '))}</div>`);
+  $('volver').onclick = () => { S.pila = []; pintar(); };
+
+  const res = b.resultado || resultadoSugerido(b);
+  const faltanFotos = EVID.filter(([k]) => !b.fotos[k]).length;
+  const sinMarcar = PUNTOS.filter(([k]) => !b.puntos[k]).length;
+  const urls = {};
+  for(const [k] of EVID) if(b.fotos[k]) urls[k] = await urlFotoLocal(b.fotos[k]);
+  const urlsD = await Promise.all(b.danos.map(urlFotoLocal));
+
+  $('vista').innerHTML = `
+    <div class="caseta"><b style="color:var(--ink);font-family:var(--mono)">${esc(b.niv)}</b>${b.placa ? ' · ' + esc(b.placa) : ''}
+      ${b.fecha_caseta ? `<br>Entrada en caseta ${hace(b.fecha_caseta)}${b.procedencia ? ' · de ' + esc(b.procedencia) : ''}${b.obs_caseta ? '<br>' + esc(b.obs_caseta) : ''}` : ''}</div>
+
+    <div class="sec">Evidencia obligatoria <small>${EVID.length - faltanFotos} de ${EVID.length}</small></div>
+    <div class="evid">${EVID.map(([k, n]) => `<label class="slot ${b.fotos[k] ? 'ok' : ''}">
+        ${urls[k] ? `<img src="${urls[k]}" alt="">` : ''}
+        ${b.fotos[k] ? '<span class="marca-ok">✓</span>' : ICO_CAM}<span>${n}</span>
+        <input type="file" accept="image/*" capture="environment" data-ang="${k}"></label>`).join('')}</div>
+    <div class="pista">${ICO_GPS}Cada foto guarda fecha, hora y ubicación${b.gps ? '' : ' (activa la ubicación del celular)'}</div>
+
+    <div class="sec">Fotos de daños <small>opcional</small></div>
+    <div class="danos">${urlsD.map((u, n) => `<div class="mini"><img src="${u}" alt=""><button data-quitar="${n}" aria-label="Quitar">×</button></div>`).join('')}
+      <label aria-label="Agregar foto de daño">+<input type="file" accept="image/*" capture="environment" multiple id="fDanos"></label></div>
+
+    <div class="sec">Check list fisicomecánico <small>${PUNTOS.length - sinMarcar} de ${PUNTOS.length}</small></div>
+    <div class="lista-chk" id="chk">${PUNTOS.map(([k, n]) => {
+      const p = b.puntos[k], est = p?.estado;
+      const cls = est === 'ok' ? 'ok' : est === 'falla' ? 'dano' : est === 'na' ? 'na' : '';
+      const ic = est === 'ok' ? '✓' : est === 'falla' ? '!' : est === 'na' ? '–' : '';
+      const val = est === 'ok' ? 'Bien' : est === 'falla' ? 'Daño' : est === 'na' ? 'N/A' : '';
+      return `<div class="pto ${cls}" data-k="${k}">
+        <button class="f" type="button"><span class="ic">${ic}</span><b>${n}</b><span class="val">${val}</span></button>
+        <div class="op"><div class="tri">
+          <button type="button" data-v="ok" aria-pressed="${est === 'ok'}">Bien</button>
+          <button type="button" data-v="falla" aria-pressed="${est === 'falla'}">Daño</button>
+          <button type="button" data-v="na" aria-pressed="${est === 'na'}">N/A</button></div>
+          ${est === 'falla' ? `<input data-nota="${k}" placeholder="¿Qué tiene? Ej. balata delantera gastada" value="${esc(p.nota || '')}">` : ''}
+        </div></div>`;
+    }).join('')}</div>
+    ${sinMarcar ? `<button class="btn-linea" id="todoBien" style="margin-top:10px">Marcar los ${sinMarcar} restantes como bien</button>` : ''}
+
+    <label class="campo2"><span>Procedencia</span><input id="iProc" value="${esc(b.procedencia || '')}" placeholder="Cliente, patio o proveedor de donde llega"></label>
+    <label class="campo2"><span>Observaciones</span><textarea id="iObs" placeholder="Lo que deba saber Ilse">${esc(b.obs || '')}</textarea></label>
+    ${res !== 'listo' ? `<label class="toggle"><input type="checkbox" id="iTicket" ${b.ticket ? 'checked' : ''}><span>Hay un cliente esperando esta unidad (ticket, va a línea prioritaria)</span></label>` : ''}
+    <label class="campo2"><span>Resultado</span><select id="iRes">
+      <option value="listo" ${res === 'listo' ? 'selected' : ''}>Listo para operar</option>
+      <option value="reparacion" ${res === 'reparacion' ? 'selected' : ''}>Requiere reparación</option>
+      <option value="adecuacion" ${res === 'adecuacion' ? 'selected' : ''}>Requiere adecuación</option>
+      <option value="baja" ${res === 'baja' ? 'selected' : ''}>Para baja / pérdida total</option></select></label>
+
+    <div class="resumen ${res === 'listo' ? '' : 'mal'}">Al cerrar, el equipo pasa a<b>${TXT_RES[res]}</b>
+      ${['reparacion','adecuacion'].includes(res) ? '<span style="display:block;margin-top:4px;font-size:13px">Se abre la orden de trabajo con los daños marcados.</span>' : ''}</div>
+    <button class="btn-grande" id="cerrar">Cerrar inspección</button>
+    <button class="btn-grande claro" id="descartar" style="margin-top:8px">Descartar borrador</button>`;
+
+  const guardar = () => IDB.put('borradores', b);
+  $('vista').querySelectorAll('input[data-ang]').forEach(inp => inp.onchange = async () => {
+    const f = inp.files[0]; if(!f) return;
+    const id = await guardarFotoLocal(f, b);
+    if(b.fotos[inp.dataset.ang]) await IDB.del('fotos', b.fotos[inp.dataset.ang]);
+    b.fotos[inp.dataset.ang] = id; await guardar(); pintarInspeccion(b);
+  });
+  $('fDanos').onchange = async () => {
+    for(const f of $('fDanos').files) b.danos.push(await guardarFotoLocal(f, b));
+    await guardar(); pintarInspeccion(b);
+  };
+  $('vista').querySelectorAll('[data-quitar]').forEach(x => x.onclick = async () => {
+    const [id] = b.danos.splice(Number(x.dataset.quitar), 1); await IDB.del('fotos', id); await guardar(); pintarInspeccion(b);
+  });
+  $('chk').onclick = async e => {
+    const pto = e.target.closest('.pto'); if(!pto) return;
+    const k = pto.dataset.k;
+    if(e.target.closest('.f')){ const ab = pto.classList.contains('abierto');
+      $('chk').querySelectorAll('.pto').forEach(x => x.classList.remove('abierto')); if(!ab) pto.classList.add('abierto'); return; }
+    const v = e.target.closest('[data-v]'); if(!v) return;
+    b.puntos[k] = { ...(b.puntos[k] || {}), estado:v.dataset.v };
+    if(v.dataset.v !== 'falla') delete b.puntos[k].nota;
+    if(!b.resultadoTocado) b.resultado = '';
+    await guardar(); await pintarInspeccion(b);
+    const el = $('chk').querySelector(`[data-k="${k}"]`);
+    if(v.dataset.v === 'falla'){ el.classList.add('abierto'); el.querySelector('input')?.focus(); }
+  };
+  $('chk').addEventListener('input', e => { const i = e.target.closest('[data-nota]'); if(!i) return; b.puntos[i.dataset.nota].nota = i.value; guardar(); });
+  if($('todoBien')) $('todoBien').onclick = async () => { PUNTOS.forEach(([k]) => { if(!b.puntos[k]) b.puntos[k] = { estado:'ok' }; }); await guardar(); pintarInspeccion(b); };
+  $('iProc').oninput = () => { b.procedencia = $('iProc').value; guardar(); };
+  $('iObs').oninput = () => { b.obs = $('iObs').value; guardar(); };
+  if($('iTicket')) $('iTicket').onchange = () => { b.ticket = $('iTicket').checked; guardar(); };
+  $('iRes').onchange = () => { b.resultado = $('iRes').value; b.resultadoTocado = true; guardar(); pintarInspeccion(b); };
+  $('descartar').onclick = async () => {
+    if(!confirm('¿Descartar esta inspección y sus fotos?')) return;
+    for(const id of [...Object.values(b.fotos), ...b.danos]) await IDB.del('fotos', id);
+    await IDB.del('borradores', b.clave); delete borradores[b.clave]; S.pila = []; pintar();
+  };
+  $('cerrar').onclick = () => cerrarInspeccion(b);
+}
+
+async function guardarFotoLocal(file, b){
+  const c = await comprimir(file);
+  const id = uuid();
+  await IDB.put('fotos', { id, blob:c.blob, w:c.w, h:c.h, tomada:new Date(file.lastModified || Date.now()).toISOString(),
+    gps: b.gps ? `${b.gps.lat.toFixed(6)},${b.gps.lng.toFixed(6)}` : null });
+  return id;
+}
+
+async function cerrarInspeccion(b){
+  const res = b.resultado || resultadoSugerido(b);
+  const sinMarcar = PUNTOS.filter(([k]) => !b.puntos[k]);
+  if(sinMarcar.length){ nota(`Falta marcar: ${sinMarcar.map(p => p[1]).join(', ')}`, 6000); return; }
+  const sinNota = PUNTOS.filter(([k]) => b.puntos[k].estado === 'falla' && !(b.puntos[k].nota || '').trim());
+  if(sinNota.length){ nota(`Describe el daño de: ${sinNota.map(p => p[1]).join(', ')}`, 6000);
+    const el = $('chk').querySelector(`[data-k="${sinNota[0][0]}"]`); el?.classList.add('abierto'); el?.querySelector('input')?.focus(); return; }
+  const faltan = EVID.filter(([k]) => !b.fotos[k]);
+  if(faltan.length && !confirm(`Faltan ${faltan.length} foto(s) obligatoria(s): ${faltan.map(f => f[1]).join(', ')}.\n\nPuedes cerrar ahora y tomarlas después; la unidad seguirá en pendientes hasta completarlas. ¿Cerrar?`)) return;
+  $('cerrar').disabled = true;
+
+  const danos = Object.entries(b.puntos).filter(([, v]) => v.estado === 'falla');
+  const condicion = danos.length === 0 ? 'buena' : danos.length <= 2 ? 'regular' : 'mala';
+  const puntos = { ...b.puntos, _evidencia: EVID.map(e => e[0]) };
+  const fila = { id:b.id, equipo_id:b.equipo_id, patio_id:b.patio_id || null, motivo:'llegada', procedencia:(b.procedencia || '').trim() || null,
+    puntos, condicion, resultado:res, observaciones:(b.obs || '').trim() || null, creado_por:S.yo.id,
+    movimiento_id:b.movimiento_id, gps_lat:b.gps?.lat ?? null, gps_lng:b.gps?.lng ?? null };
+  const titulo = `Inspección NIV ·${String(b.niv).slice(-4)}`;
+  await encolar('revision', { fila, prueba:S.prueba }, titulo);
+
+  if(['reparacion','adecuacion'].includes(res)){
+    const trabajos = [...new Set(danos.map(([k]) => PUNTO_TRABAJO[k]).filter(Boolean))];
+    const desc = danos.map(([k, v]) => `${(PUNTOS.find(p => p[0] === k) || [k, k])[1]}: ${v.nota}`).join('; ')
+      + (fila.observaciones ? (danos.length ? '. ' : '') + fila.observaciones : '') || 'Revisión de llegada con observaciones';
+    await encolar('orden', { equipo_id:b.equipo_id, tipo: res === 'adecuacion' ? 'adecuacion' : 'reparacion', trabajos,
+      prioridad: b.ticket ? 'ticket' : 'sin_asignar', descripcion:desc, patio_id:b.patio_id || null, revision_id:b.id,
+      niv:b.niv, aviso:`${b.niv} llegó con daños (${danos.map(([k]) => (PUNTOS.find(p => p[0] === k) || [k, k])[1].toLowerCase()).join(', ') || 'ver observaciones'}): queda en diagnóstico` }, titulo + ' · orden');
+  } else if(res === 'baja'){
+    await encolar('aviso', { aviso:`${b.niv} revisado: propuesto para baja / pérdida total`, revision_id:b.id }, titulo + ' · aviso');
+  }
+  for(const [k] of EVID) if(b.fotos[k]) await encolarFoto(b.fotos[k], { revision_id:b.id, equipo_id:b.equipo_id, patio_id:b.patio_id, niv:b.niv, etapa:'condicion', angulo:k });
+  for(const id of b.danos) await encolarFoto(id, { revision_id:b.id, equipo_id:b.equipo_id, patio_id:b.patio_id, niv:b.niv, etapa:'condicion', angulo:'dano' });
+
+  await IDB.del('borradores', b.clave); delete borradores[b.clave];
+  S.porRevisar = S.porRevisar.filter(x => x.movimiento_id !== b.movimiento_id);
+  if(faltan.length) S.revisiones.unshift({ id:b.id, equipo_id:b.equipo_id, niv:b.niv, placa:b.placa, patio_id:b.patio_id, patio:nombrePatio(b.patio_id), puntos, resultado:res, creado_en:new Date().toISOString() });
+  S.pila = [];
+  nota(navigator.onLine ? 'Inspección cerrada. Subiendo…' : 'Inspección guardada en el teléfono: se sube al recuperar señal.', 5000);
+  pintar();
+  subirCola().then(cargar);
+}
+
+/* completar fotos que faltaron */
+async function abrirFaltantes(r, faltan){
+  S.pila = ['faltantes'];
+  window.scrollTo(0, 0);
+  pintarTop(`<button class="volver" id="volver">‹ Mis equipos</button><h1>Fotos de recepción · NIV ·${ultimos(r.niv)}</h1>
+    <div class="sub2">${esc(r.patio || '')} · inspeccionada ${hace(r.creado_en)}</div>`);
+  $('volver').onclick = () => { S.pila = []; pintar(); };
+  const tomadas = {};
+  const pintarF = () => {
+    $('vista').innerHTML = `<div class="sec">Faltan ${faltan.length - Object.keys(tomadas).length} de ${faltan.length}</div>
+      <div class="evid">${EVID.filter(([k]) => faltan.includes(k)).map(([k, n]) => `<label class="slot ${tomadas[k] ? 'ok' : ''}">
+        ${tomadas[k] ? '<span class="marca-ok">✓</span>' : ICO_CAM}<span>${n}</span>
+        <input type="file" accept="image/*" capture="environment" data-ang="${k}" ${tomadas[k] ? 'disabled' : ''}></label>`).join('')}</div>
+      <div class="pista">${ICO_GPS}Cada foto guarda fecha, hora y ubicación</div>
+      <button class="btn-grande" id="listo" style="margin-top:16px">Listo</button>`;
+    $('vista').querySelectorAll('input[data-ang]').forEach(inp => inp.onchange = async () => {
+      const f = inp.files[0]; if(!f) return;
+      const id = await guardarFotoLocal(f, {});
+      await encolarFoto(id, { revision_id:r.id, equipo_id:r.equipo_id, patio_id:r.patio_id, niv:r.niv, etapa:'condicion', angulo:inp.dataset.ang });
+      tomadas[inp.dataset.ang] = true; pintarF(); subirCola();
+    });
+    $('listo').onclick = () => { S.pila = []; pintar(); };
+  };
+  pintarF();
+}
+
+/* ============================ ORDEN: avance del día ============================ */
+function abrirOrden(o){
+  if(!o) return;
+  S.pila = ['orden'];
+  window.scrollTo(0, 0);
+  const tareas = S.tareas[o.id] || [];
+  const hechas = tareas.filter(t => t.estatus === 'hecha').length;
+  const pct = tareas.length ? Math.round(hechas * 100 / tareas.length) : 0;
+  const ESTO = { abierta:'En diagnóstico', cotizacion:'En cotización', por_autorizar:'Cotización por autorizar', autorizada:'Autorizada · espera pasar a taller',
+    en_proceso:'En reparación', terminada:'Terminada · enviada a Ilse para liberar' };
+  pintarTop(`<button class="volver" id="volver">‹ Mis equipos</button><h1>${esc(o.folio_txt)} · NIV ·${ultimos(o.niv)}</h1>
+    <div class="sub2">${esc([o.tipo_equipo, o.linea || o.taller || o.patio].filter(Boolean).join(' · '))}</div>`);
+  $('volver').onclick = () => { S.pila = []; pintar(); };
+  const enCola = S.cola.filter(c => c.datos?.orden_id === o.id).length;
+  $('vista').innerHTML = `
+    <div class="caja">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="chip ${o.estatus === 'terminada' ? 'terminado' : o.estatus === 'en_proceso' || o.estatus === 'autorizada' ? 'reparacion' : 'diagnostico'}">${ESTO[o.estatus] || o.estatus}</span>
+        <span style="flex:1"></span>${o.estatus === 'terminada' ? '' : semaforo(o.fecha_compromiso)}</div>
+      <p style="font-size:15px;margin-top:8px">${esc(o.descripcion)}</p>
+      <p class="pista" style="font-family:var(--mono)">${esc(o.niv)}${o.placa ? ' · ' + esc(o.placa) : ''}</p>
+    </div>
+    ${tareas.length ? `<div class="sec">Trabajos del taller <small>${hechas} de ${tareas.length} · ${pct}%</small></div>
+      <div class="caja"><div class="barra-av"><i style="width:${pct}%"></i></div>
+        ${tareas.map(t => `<div class="tarea2 ${t.estatus}"><span class="ic">${t.estatus === 'hecha' ? '✓' : t.estatus === 'detenida' ? '!' : t.estatus === 'en_curso' ? '▶' : t.posicion}</span>
+          <div style="flex:1">${esc(t.descripcion)}<small>${EST_TAREA[t.estatus]}${t.mecanico ? ' · ' + esc(t.mecanico) : ''}${t.estatus === 'detenida' && t.nota ? ' · ' + esc(t.nota) : ''}</small></div></div>`).join('')}
+      </div>` : ''}
+    ${puedeEscribir() && o.estatus === 'en_proceso' ? `
+      <div class="sec">Reportar avance del día ${S.avanceHoy.has(o.id) || enCola ? '<small style="color:var(--lime-ink)">ya hay avance hoy</small>' : ''}</div>
+      <textarea id="aTxt" placeholder="Qué se hizo hoy, qué falta, si espera refacción…"></textarea>
+      <div class="danos" style="margin-top:10px" id="aFotos"></div>
+      <button class="btn-grande" id="aGuardar" style="margin-top:12px">Guardar avance</button>
+      <button class="btn-grande navy" id="aTerminar" style="margin-top:8px">Trabajo terminado · avisar a Ilse</button>` : ''}
+    ${puedeEscribir() && o.estatus === 'terminada' ? `<div class="sec">Fotos de terminado</div><div class="danos" id="aFotos"></div>
+      <button class="btn-grande" id="aGuardar" style="margin-top:12px">Guardar fotos</button>` : ''}`;
+  if(!$('aGuardar')) return;
+  const fotos = [];
+  const pintarFotos = async () => {
+    const us = await Promise.all(fotos.map(urlFotoLocal));
+    $('aFotos').innerHTML = us.map((u, n) => `<div class="mini"><img src="${u}" alt=""><button data-q="${n}" aria-label="Quitar">×</button></div>`).join('')
+      + `<label aria-label="Agregar foto">+<input type="file" accept="image/*" capture="environment" multiple id="aIn"></label>`;
+    $('aIn').onchange = async () => { for(const f of $('aIn').files) fotos.push(await guardarFotoLocal(f, {})); pintarFotos(); };
+    $('aFotos').querySelectorAll('[data-q]').forEach(x => x.onclick = async () => { const [id] = fotos.splice(Number(x.dataset.q), 1); await IDB.del('fotos', id); pintarFotos(); });
+  };
+  pintarFotos();
+  const etapa = o.estatus === 'terminada' ? 'terminado' : 'avance';
+  $('aGuardar').onclick = async () => {
+    const txt = ($('aTxt')?.value || '').trim();
+    if(!txt && !fotos.length){ nota('Escribe el avance o toma una foto'); return; }
+    $('aGuardar').disabled = true;
+    if(txt) await encolar('comentario', { orden_id:o.id, texto:'Avance del día: ' + txt }, `Avance ${o.folio_txt}`);
+    for(const id of fotos) await encolarFoto(id, { orden_id:o.id, equipo_id:o.equipo_id, patio_id:o.patio_id, niv:o.niv, etapa });
+    S.avanceHoy.add(o.id);
+    nota(navigator.onLine ? 'Avance guardado' : 'Guardado en el teléfono: se sube al recuperar señal', 4500);
+    S.pila = []; pintar(); subirCola().then(cargar);
+  };
+  if($('aTerminar')) $('aTerminar').onclick = async () => {
+    const tPend = tareas.filter(t => t.estatus !== 'hecha').length;
+    const t = await pedirTexto('Trabajo terminado', (tPend ? `Ojo: ${tPend} tarea(s) del taller sin marcar como hechas. ` : '') + 'Se le avisa a Ilse para revisar y liberar. Toma las fotos de terminado.', 'Nota (opcional)', false);
+    if(t === null) return;
+    if(!navigator.onLine){ nota('Para marcar terminado se necesita señal. Guarda el avance y márcalo al tener conexión.', 6000); return; }
+    const { error } = await db.rpc('cambiar_estatus', { p_orden:o.id, p_estatus:'terminada', p_nota:t || null, p_linea:null, p_forzar:false });
+    if(error){ nota(errTxt(error), 7000); return; }
+    for(const id of fotos) await encolarFoto(id, { orden_id:o.id, equipo_id:o.equipo_id, patio_id:o.patio_id, niv:o.niv, etapa:'terminado' });
+    nota('Listo: Ilse recibió el aviso'); S.pila = []; await cargar(); subirCola();
+  };
+}
+
+/* ============================ cola de subida (sin señal) ============================ */
+async function encolar(tipo, datos, titulo){
+  const c = { id:uuid(), tipo, datos, titulo, creado:new Date().toISOString() };
+  await IDB.put('cola', c); S.cola.push(c); pintarCinta();
+}
+async function encolarFoto(fotoId, meta){
+  await encolar('foto', { foto_id:fotoId, ...meta, prueba:S.prueba }, `Foto ${meta.angulo || meta.etapa} NIV ·${String(meta.niv || '').slice(-4)}`);
+}
+async function refrescarCola(){
+  S.cola = (await IDB.all('cola')).sort((a, b) => a.creado.localeCompare(b.creado));
+  const bs = await IDB.all('borradores'); borradores = Object.fromEntries(bs.map(x => [x.clave, true]));
+  pintarCinta();
+}
+function pintarCinta(){
+  const n = S.cola.length, err = S.cola.filter(c => c.error).length;
+  $('navPend').textContent = n || '';
+  const c = $('cintaSync');
+  if(!n){ c.innerHTML = navigator.onLine ? '' : `<div class="cinta-sync">${ICO_NUBE}Sin señal: puedes seguir capturando, se guarda en el teléfono.</div>`; return; }
+  c.innerHTML = err
+    ? `<div class="cinta-sync mal">${ICO_NUBE}${err} captura(s) no se pudieron subir<button id="verErr">Ver</button></div>`
+    : `<div class="cinta-sync">${ICO_NUBE}${n} captura${n > 1 ? 's' : ''} guardada${n > 1 ? 's' : ''}, ${navigator.onLine ? (S.subiendo ? 'subiendo…' : 'por subir') : 'se suben al recuperar señal'}</div>`;
+  if($('verErr')) $('verErr').onclick = () => ir('yo');
+}
+
+async function subirCola(forzar = false){
+  if(S.subiendo || !S.cola.length || (!navigator.onLine && !forzar)) return;
+  S.subiendo = true; pintarCinta();
+  try{
+    for(const c of [...S.cola]){
+      if(c.error && !forzar) continue;
+      try{
+        await ejecutar(c);
+        await IDB.del('cola', c.id);
+        S.cola = S.cola.filter(x => x.id !== c.id);
+      }catch(e){
+        if(esRed(e)) break;                       // sin señal: se intenta después, en orden
+        c.error = errTxt(e); await IDB.put('cola', c);
+        // si falló la revisión, lo que depende de ella espera
+        if(c.tipo === 'revision') break;
+      }
+      pintarCinta();
+    }
+  } finally {
+    S.subiendo = false; pintarCinta();
+    if(S.vista === 'yo' && !S.pila.length) vistaYo();
+  }
+}
+
+async function ejecutar(c){
+  const d = c.datos;
+  if(c.tipo === 'revision'){
+    const { error } = await db.from('revisiones').insert(d.fila);
+    if(error && !(error.code === '23505')) throw error;           // ya se había subido
+  } else if(c.tipo === 'orden'){
+    const { data:id, error } = await db.rpc('crear_orden', { p_equipo:d.equipo_id, p_tipo:d.tipo, p_trabajos:d.trabajos, p_prioridad:d.prioridad,
+      p_descripcion:d.descripcion, p_patio:d.patio_id, p_revision:d.revision_id });
+    if(error){
+      if(/ya tiene una orden/i.test(errTxt(error))){            // ya existe la orden abierta: se avisa igual
+        const r = await db.rpc('avisar_revision', { p_revision:d.revision_id, p_orden:null, p_texto:d.aviso + ' (ya tenía orden abierta)' });
+        if(r.error) throw r.error;
+        return;
+      }
+      throw error;
+    }
+    const r = await db.rpc('avisar_revision', { p_revision:d.revision_id, p_orden:id, p_texto:d.aviso });
+    if(r.error) throw r.error;
+  } else if(c.tipo === 'aviso'){
+    const { error } = await db.rpc('avisar_revision', { p_revision:d.revision_id, p_orden:null, p_texto:d.aviso });
+    if(error) throw error;
+  } else if(c.tipo === 'comentario'){
+    const { error } = await db.rpc('comentar', { p_orden:d.orden_id, p_texto:d.texto }); if(error) throw error;
+  } else if(c.tipo === 'foto'){
+    const f = await IDB.get('fotos', d.foto_id);
+    if(!f) return;                                             // la foto ya no está: nada que subir
+    if(d.prueba){
+      const ruta = `prueba/${d.orden_id || ('revision-' + d.revision_id)}/${d.foto_id}.jpg`;
+      const up = await db.storage.from(BUCKET_ADJ).upload(ruta, f.blob, { contentType:'image/jpeg', upsert:true }); if(up.error) throw up.error;
+      const { error } = await db.from('fotos_prueba').insert({ id:d.foto_id, orden_id:d.orden_id || null, revision_id:d.revision_id || null,
+        etapa:d.etapa, ruta, subida_por:S.yo.id, tomada_en:f.tomada });
+      if(error && error.code !== '23505') throw error;
+    } else {
+      const ruta = `${d.niv || 'SIN_NIV'}/operaciones/${d.orden_id || ('revision-' + d.revision_id)}/${d.foto_id}.jpg`;
+      const up = await db.storage.from(BUCKET_FOTOS).upload(ruta, f.blob, { contentType:'image/jpeg', upsert:true }); if(up.error) throw up.error;
+      const r1 = await core.from('fotos').insert({ id:d.foto_id, equipo_id:d.equipo_id, patio_id:d.patio_id || null, modulo_origen:'operaciones',
+        etapa:d.etapa, angulo:d.angulo || null, ruta_storage:ruta, ancho:f.w, alto:f.h, bytes:f.blob.size, publica:false, subida_por:S.yo.id, tomada_en:f.tomada });
+      if(r1.error && r1.error.code !== '23505') throw r1.error;
+      const r2 = await db.from('orden_fotos').insert({ foto_id:d.foto_id, orden_id:d.orden_id || null, revision_id:d.revision_id || null,
+        etapa:d.etapa, nota: f.gps ? 'GPS ' + f.gps : null });
+      if(r2.error && r2.error.code !== '23505') throw r2.error;
+    }
+    await IDB.del('fotos', d.foto_id);
+  }
+}
+
+/* ============================ fotos ============================ */
+function comprimir(file, max = 1600, q = 0.78){
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      const r = Math.min(1, max / Math.max(img.width, img.height));
+      const cv = document.createElement('canvas'); cv.width = Math.round(img.width * r); cv.height = Math.round(img.height * r);
+      const ctx = cv.getContext('2d'); ctx.drawImage(img, 0, 0, cv.width, cv.height);
+      // sello de fecha y hora sobre la foto
+      const txt = new Date().toLocaleString('es-MX', { timeZone:'America/Monterrey', day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+      const fs = Math.max(14, Math.round(cv.width / 45));
+      ctx.font = `600 ${fs}px Arial`; const w = ctx.measureText(txt).width + fs;
+      ctx.fillStyle = 'rgba(8,24,38,.65)'; ctx.fillRect(cv.width - w - fs / 2, cv.height - fs * 1.9, w, fs * 1.5);
+      ctx.fillStyle = '#fff'; ctx.fillText(txt, cv.width - w, cv.height - fs * 0.85);
+      cv.toBlob(b => { URL.revokeObjectURL(url); b ? res({ blob:b, w:cv.width, h:cv.height }) : rej(new Error('No se pudo procesar la imagen')); }, 'image/jpeg', q);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('Formato de imagen no soportado')); };
+    img.src = url;
+  });
+}
+
+/* ============================ hoja de captura ============================ */
+function pedirTexto(titulo, texto, placeholder, obligatorio){
+  return new Promise(res => {
+    $('hTitulo').textContent = titulo; $('hTexto').textContent = texto;
+    $('hCampo').value = ''; $('hCampo').placeholder = placeholder || ''; $('hError').textContent = '';
+    $('hoja').classList.add('on');
+    const cerrar = v => { $('hoja').classList.remove('on'); $('hAceptar').onclick = $('hCancelar').onclick = null; res(v); };
+    $('hCancelar').onclick = () => cerrar(null);
+    $('hAceptar').onclick = () => { const v = $('hCampo').value.trim(); if(obligatorio && !v){ $('hError').textContent = 'Escribe el dato.'; return; } cerrar(v); };
+  });
+}
+
+iniciar().catch(err => { console.error(err); nota('Error al iniciar: ' + errTxt(err), 10000); });
+})();
+</script>
+</body>
+</html>

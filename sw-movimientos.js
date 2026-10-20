@@ -1,9 +1,9 @@
-// Service worker de Entradas y salidas de patio (Plataforma HT)
+// Service worker de Entradas y salidas de patio y de Operaciones en patio (campo.html) · Plataforma HT
 // IMPORTANTE: en Railway la plataforma vive en la raíz del dominio, así que este
 // service worker controla TODAS las páginas (index.html, mapa-patios.html, inventario/...).
 // Por eso las páginas propias se piden siempre a la red primero; la copia guardada
 // solo se usa si no hay conexión (caseta sin señal).
-const VERSION = 'mov-v8-2026-10-18';
+const VERSION = 'mov-v9-2026-10-19';
 const CACHE = 'movimientos-ht-' + VERSION;
 const EXTERNOS = [
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js',
@@ -12,7 +12,7 @@ const EXTERNOS = [
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE)
-    .then(c => Promise.all(['./movimientos.html', './ht.css', './manifest-movimientos.json', ...EXTERNOS]
+    .then(c => Promise.all(['./movimientos.html', './campo.html', './ht.css', './manifest-movimientos.json', './manifest-campo.json', './icon-mov-192.png', ...EXTERNOS]
       .map(u => c.add(u).catch(() => null))))
     .then(() => self.skipWaiting()));
 });
@@ -38,7 +38,7 @@ self.addEventListener('fetch', e => {
 
   // Páginas y archivos de la plataforma: SIEMPRE de la red; la copia solo si no hay conexión
   if (u.startsWith(self.location.origin)) {
-    const guardar = u.includes('movimientos') || u.includes('ht.css');
+    const guardar = u.includes('movimientos') || u.includes('campo') || u.includes('ht.css');
     e.respondWith(fetch(e.request).then(res => {
       if (guardar && res.ok) { const copia = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copia)).catch(() => {}); }
       return res;

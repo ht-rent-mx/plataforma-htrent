@@ -93,7 +93,7 @@ const acceso = $('acceso'), app = $('app'), aviso = $('avisoAcceso');
 
 /* Cambia esta versión cada vez que se suba una página nueva:
    obliga al navegador de todos a traer la versión actualizada. */
-const VERSION = '2026-10-19b';
+const VERSION = '2026-10-19c';
 
 const DESTINOS = {
   clientes:    { nombre:'Servicio a Clientes', url:'https://ht-rent-mx.github.io/seguimiento-clientes-equipo/' },
@@ -101,6 +101,7 @@ const DESTINOS = {
   patios:      { nombre:'Levantamiento de patios', url:'https://ht-rent-mx.github.io/levantamiento-patio/' },
   operaciones: { nombre:'Operaciones y taller', url:'operaciones.html' },
   taller:      { nombre:'Taller · avance de unidades', url:'taller.html' },
+  campo:       { nombre:'Operaciones en patio (celular)', url:'campo.html' },
   fotos:       { nombre:'Imágenes HT', url:'https://ht-rent-mx.github.io/imagenes-ht/?t=8a578d88491c462bb93198ccfa923a49' },
   mapa_patios: { nombre:'Mapa de patios', url:'mapa-patios.html' },
   movimientos: { nombre:'Entradas y salidas de patio', url:'movimientos.html' },
@@ -180,6 +181,10 @@ async function cargarModulos(){
     let ya = false; try{ ya = sessionStorage.getItem('ht_taller_directo') === '1'; sessionStorage.setItem('ht_taller_directo', '1'); }catch(_){}
     if(!ya){ location.href = `taller.html?v=${VERSION}`; return; }
   }
+
+  // App de celular de Operaciones (misma información, pensada para patio)
+  const op = data.find(m => m.clave === 'operaciones');
+  if(op && ['escritura','admin'].includes(op.nivel)) data.splice(data.indexOf(op) + 1, 0, { clave:'campo', nombre:'Operaciones en patio', nivel:op.nivel });
 
   cont.innerHTML = data.map(m => {
     const d = DESTINOS[m.clave] || { nombre:m.nombre, url:null };

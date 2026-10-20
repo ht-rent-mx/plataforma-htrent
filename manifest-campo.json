@@ -1,0 +1,16 @@
+{
+  "name": "Operaciones en patio · HT Rent",
+  "short_name": "Patio HT",
+  "description": "Mis equipos del día, inspección de recepción con evidencia y avance del taller. Funciona sin señal.",
+  "start_url": "./campo.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#EDF0F5",
+  "theme_color": "#0B3D66",
+  "lang": "es-MX",
+  "icons": [
+    { "src": "icon-mov-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-mov-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
