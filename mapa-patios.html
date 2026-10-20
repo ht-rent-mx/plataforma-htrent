@@ -200,7 +200,7 @@ dialog textarea{width:100%;border:1px solid var(--borde);border-radius:6px;paddi
 .plano-ayuda{position:absolute;left:24px;top:24px;max-width:520px;color:var(--tinta-suave);line-height:1.5;z-index:2;pointer-events:none}
 .zoom{display:inline-flex;align-items:center;gap:4px} .zoom .btn{padding:0 11px} .zoom span{min-width:44px;text-align:center;font-size:13px;color:var(--tinta-suave);font-variant-numeric:tabular-nums}
 dialog.torre-dlg{width:min(600px,96vw)}
-.exp-opc{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 6px}
+.exp-opc{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0 6px}
 .exp-btn{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:14px;border:1px solid var(--borde);border-radius:8px;background:var(--panel);cursor:pointer;text-align:left;font:inherit;color:var(--tinta)}
 .exp-btn b{font-size:15px;color:var(--ink)} .exp-btn span{font-size:12px;color:var(--tinta-suave)}
 .exp-btn:hover:not(:disabled){border-color:var(--navy);background:var(--concreto)} .exp-btn:disabled{opacity:.5;cursor:default}
@@ -323,9 +323,10 @@ dialog label.exp-check input{width:auto;height:auto;margin-top:2px}
   <div class="nota">Se descarga el plano completo, sin importar el zoom, con el NIV de cada equipo. En las torres se listan todos los NIV de arriba hacia abajo.</div>
   <div class="exp-opc">
     <button class="exp-btn" id="expPng"><b>Imagen PNG</b><span id="expPngSub">Patio actual</span></button>
-    <button class="exp-btn" id="expPdf"><b>PDF</b><span>Todos los patios, una página por patio</span></button>
+    <button class="exp-btn" id="expPdf1"><b>PDF de este patio</b><span id="expPdf1Sub">Patio actual</span></button>
+    <button class="exp-btn" id="expPdf"><b>PDF de todos</b><span>Todos los patios, con resumen y una página por patio</span></button>
   </div>
-  <label class="exp-check"><input type="checkbox" id="expAnexo" checked> Incluir en el PDF la lista de equipos por patio (NIV, placa, tipo, zona, estatus)</label>
+  <label class="exp-check"><input type="checkbox" id="expAnexo" checked> Incluir en el PDF la lista de equipos del patio (NIV, placa, tipo, zona, estatus)</label>
   <div class="nota" id="expEstado"></div>
   <div class="pie"><button class="btn claro" id="expCerrar">Cerrar</button></div>
 </div></dialog>
@@ -1182,7 +1183,7 @@ const nombreArchivo=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\w-]
 const hoyArchivo=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`};
 function descargar(blob,nombre){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=nombre; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),5000); }
 const estadoExp=(t,err)=>{ const e=$('#expEstado'); e.textContent=t; e.style.color=err?'var(--red)':''; };
-const bloquearExp=v=>{ $('#expPng').disabled=v||vistaEntregados; $('#expPdf').disabled=v; };
+const bloquearExp=v=>{ $('#expPng').disabled=$('#expPdf1').disabled=v||vistaEntregados; $('#expPdf').disabled=v; };
 
 async function exportarPNG(){
   if(vistaEntregados||!patioActivo) return;
@@ -1197,7 +1198,8 @@ async function exportarPNG(){
   bloquearExp(false);
 }
 
-async function exportarPDF(){
+async function exportarPDF(solo){
+  if(solo&&(vistaEntregados||!patioActivo)) return;
   bloquearExp(true);
   try{
     estadoExp('Preparando PDF…');
@@ -1205,7 +1207,8 @@ async function exportarPDF(){
     const { jsPDF }=window.jspdf;
     const doc=new jsPDF({orientation:'landscape',unit:'pt',format:'tabloid',compress:true});
     const PW=doc.internal.pageSize.getWidth(), PH=doc.internal.pageSize.getHeight(), M=28;
-    const lista=patios.filter(p=>equipos.some(e=>e.patio==p.id&&!fuera(e)));
+    const lista=solo?patios.filter(p=>p.id==patioActivo):patios.filter(p=>equipos.some(e=>e.patio==p.id&&!fuera(e)));
+    if(!solo){
     // portada con el resumen por patio
     const resumen=lista.map(p=>{ const L=layoutPatio(p.id), sinN=L.sin.reduce((s,g)=>s+g.length,0);
       return [p.nombre, L.enPatio.length, L.enPatio.filter(e=>e.estatus==='LIBRE').length, L.enPatio.filter(e=>e.estatus.startsWith('ASIGNADO')).length, L.torres, sinN]; });
@@ -1216,12 +1219,13 @@ async function exportarPDF(){
       body:[...resumen,['Total',...[1,2,3,4,5].map(i=>resumen.reduce((s,r)=>s+r[i],0))]],
       styles:{fontSize:10,cellPadding:5}, headStyles:{fillColor:[11,61,102]}, columnStyles:{1:{halign:'right'},2:{halign:'right'},3:{halign:'right'},4:{halign:'right'},5:{halign:'right'}},
       didParseCell:d=>{ if(d.section==='body'&&d.row.index===resumen.length) d.cell.styles.fontStyle='bold'; } });
+    }
     let sinFondo=0;
     for(let i=0;i<lista.length;i++){
       const p=lista[i]; estadoExp(`Dibujando ${p.nombre} (${i+1} de ${lista.length})…`);
       await new Promise(r=>setTimeout(r,0));
       const { cv, L, sinFondo:sf }=await canvasPatio(p.id); if(sf) sinFondo++;
-      doc.addPage('tabloid','landscape');
+      if(!solo||i>0) doc.addPage('tabloid','landscape');
       const r=Math.min((PW-M*2)/cv.width,(PH-M*2)/cv.height), w=cv.width*r, h=cv.height*r;
       doc.addImage(await pngLigero(cv),'PNG',(PW-w)/2,M,w,h,undefined,'NONE');
       cv.width=cv.height=0;
@@ -1236,17 +1240,17 @@ async function exportarPDF(){
       }
     }
     estadoExp('Guardando PDF…');
-    const pdf=doc.output('blob'); descargar(pdf,`Mapa_de_patios_${hoyArchivo()}.pdf`);
-    estadoExp(`PDF descargado: ${lista.length} patios, ${kb(pdf.size)}`+(sinFondo?` (en ${sinFondo} no se pudo incluir la imagen de fondo)`:'')+'.');
+    const pdf=doc.output('blob'); descargar(pdf,solo?`Mapa_${nombreArchivo(nombrePatio(patioActivo))}_${hoyArchivo()}.pdf`:`Mapa_de_patios_${hoyArchivo()}.pdf`);
+    estadoExp(`PDF descargado: ${solo?nombrePatio(patioActivo):lista.length+' patios'}, ${kb(pdf.size)}`+(sinFondo?` (en ${sinFondo} no se pudo incluir la imagen de fondo)`:'')+'.');
   }catch(err){ console.error(err); estadoExp('No se pudo generar el PDF: '+(err.message||err),true); }
   bloquearExp(false);
 }
 $('#btnExportar').onclick=()=>{
   if(editando){ aviso('Termina o cancela la edición del plano primero'); return; }
-  $('#expPngSub').textContent=vistaEntregados?'Elige un patio para exportarlo':`Patio ${nombrePatio(patioActivo)}`;
+  $('#expPngSub').textContent=$('#expPdf1Sub').textContent=vistaEntregados?'Elige un patio para exportarlo':`Patio ${nombrePatio(patioActivo)}`;
   estadoExp(''); bloquearExp(false); $('#dlgExport').showModal();
 };
-$('#expPng').onclick=exportarPNG; $('#expPdf').onclick=exportarPDF; $('#expCerrar').onclick=()=>$('#dlgExport').close();
+$('#expPng').onclick=exportarPNG; $('#expPdf').onclick=()=>exportarPDF(false); $('#expPdf1').onclick=()=>exportarPDF(true); $('#expCerrar').onclick=()=>$('#dlgExport').close();
 
 iniciar();
 </script>
