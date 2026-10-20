@@ -1,0 +1,1649 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interacciones 1 a 1 · Plataforma HT</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Saira:ital,wght@1,700;1,800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#15203B; --navy:#0B3D66; --navy-d:#082B49; --steel:#5A6680; --lime:#3CE81E; --lime-ink:#1B7F0A;
+  --line:#D5DBE5; --paper:#EDF0F5; --white:#fff; --soft:#E2ECF2;
+  --amber:#F2B233; --amber-l:#FBEDD3; --green:#1B7F0A; --green-l:#DCEFE7;
+  --red:#B3352A; --red-l:#F8E1DE; --gray:#8296A1;
+  --r:6px; --sh:0 1px 2px rgba(16,26,32,.08), 0 8px 24px -12px rgba(16,26,32,.25);
+  --disp:'Saira','Arial Narrow',Arial,sans-serif;
+  --body:'Barlow','Segoe UI',Roboto,Arial,sans-serif;
+  --mono:Consolas,'Courier New',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:var(--body);background:var(--paper);color:var(--ink);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+button{cursor:pointer;border:none;background:none}
+a{color:var(--navy)}
+:focus-visible{outline:3px solid var(--lime);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.app{display:flex;min-height:100vh}
+.rail{width:222px;flex:0 0 222px;background:var(--navy-d);border-top:4px solid var(--lime);color:#C9D8E2;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.marca{padding:20px 18px 16px;border-bottom:1px solid rgba(255,255,255,.1)}
+.marca .ht{font-family:var(--disp);font-style:italic;font-weight:800;font-size:26px;letter-spacing:-.02em;color:#fff;line-height:1}
+.marca .sub2{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--lime);margin-top:6px}
+.nav{padding:12px 10px;display:flex;flex-direction:column;gap:2px;flex:1;overflow:auto}
+.nav button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:9px 12px;border-radius:8px;color:#B9CBD7;font-size:14px}
+.nav button:hover{background:rgba(255,255,255,.07);color:#fff}
+.nav button.on{background:var(--lime);color:#0B2A10;font-weight:700}
+.nav .glyph{font-family:var(--mono);font-size:11px;opacity:.85;width:16px}
+.nav .sec{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#6C8595;padding:14px 12px 6px}
+.pieRail{padding:12px 16px;border-top:1px solid rgba(255,255,255,.1);font-size:11.5px;color:#7D95A4}
+.pieRail button,.pieRail a{color:var(--lime);text-decoration:none;display:inline-block;font-size:12px;padding:0;margin-top:6px}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.top{background:var(--white);border-bottom:1px solid var(--line);padding:16px 28px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;position:sticky;top:0;z-index:20}
+.top h1{font-family:var(--disp);font-size:20px;margin:0;font-weight:600;letter-spacing:-.01em}
+.top .sp{flex:1}
+.cont{padding:24px 28px 64px;max-width:1240px;width:100%}
+@media(max-width:860px){
+  .app{flex-direction:column}
+  .rail{width:100%;flex:none;height:auto;position:static}
+  .nav{flex-direction:row;overflow-x:auto;padding:8px}
+  .nav .sec{display:none}
+  .nav button{white-space:nowrap;width:auto}
+  .pieRail{display:none}
+  .cont{padding:16px}
+  .top{padding:14px 16px}
+}
+
+.card{background:var(--white);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh)}
+.card .hd{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.card .hd h3{margin:0;font-family:var(--disp);font-size:15px;font-weight:600}
+.card .bd{padding:18px}
+.grid{display:grid;gap:16px}
+.g4{grid-template-columns:repeat(auto-fit,minmax(268px,1fr))}
+.g2{grid-template-columns:repeat(auto-fit,minmax(330px,1fr))}
+.eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--steel)}
+.dato{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.btn{background:var(--navy);color:#fff;padding:9px 16px;border-radius:8px;font-weight:600;font-size:14px;display:inline-flex;align-items:center;gap:7px}
+.btn:hover{background:var(--navy-d)}
+.btn.amb{background:var(--amber);color:#231604}
+.btn.gh{background:transparent;color:var(--navy);border:1px solid var(--line)}
+.btn.gh:hover{background:var(--paper)}
+.btn.dg{background:transparent;color:var(--red);border:1px solid var(--red-l)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.sm{padding:6px 11px;font-size:13px}
+label.f{display:block;margin-bottom:14px}
+label.f > span{display:block;font-size:12.5px;font-weight:600;color:var(--steel);margin-bottom:5px}
+label.f > span em{font-style:normal;font-weight:400;color:var(--gray)}
+input[type=text],input[type=date],input[type=number],input[type=email],input[type=password],input[type=month],select,textarea{
+  width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:#fff}
+textarea{min-height:84px;resize:vertical;line-height:1.55}
+input:focus,select:focus,textarea:focus{border-color:var(--navy);outline:none;box-shadow:0 0 0 3px var(--soft)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--steel);padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:11px 12px;border-bottom:1px solid var(--paper);vertical-align:top}
+tr:last-child td{border-bottom:none}
+.tw{overflow-x:auto}
+.tag{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.t-ok{background:var(--green-l);color:var(--green)}
+.t-al{background:var(--amber-l);color:#8A5B04}
+.t-rj{background:var(--red-l);color:var(--red)}
+.t-nt{background:var(--soft);color:var(--navy)}
+.t-gr{background:var(--paper);color:var(--steel)}
+.vacio{padding:36px 20px;text-align:center;color:var(--steel)}
+.vacio strong{display:block;font-family:var(--disp);font-size:16px;color:var(--ink);margin-bottom:5px}
+.barra{height:7px;background:var(--paper);border-radius:99px;overflow:hidden}
+.barra > i{display:block;height:100%;border-radius:99px}
+
+.pc{padding:0;overflow:hidden;text-align:left;width:100%;background:var(--white);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);display:block}
+.pc:hover{border-color:var(--navy)}
+.pc .top2{display:flex;gap:12px;padding:16px 16px 12px;align-items:flex-start}
+.ini{width:42px;height:42px;flex:0 0 42px;border-radius:10px;background:var(--navy);color:#fff;display:grid;place-items:center;font-family:var(--disp);font-weight:600;font-size:15px}
+.ini.doc{background:var(--steel)}
+.pc h4{margin:0;font-family:var(--disp);font-size:16px;font-weight:600}
+.pc .rol{font-size:12.5px;color:var(--steel);margin-top:1px}
+.pc .met{display:flex;border-top:1px solid var(--line);background:#FAFBFC}
+.pc .met div{flex:1;padding:11px 14px;border-right:1px solid var(--line)}
+.pc .met div:last-child{border-right:none}
+.pc .met b{display:block;font-family:var(--mono);font-size:19px;font-weight:600;line-height:1.2}
+.pc .met span{font-size:10.5px;color:var(--steel);letter-spacing:.03em}
+
+.riel{display:flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:#fff;margin-bottom:20px;flex-wrap:wrap}
+.riel button{flex:1 1 14%;padding:11px 9px;border-right:1px solid var(--line);text-align:left;min-width:0}
+.riel button:last-child{border-right:none}
+.riel button:hover{background:#FAFBFC}
+.riel .n{font-family:var(--mono);font-size:11px;color:var(--gray);display:block}
+.riel .t{font-size:12px;font-weight:600;color:var(--steel);display:block;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.riel button.on{background:var(--navy)}
+.riel button.on .n{color:var(--lime)}
+.riel button.on .t{color:#fff}
+.riel button.hecho .n{color:var(--green)}
+.riel button.hecho .t::after{content:' ✓';color:var(--green)}
+@media(max-width:860px){.riel button{flex:1 1 33%;border-bottom:1px solid var(--line)}}
+
+.reglas{background:#FCFDFE;border:1px solid var(--line);border-left:3px solid var(--lime);border-radius:8px;padding:14px 16px}
+.reglas h4{margin:0 0 8px;font-family:var(--disp);font-size:13.5px}
+.reglas label{display:flex;gap:9px;align-items:flex-start;padding:5px 0;font-size:13.5px;cursor:pointer}
+.reglas input{margin-top:3px;accent-color:var(--navy);flex:0 0 auto}
+.reglas .grp{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--gray);margin:10px 0 2px}
+
+.ovl{position:fixed;inset:0;background:rgba(16,26,32,.55);display:flex;align-items:flex-start;justify-content:center;padding:4vh 16px;z-index:100;overflow:auto}
+.mod{background:#fff;border-radius:12px;width:100%;max-width:660px;box-shadow:0 24px 60px -20px rgba(0,0,0,.5)}
+.mod .mh{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center}
+.mod .mh h3{margin:0;font-family:var(--disp);font-size:17px}
+.mod .mb{padding:20px;max-height:68vh;overflow:auto}
+.mod .mf{padding:14px 20px;border-top:1px solid var(--line);display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--navy-d);color:#fff;padding:11px 18px;border-radius:9px;z-index:200;box-shadow:var(--sh);font-size:14px}
+.toast.err{background:var(--red)}
+.aviso{background:var(--red-l);border:1px solid #EFC4BE;color:#7C2018;padding:11px 14px;border-radius:9px;font-size:13.5px;margin-bottom:16px}
+.aviso.ok{background:var(--green-l);border-color:#BFDFD3;color:#125240}
+.aviso.info{background:var(--soft);border-color:#C4D9E6;color:var(--navy)}
+.aviso.warn{background:var(--amber-l);border-color:#EBD3A4;color:#7A4F03}
+.spin{width:18px;height:18px;border:2px solid var(--line);border-top-color:var(--navy);border-radius:50%;animation:g .7s linear infinite;display:inline-block}
+@keyframes g{to{transform:rotate(360deg)}}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:12.5px}
+.sub{font-size:13px;color:var(--steel)}
+.hr{height:1px;background:var(--line);margin:18px 0}
+.kpirow{display:grid;grid-template-columns:1fr 96px 96px 118px;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--paper)}
+@media(max-width:700px){.kpirow{grid-template-columns:1fr 1fr}}
+.kpirow .nm{font-size:13.5px;font-weight:500}
+.kpirow .mt{font-size:11.5px;color:var(--steel)}
+.rut{display:grid;grid-template-columns:1fr 150px 60px;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--paper)}
+@media(max-width:700px){.rut{grid-template-columns:1fr 120px}.rut .pctc{grid-column:1/-1}}
+
+/* Login */
+.login{min-height:100vh;display:grid;place-items:center;padding:24px;
+  background:radial-gradient(1100px 520px at 12% -10%, #17415F 0%, #0C2334 55%, #081A27 100%)}
+.lcard{width:100%;max-width:400px;background:#fff;border-radius:14px;padding:30px;box-shadow:0 30px 70px -25px rgba(0,0,0,.6)}
+.lcard .ht{font-family:var(--disp);font-weight:700;font-size:30px;letter-spacing:-.02em;line-height:1}
+.lcard .sub2{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--amber);margin:6px 0 22px}
+.lcard p.q{font-size:14px;color:var(--steel);margin:0 0 18px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="module">
+/* Sesión de Plataforma HT: el mismo correo y contraseña con que se entra a la plataforma. */
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+const db = createClient('https://ahfjstuwekcuxshclprl.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFoZmpzdHV3ZWtjdXhzaGNscHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwNDg2MjYsImV4cCI6MjEwMzYyNDYyNn0.lf1uw8WHPRy21GuYlK9NzeI5JgJK2be1LrODq22CodM',
+  { db:{ schema:'core' } });
+window.HT = {
+  async acceso(){
+    const { data:{ session } } = await db.auth.getSession();
+    if(!session){ location.href = 'index.html'; throw new Error('Sin sesión'); }
+    const { data, error } = await db.rpc('uno_a_uno_mi_acceso');
+    if(error) throw new Error(error.message);
+    return data;   // { colaboradorId, clave }
+  },
+  async guardarClave(colaborador, clave){
+    const { error } = await db.rpc('uno_a_uno_guardar_clave', { p_colaborador: colaborador, p_clave: clave });
+    if(error) throw new Error(error.message);
+  },
+  async salir(){ await db.auth.signOut(); location.href = 'index.html'; }
+};
+window.dispatchEvent(new Event('ht-listo'));
+</script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script type="text/babel">
+const {useState, useEffect, useMemo} = React;
+
+/* ============================================================
+   1. CONFIGURACIÓN — edita estas dos líneas
+   ============================================================ */
+const CONFIG = {
+  API_URL: 'https://script.google.com/macros/s/AKfycbxdHJLrVnzsAmfWgpXJe5Mln3Yqv0bZ1l-saU_pyd0pOQCngVp1pcH95EFnvyZBs66N/exec',
+  TOKEN:   'HTRENT-1A1-2026'
+};
+
+/* ============================================================
+   2. CATÁLOGO DE KPIs
+   SC  → plan estratégico de Servicio a Clientes (evaluación proporcional)
+   DOC → Matriz de KPIs de Documentación (evaluación por semáforo)
+   ============================================================ */
+const KPIS = {
+  SC: [
+    {id:'sc1', nombre:'Tiempo promedio de gestión de expediente', meta:5,  u:'días', dir:'menor', evalua:'prop', peso:{COORD:15, EJEC:15}, fuente:'CRM / bitácora'},
+    {id:'sc2', nombre:'Entregas en fecha comprometida',           meta:90, u:'%',    dir:'mayor', evalua:'prop', peso:{COORD:20, EJEC:20}, fuente:'Bitácora de entregas'},
+    {id:'sc3', nombre:'Respuesta a incidencias (1er nivel)',      meta:24, u:'hrs',  dir:'menor', evalua:'prop', peso:{COORD:0,  EJEC:15}, fuente:'Sistema de tickets'},
+    {id:'sc4', nombre:'Resolución de incidencias totales',        meta:80, u:'%',    dir:'mayor', evalua:'prop', peso:{COORD:15, EJEC:15}, fuente:'Sistema de tickets'},
+    {id:'sc5', nombre:'Satisfacción del cliente (CSAT)',          meta:85, u:'pts',  dir:'mayor', evalua:'prop', peso:{COORD:20, EJEC:20}, fuente:'Encuesta post-entrega'},
+    {id:'sc6', nombre:'Expedientes completos al 1er envío',       meta:85, u:'%',    dir:'mayor', evalua:'prop', peso:{COORD:10, EJEC:10}, fuente:'Control de expedientes'},
+    {id:'sc7', nombre:'Desempeño del equipo a cargo',             meta:80, u:'%',    dir:'mayor', evalua:'prop', peso:{COORD:5,  EJEC:0},  fuente:'% global del ejecutivo del área'}
+  ],
+  DOC: [
+    /* Coordinador */
+    {id:'dc1', nombre:'Trámites completados en tiempo',            meta:98, verde:98, amarillo:95, u:'%', dir:'mayor', evalua:'semaforo', peso:{COORD:25, EJEC:0},  fuente:'Bitácora de trámites'},
+    {id:'dc2', nombre:'Trámites sin error ni retrabajo',           meta:98, verde:98, amarillo:96, u:'%', dir:'mayor', evalua:'semaforo', peso:{COORD:20, EJEC:20}, fuente:'Registro de incidencias'},
+    {id:'dc3', nombre:'Expediente completo y vigente',             meta:98, verde:98, amarillo:95, u:'%', dir:'mayor', evalua:'semaforo', peso:{COORD:20, EJEC:0},  fuente:'Base documental'},
+    {id:'dc4', nombre:'Expediente digital completo y actualizado', meta:98, verde:98, amarillo:95, u:'%', dir:'mayor', evalua:'semaforo', peso:{COORD:15, EJEC:0},  fuente:'Repositorio digital'},
+    {id:'dc5', nombre:'Cumplimiento preventivo documental',        meta:95, verde:95, amarillo:90, u:'%', dir:'mayor', evalua:'semaforo', peso:{COORD:10, EJEC:0},  fuente:'Calendario de vencimientos'},
+    {id:'dc6', nombre:'Incidencias por vencimiento o falta documental', meta:0, verde:0, amarillo:1, u:'inc', dir:'menor', evalua:'semaforo', peso:{COORD:10, EJEC:0}, fuente:'Reporte de incidencias'},
+    /* Ejecutiva / Asistente */
+    {id:'da1', nombre:'Tareas y trámites asignados en tiempo',     meta:98, verde:98, amarillo:95, u:'%', dir:'mayor', evalua:'semaforo', peso:{COORD:0, EJEC:25}, fuente:'Bitácora de tareas'},
+    {id:'da3', nombre:'Documentos digitalizados en tiempo',        meta:98, verde:98, amarillo:95, u:'%', dir:'mayor', evalua:'semaforo', peso:{COORD:0, EJEC:20}, fuente:'Repositorio digital'},
+    {id:'da4', nombre:'Expedientes digitales bien estructurados',  meta:98, verde:98, amarillo:95, u:'%', dir:'mayor', evalua:'semaforo', peso:{COORD:0, EJEC:15}, fuente:'Auditoría de carpetas'},
+    {id:'da5', nombre:'Actualización correcta del tablero documental', meta:100, verde:100, amarillo:98, u:'%', dir:'mayor', evalua:'semaforo', peso:{COORD:0, EJEC:10}, fuente:'Base documental'},
+    {id:'da6', nombre:'Seguimiento puntual de expedientes asignados', meta:98, verde:98, amarillo:95, u:'%', dir:'mayor', evalua:'semaforo', peso:{COORD:0, EJEC:10}, fuente:'Checklist de seguimiento'}
+  ]
+};
+
+/* Factores del semáforo (la matriz define verde y amarillo; el de rojo
+   es un supuesto que puedes cambiar aquí en una sola línea) */
+const FACTOR = { verde:100, amarillo:80, rojo:50 };
+
+/* Escalas de bono: cada área conserva la de su propio plan */
+const ESCALAS = {
+  SC: {referencia:'del sueldo base', niveles:[
+    {min:95, nombre:'Excepcional',    bono:{COORD:30,EJEC:25}, cls:'t-ok'},
+    {min:85, nombre:'Alto desempeño', bono:{COORD:25,EJEC:20}, cls:'t-ok'},
+    {min:75, nombre:'Cumplimiento',   bono:{COORD:20,EJEC:15}, cls:'t-nt'},
+    {min:60, nombre:'En desarrollo',  bono:{COORD:10,EJEC:8},  cls:'t-al'},
+    {min:0,  nombre:'Bajo estándar',  bono:{COORD:0, EJEC:0},  cls:'t-rj'}
+  ]},
+  DOC: {referencia:'del bono asignado', niveles:[
+    {min:98, nombre:'Verde',          bono:{COORD:100,EJEC:100}, cls:'t-ok'},
+    {min:95, nombre:'Amarillo alto',  bono:{COORD:80, EJEC:80},  cls:'t-nt'},
+    {min:90, nombre:'Amarillo',       bono:{COORD:50, EJEC:50},  cls:'t-al'},
+    {min:0,  nombre:'Rojo',           bono:{COORD:0,  EJEC:0},   cls:'t-rj'}
+  ]}
+};
+
+/* ============================================================
+   3. RUTINA SEMANAL  (checklist puntuado 0 a 1)
+   La de Ejecutivo SC viene tal cual de tu archivo de 1 a 1.
+   Las otras tres son propuesta derivada de sus KPIs: ajústalas.
+   ============================================================ */
+const RUTINAS = {
+  'SC-EJEC': [
+    'Precisión en folios de ventas',
+    'Precisión en envío de documentos a contrato',
+    'Captura de información de cliente nuevo en formato de control',
+    'Seguimiento a elaboración de contrato',
+    'Seguimiento a clientes con contrato enviado',
+    'Llamadas de seguimiento y referidos',
+    'Conocimiento del producto',
+    'Sesión 1 a 1 con Comercial para revisar avances',
+    'Clientes con programación de entrega el mismo mes',
+    'Mensaje de seguimiento a clientes con 3 semanas de entrega'
+  ],
+  'SC-COORD': [
+    'Revisión del tablero de casos abiertos y críticos',
+    'Seguimiento a las entregas comprometidas de la semana',
+    'Escalamiento y cierre de incidencias fuera de tiempo',
+    'Revisión de expedientes incompletos o por vencer',
+    'Sesión 1 a 1 con el ejecutivo del área',
+    'Revisión de encuestas CSAT y llamadas de recuperación',
+    'Coordinación con Comercial e Inventarios'
+  ],
+  'DOC-COORD': [
+    'Revisión de trámites programados contra concluidos',
+    'Validación de trámites sin error ni retrabajo',
+    'Revisión de expedientes completos y vigentes',
+    'Verificación del expediente digital',
+    'Calendario preventivo de vencimientos actualizado',
+    'Seguimiento a gestores externos',
+    'Sesión 1 a 1 con la ejecutiva del área'
+  ],
+  'DOC-EJEC': [
+    'Trámites asignados concluidos en tiempo',
+    'Revisión de trámites sin error ni retrabajo',
+    'Digitalización de documentos recibidos y emitidos',
+    'Estructura correcta de los expedientes digitales',
+    'Actualización del tablero y base documental',
+    'Seguimiento a expedientes asignados',
+    'Avance de bajas de equipo en proceso'
+  ]
+};
+
+/* ============================================================
+   4. COMPETENCIAS POR PUESTO
+   Las de Ejecutivo SC son las de tu archivo original.
+   ============================================================ */
+const COMPETENCIAS = {
+  'SC-EJEC': ['Empatía genuina','Comunicación clara y profesional','Organización y seguimiento','Actitud positiva y tolerancia a la presión','Orientación a la solución','Conocimiento del producto o servicio'],
+  'SC-COORD': ['Liderazgo y desarrollo del equipo','Comunicación clara y profesional','Organización y seguimiento','Toma de decisiones bajo presión','Orientación a la solución','Análisis de datos y reporteo','Empatía genuina con el cliente'],
+  'DOC-COORD': ['Rigor documental y legal','Planeación preventiva','Liderazgo y desarrollo del equipo','Coordinación con gestores externos','Análisis de datos y reporteo','Comunicación clara y profesional'],
+  'DOC-EJEC': ['Rigor documental','Orden y disciplina digital','Constancia en el seguimiento','Comunicación clara','Atención al detalle','Autonomía en la ejecución']
+};
+
+/* ============================================================
+   5. REGLAS DE UNA INTERACCIÓN PRODUCTIVA
+   ============================================================ */
+const REGLAS = [
+  {g:'Antes de la sesión', items:[
+    {id:'r1', t:'Envié la agenda con al menos 24 horas de anticipación.'},
+    {id:'r2', t:'Revisé los acuerdos de la sesión anterior antes de entrar.'},
+    {id:'r3', t:'Tengo a la mano los KPIs del periodo y un dato concreto de cada uno.'}
+  ]},
+  {g:'Durante la sesión', items:[
+    {id:'r4', t:'Empecé puntual, sin interrupciones ni celular.'},
+    {id:'r5', t:'El colaborador habló primero (regla 70/30: escuché más de lo que hablé).'},
+    {id:'r6', t:'Di retroalimentación sobre conductas observables, con dato y ejemplo, no sobre la persona.'},
+    {id:'r7', t:'Pregunté antes de aconsejar; dejé que propusiera su propia solución.'},
+    {id:'r8', t:'No usé la sesión para resolver operación del día; eso se fue a otro foro.'},
+    {id:'r9', t:'Reconocí al menos un logro concreto del periodo.'}
+  ]},
+  {g:'Al cerrar', items:[
+    {id:'r10', t:'Cerramos con máximo 3 acuerdos, cada uno con responsable y fecha.'},
+    {id:'r11', t:'El colaborador repitió los acuerdos con sus palabras.'},
+    {id:'r12', t:'Definimos una sola meta para la siguiente semana y agendamos la próxima sesión.'}
+  ]}
+];
+
+const PASOS = [
+  {n:'01', t:'Preparación'},
+  {n:'02', t:'Check-in'},
+  {n:'03', t:'Rutina'},
+  {n:'04', t:'KPIs'},
+  {n:'05', t:'Más–Menos–Más'},
+  {n:'06', t:'Seguir/Empezar/Dejar'},
+  {n:'07', t:'Meta y acuerdos'}
+];
+
+const ESTATUS_PLAN = ['No iniciada','En proceso','Bloqueada','Cumplida','Cancelada'];
+
+/* ============================================================
+   6. UTILIDADES
+   ============================================================ */
+const hoy = () => new Date().toISOString().slice(0,10);
+const periodoActual = () => new Date().toISOString().slice(0,7);
+const dias = (a,b) => Math.round((new Date(b+'T12:00:00') - new Date(a+'T12:00:00'))/86400000);
+const fFecha = (d) => { if(!d) return '—'; const p=String(d).slice(0,10).split('-'); if(p.length<3) return d;
+  const m=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  return p[2]+' '+m[+p[1]-1]+' '+p[0]; };
+const fPeriodo = (p) => { if(!p) return '—'; const m=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const x=String(p).split('-'); return (m[+x[1]-1]||'')+' '+x[0]; };
+const iniciales = (n) => String(n||'').trim().split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
+const clave = (c) => (c.area||'')+'-'+(c.rol||'');
+const semanaISO = (f) => {
+  const d = new Date(f+'T12:00:00'); const j = new Date(d.getFullYear(),0,1);
+  return 'Sem '+String(Math.ceil((((d-j)/86400000)+j.getDay()+1)/7)).padStart(2,'0');
+};
+
+function kpisDeRol(area, rol){
+  const base = (KPIS[area]||[]).filter(k => (k.peso[rol]||0) > 0);
+  const suma = base.reduce((a,k)=>a+k.peso[rol],0) || 1;
+  return base.map(k => ({...k, pesoRol:k.peso[rol], pesoNorm:+(k.peso[rol]/suma*100).toFixed(2)}));
+}
+function cumplimiento(k, valor){
+  const v = parseFloat(valor);
+  if (valor === '' || valor === null || valor === undefined || isNaN(v)) return null;
+  if (k.evalua === 'semaforo'){
+    if (k.dir === 'mayor') return v >= k.verde ? FACTOR.verde : (v >= k.amarillo ? FACTOR.amarillo : FACTOR.rojo);
+    return v <= k.verde ? FACTOR.verde : (v <= k.amarillo ? FACTOR.amarillo : FACTOR.rojo);
+  }
+  if (k.dir === 'mayor') return Math.max(0, Math.min(100, k.meta ? v/k.meta*100 : 0));
+  if (v <= 0) return 100;
+  return Math.max(0, Math.min(100, k.meta/v*100));
+}
+function nivelDe(area, pct, rol){
+  const esc = ESCALAS[area] || ESCALAS.SC;
+  const n = esc.niveles.find(x => pct >= x.min) || esc.niveles[esc.niveles.length-1];
+  return {...n, bonoPct:n.bono[rol]||0, referencia:esc.referencia};
+}
+function globalDe(colab, periodo, kpisData){
+  const lista = kpisDeRol(colab.area, colab.rol);
+  const regs = kpisData.filter(r => r.colaboradorId===colab.id && r.periodo===periodo);
+  let acum=0, pesoUsado=0; const detalle=[];
+  lista.forEach(k=>{
+    const r = regs.find(x=>x.kpiId===k.id);
+    const c = r ? cumplimiento(k, r.resultado) : null;
+    if (c !== null){ acum += c*k.pesoNorm/100; pesoUsado += k.pesoNorm; }
+    detalle.push({...k, resultado:r?r.resultado:'', comentario:r?r.comentario:'', cumpl:c});
+  });
+  const pct = pesoUsado>0 ? +(acum/pesoUsado*100).toFixed(1) : null;
+  return {pct, detalle, cobertura:+pesoUsado.toFixed(0)};
+}
+function colorPct(p){ if(p===null||p===undefined) return 'var(--line)'; if(p>=85) return 'var(--green)'; if(p>=75) return 'var(--navy)'; if(p>=60) return 'var(--amber)'; return 'var(--red)'; }
+
+function jsonp(action, data){
+  return new Promise((res, rej)=>{
+    if(!CONFIG.API_URL || CONFIG.API_URL.indexOf('http')!==0)
+      return rej(new Error('Falta configurar la URL del backend en CONFIG.API_URL.'));
+    const cb = 'cb'+Date.now()+Math.floor(Math.random()*1000);
+    const s = document.createElement('script');
+    const to = setTimeout(()=>{fin(); rej(new Error('El servidor no respondió a tiempo.'));}, 25000);
+    function fin(){ clearTimeout(to); try{delete window[cb];}catch(e){window[cb]=undefined;} if(s.parentNode) s.parentNode.removeChild(s); }
+    window[cb] = (r)=>{ fin(); (r && r.ok) ? res(r.data) : rej(new Error((r&&r.error)||'Error desconocido')); };
+    s.onerror = ()=>{ fin(); rej(new Error('No se pudo conectar con el backend.')); };
+    s.src = CONFIG.API_URL+'?callback='+cb+'&token='+encodeURIComponent(CONFIG.TOKEN)
+          +'&action='+encodeURIComponent(action)+'&data='+encodeURIComponent(JSON.stringify(data||{}));
+    document.body.appendChild(s);
+  });
+}
+
+/* ============================================================
+   7. PIEZAS BASE
+   ============================================================ */
+function Modal({titulo, children, onCerrar, pie}){
+  return (
+    <div className="ovl" onMouseDown={e=>{ if(e.target===e.currentTarget) onCerrar(); }}>
+      <div className="mod" role="dialog" aria-modal="true">
+        <div className="mh"><h3>{titulo}</h3><div style={{flex:1}}></div>
+          <button className="btn gh sm" onClick={onCerrar}>Cerrar</button></div>
+        <div className="mb">{children}</div>
+        {pie && <div className="mf">{pie}</div>}
+      </div>
+    </div>
+  );
+}
+function Campo({etiqueta, ayuda, children}){
+  return <label className="f"><span>{etiqueta} {ayuda && <em>· {ayuda}</em>}</span>{children}</label>;
+}
+function Vacio({titulo, texto, accion}){
+  return <div className="vacio"><strong>{titulo}</strong><div className="sub">{texto}</div>{accion && <div style={{marginTop:14}}>{accion}</div>}</div>;
+}
+function Barra({pct, color}){
+  return <div className="barra"><i style={{width:Math.max(0,Math.min(100,pct||0))+'%', background:color||'var(--navy)'}}></i></div>;
+}
+function Spark({puntos}){
+  if(!puntos.length) return <div className="sub">Sin historial todavía.</div>;
+  const w=280,h=56,mx=puntos.length>1?puntos.length-1:1;
+  const pts = puntos.map((p,i)=>[i/mx*(w-8)+4, h-6-((p.v||0)/100)*(h-14)]);
+  const d = pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} width="100%" height={h} role="img" aria-label="Tendencia">
+      <line x1="4" y1={h-6-(85/100)*(h-14)} x2={w-4} y2={h-6-(85/100)*(h-14)} stroke="var(--line)" strokeDasharray="3 3"/>
+      <path d={d} fill="none" stroke="var(--navy)" strokeWidth="2" strokeLinejoin="round"/>
+      {pts.map((p,i)=><circle key={i} cx={p[0]} cy={p[1]} r="3" fill={colorPct(puntos[i].v)}/>)}
+    </svg>
+  );
+}
+
+/* ============================================================
+   8. LOGIN
+   ============================================================ */
+function esperarHT(){
+  return new Promise(res=>{ if(window.HT) return res(window.HT); window.addEventListener('ht-listo', ()=>res(window.HT), {once:true}); });
+}
+function Login({onEntrar}){
+  const [err, setErr] = useState('');
+  async function conectar(){
+    setErr('');
+    try{
+      const ht = await esperarHT();
+      const a = await ht.acceso();
+      const u = await jsonp('login', {clave:a.clave});
+      onEntrar(a.clave, u);
+    }catch(e){ if(e.message!=='Sin sesión') setErr(e.message); }
+  }
+  useEffect(()=>{ conectar(); }, []);
+  return (
+    <div className="login">
+      <div className="lcard">
+        <div className="ht">Plataforma HT</div>
+        <div className="sub2">Interacciones 1 a 1</div>
+        {!err && <p className="q" style={{display:'flex',gap:10,alignItems:'center'}}><span className="spin"></span> Abriendo tu información…</p>}
+        {err && <>
+          <div className="aviso">{err}</div>
+          <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+            <button className="btn" onClick={conectar}>Reintentar</button>
+            <a className="btn gh" href="index.html" style={{textDecoration:'none'}}>Volver a módulos</a>
+          </div>
+        </>}
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   9. PANEL GENERAL
+   ============================================================ */
+function estadoSesion(colab, sesiones){
+  const s = sesiones.filter(x=>x.colaboradorId===colab.id && x.estado==='Realizada')
+                    .sort((a,b)=>String(b.fecha).localeCompare(String(a.fecha)));
+  const ultima = s[0] ? String(s[0].fecha).slice(0,10) : null;
+  const limite = colab.frecuencia==='SEMANAL' ? 7 : 14;
+  const d = ultima ? dias(ultima, hoy()) : null;
+  return {ultima, d, vencida: d===null || d>limite, limite, total:s.length};
+}
+function acuerdosDe(colab, acuerdos){
+  const mios = acuerdos.filter(a=>a.colaboradorId===colab.id);
+  const abiertos = mios.filter(a=>a.estado==='Pendiente'||a.estado==='En curso');
+  const vencidos = abiertos.filter(a=>a.fechaCompromiso && String(a.fechaCompromiso).slice(0,10) < hoy());
+  const cerrados = mios.filter(a=>a.estado==='Cumplido');
+  const tasa = mios.length ? Math.round(cerrados.length/mios.length*100) : null;
+  return {mios, abiertos, vencidos, cerrados, tasa};
+}
+
+function Panel({data, periodo, setPeriodo, abrir, nuevaSesion}){
+  const cols = data.Colaboradores.filter(c=>c.rol!=='ADMIN' && String(c.activo).toUpperCase()!=='NO');
+  const pend = data.Acuerdos.filter(a=>a.estado==='Pendiente'||a.estado==='En curso');
+  const venc = pend.filter(a=>a.fechaCompromiso && String(a.fechaCompromiso).slice(0,10) < hoy());
+  const atrasados = cols.filter(c=>estadoSesion(c, data.Sesiones).vencida);
+  const planAbierto = data.PlanGerencial.filter(p=>p.estatus!=='Cumplida'&&p.estatus!=='Cancelada');
+  const planTarde = planAbierto.filter(p=>p.fechaCompromiso && String(p.fechaCompromiso).slice(0,10) < hoy());
+
+  return (
+    <div>
+      <div style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap',marginBottom:18}}>
+        <div className="eyebrow">Periodo de medición</div>
+        <input type="month" value={periodo} onChange={e=>setPeriodo(e.target.value)} style={{width:170}}/>
+        <div style={{flex:1}}></div>
+        <button className="btn amb" onClick={()=>nuevaSesion(null)}>+ Registrar sesión</button>
+      </div>
+
+      {atrasados.length>0 &&
+        <div className="aviso"><strong>Sesiones vencidas: </strong>
+          {atrasados.map(c=>c.nombre.split(' ')[0]).join(', ')} — según la frecuencia acordada.</div>}
+      {venc.length>0 &&
+        <div className="aviso warn"><strong>{venc.length} acuerdo{venc.length>1?'s':''} con fecha vencida.</strong> Un acuerdo que se vence sin consecuencia enseña que los acuerdos son opcionales.</div>}
+      {planTarde.length>0 &&
+        <div className="aviso info"><strong>{planTarde.length} actividad{planTarde.length>1?'es':''} del plan de 90 días fuera de fecha.</strong> Revísalas en la sección Plan gerencial.</div>}
+
+      <div className="grid g4" style={{marginBottom:22}}>
+        {cols.map(c=>{
+          const g = globalDe(c, periodo, data.KPIs);
+          const es = estadoSesion(c, data.Sesiones);
+          const ac = acuerdosDe(c, data.Acuerdos);
+          const nv = g.pct!==null ? nivelDe(c.area, g.pct, c.rol) : null;
+          return (
+            <button key={c.id} className="pc" onClick={()=>abrir(c.id)}>
+              <div className="top2">
+                <div className={'ini'+(c.area==='DOC'?' doc':'')}>{iniciales(c.nombre)}</div>
+                <div style={{minWidth:0,flex:1}}>
+                  <h4>{c.nombre}</h4>
+                  <div className="rol">{c.puesto}</div>
+                  <div style={{marginTop:7,display:'flex',gap:6,flexWrap:'wrap'}}>
+                    {nv ? <span className={'tag '+nv.cls}>{nv.nombre} · bono {nv.bonoPct}%</span>
+                        : <span className="tag t-gr">Sin KPIs del periodo</span>}
+                    {es.vencida && <span className="tag t-rj">1 a 1 vencida</span>}
+                  </div>
+                </div>
+              </div>
+              <div style={{padding:'0 16px 14px'}}><Barra pct={g.pct||0} color={colorPct(g.pct)}/></div>
+              <div className="met">
+                <div><b style={{color:colorPct(g.pct)}}>{g.pct===null?'—':g.pct+'%'}</b><span>KPIs del mes</span></div>
+                <div><b style={{color:ac.vencidos.length?'var(--red)':'var(--ink)'}}>{ac.abiertos.length}</b><span>Acuerdos abiertos</span></div>
+                <div><b>{es.d===null?'—':es.d}</b><span>Días desde 1 a 1</span></div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="grid g2">
+        <div className="card">
+          <div className="hd"><h3>Acuerdos abiertos de todo el equipo</h3></div>
+          <div className="tw">
+            {pend.length===0
+              ? <Vacio titulo="No hay acuerdos abiertos" texto="Los acuerdos que registres en las sesiones aparecerán aquí hasta que se cierren."/>
+              : <table><thead><tr><th>Colaborador</th><th>Acuerdo</th><th>Compromiso</th><th>Estado</th></tr></thead>
+                <tbody>{pend.slice().sort((a,b)=>String(a.fechaCompromiso).localeCompare(String(b.fechaCompromiso))).slice(0,14).map(a=>{
+                  const c = cols.find(x=>x.id===a.colaboradorId);
+                  const tarde = a.fechaCompromiso && String(a.fechaCompromiso).slice(0,10) < hoy();
+                  return <tr key={a.id}>
+                    <td>{c?c.nombre.split(' ')[0]:'—'}</td>
+                    <td>{a.descripcion}</td>
+                    <td className="dato" style={{color:tarde?'var(--red)':'inherit'}}>{fFecha(a.fechaCompromiso)}</td>
+                    <td><span className={'tag '+(tarde?'t-rj':'t-nt')}>{tarde?'Vencido':a.estado}</span></td>
+                  </tr>;})}
+                </tbody></table>}
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="hd"><h3>Reglas de una sesión productiva</h3></div>
+          <div className="bd" style={{paddingTop:8}}>
+            {REGLAS.map(g=>
+              <div key={g.g} style={{marginBottom:12}}>
+                <div style={{fontFamily:'var(--mono)',fontSize:10,letterSpacing:'.12em',textTransform:'uppercase',color:'var(--gray)',margin:'8px 0 4px'}}>{g.g}</div>
+                {g.items.map(i=><div key={i.id} style={{fontSize:13.5,padding:'3px 0',display:'flex',gap:8}}>
+                  <span style={{color:'var(--amber)'}}>—</span><span>{i.t}</span></div>)}
+              </div>)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   10. FICHA
+   ============================================================ */
+function Ficha({colab, data, periodo, setPeriodo, guardar, nuevaSesion, verSesion, soloLectura}){
+  const [tab, setTab] = useState('resumen');
+  const g = globalDe(colab, periodo, data.KPIs);
+  const nv = g.pct!==null ? nivelDe(colab.area, g.pct, colab.rol) : null;
+  const es = estadoSesion(colab, data.Sesiones);
+  const ac = acuerdosDe(colab, data.Acuerdos);
+  const sesiones = data.Sesiones.filter(s=>s.colaboradorId===colab.id)
+                    .sort((a,b)=>String(b.fecha).localeCompare(String(a.fecha)));
+  const periodos = [...new Set(data.KPIs.filter(k=>k.colaboradorId===colab.id).map(k=>k.periodo))].sort();
+  const hist = periodos.slice(-6).map(p=>({p, v:globalDe(colab,p,data.KPIs).pct||0}));
+
+  const tabs = [['resumen','Resumen'],['sesiones','Sesiones'],['rutina','Rutina semanal'],['kpis','KPIs'],['acuerdos','Acuerdos'],['desarrollo','Desarrollo'],['perfil','Perfil']];
+
+  return (
+    <div>
+      <div className="card" style={{marginBottom:18}}>
+        <div className="bd" style={{display:'flex',gap:16,alignItems:'flex-start',flexWrap:'wrap'}}>
+          <div className={'ini'+(colab.area==='DOC'?' doc':'')} style={{width:54,height:54,flex:'0 0 54px',fontSize:19}}>{iniciales(colab.nombre)}</div>
+          <div style={{flex:1,minWidth:220}}>
+            <h2 style={{margin:0,fontFamily:'var(--disp)',fontSize:22}}>{colab.nombre}</h2>
+            <div className="sub">{colab.puesto} · 1 a 1 {colab.frecuencia==='SEMANAL'?'semanal':'quincenal'}</div>
+            <div style={{marginTop:9,display:'flex',gap:7,flexWrap:'wrap'}}>
+              {nv && <span className={'tag '+nv.cls}>{nv.nombre} · {g.pct}% · bono {nv.bonoPct}% {nv.referencia}</span>}
+              <span className={'tag '+(es.vencida?'t-rj':'t-ok')}>{es.ultima?('Última 1 a 1: '+fFecha(es.ultima)):'Sin sesiones registradas'}</span>
+              {ac.vencidos.length>0 && <span className="tag t-rj">{ac.vencidos.length} acuerdo(s) vencido(s)</span>}
+            </div>
+          </div>
+          {!soloLectura && <button className="btn amb" onClick={()=>nuevaSesion(colab.id)}>+ Registrar sesión</button>}
+        </div>
+      </div>
+
+      <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:16}}>
+        {tabs.map(([k,l])=><button key={k} className={'btn '+(tab===k?'':'gh')+' sm'} onClick={()=>setTab(k)}>{l}</button>)}
+      </div>
+
+      {tab==='resumen' && <Resumen colab={colab} data={data} g={g} nv={nv} hist={hist} ac={ac} es={es} periodo={periodo} setPeriodo={setPeriodo} sesiones={sesiones} verSesion={verSesion}/>}
+      {tab==='sesiones' && <ListaSesiones sesiones={sesiones} verSesion={verSesion} acuerdos={data.Acuerdos}/>}
+      {tab==='rutina' && <PanelRutina colab={colab} data={data} verSesion={verSesion}/>}
+      {tab==='kpis' && <PanelKPIs colab={colab} data={data} periodo={periodo} setPeriodo={setPeriodo} guardar={guardar} soloLectura={soloLectura}/>}
+      {tab==='acuerdos' && <PanelAcuerdos colab={colab} acuerdos={ac.mios} guardar={guardar} soloLectura={soloLectura}/>}
+      {tab==='desarrollo' && <PanelDesarrollo colab={colab} data={data} guardar={guardar} soloLectura={soloLectura}/>}
+      {tab==='perfil' && <PanelPerfil colab={colab} data={data} guardar={guardar} soloLectura={soloLectura}/>}
+    </div>
+  );
+}
+
+function Resumen({colab, data, g, nv, hist, ac, es, periodo, setPeriodo, sesiones, verSesion}){
+  const ult = sesiones.filter(s=>s.estado==='Realizada')[0];
+  const rut = sesiones.filter(s=>s.promedioRutina!=='' && s.promedioRutina!==null)
+                      .slice(0,8).reverse()
+                      .map(s=>({p:s.fecha, v:Math.round((parseFloat(s.promedioRutina)||0)*100)}));
+  return (
+    <div className="grid g2">
+      <div className="card">
+        <div className="hd"><h3>Desempeño de {fPeriodo(periodo)}</h3><div style={{flex:1}}></div>
+          <input type="month" value={periodo} onChange={e=>setPeriodo(e.target.value)} style={{width:160}}/></div>
+        <div className="bd">
+          <div style={{display:'flex',alignItems:'baseline',gap:12,marginBottom:6}}>
+            <div className="dato" style={{fontSize:42,fontWeight:600,lineHeight:1,color:colorPct(g.pct)}}>{g.pct===null?'—':g.pct+'%'}</div>
+            <div>{nv ? <span className={'tag '+nv.cls}>{nv.nombre}</span> : <span className="tag t-gr">Sin captura</span>}
+              <div className="sub" style={{marginTop:4}}>Bono proyectado: <b>{nv?nv.bonoPct:0}%</b> {nv?nv.referencia:''}</div></div>
+          </div>
+          <Barra pct={g.pct||0} color={colorPct(g.pct)}/>
+          <div className="sub" style={{marginTop:6}}>Cobertura de captura: {g.cobertura}% del peso total de sus KPIs.</div>
+          <div className="hr"></div>
+          <div className="eyebrow" style={{marginBottom:6}}>Tendencia mensual de KPIs</div>
+          <Spark puntos={hist}/>
+          <div className="hr"></div>
+          <div className="eyebrow" style={{marginBottom:6}}>Tendencia de la rutina semanal</div>
+          <Spark puntos={rut}/>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="hd"><h3>Estado de la relación 1 a 1</h3></div>
+        <div className="bd">
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,marginBottom:14}}>
+            <div><div className="eyebrow">Sesiones realizadas</div><div className="dato" style={{fontSize:26,fontWeight:600}}>{es.total}</div></div>
+            <div><div className="eyebrow">Cumplimiento de acuerdos</div><div className="dato" style={{fontSize:26,fontWeight:600,color:ac.tasa===null?'var(--gray)':colorPct(ac.tasa)}}>{ac.tasa===null?'—':ac.tasa+'%'}</div></div>
+            <div><div className="eyebrow">Acuerdos abiertos</div><div className="dato" style={{fontSize:26,fontWeight:600}}>{ac.abiertos.length}</div></div>
+            <div><div className="eyebrow">Vencidos</div><div className="dato" style={{fontSize:26,fontWeight:600,color:ac.vencidos.length?'var(--red)':'var(--ink)'}}>{ac.vencidos.length}</div></div>
+          </div>
+          <div className="hr"></div>
+          {ult ? <div>
+            <div className="eyebrow" style={{marginBottom:6}}>Última sesión · {fFecha(ult.fecha)}</div>
+            {ult.metaSemana && <div className="aviso info" style={{marginBottom:10}}><b>Meta comprometida:</b> {ult.metaSemana}</div>}
+            <div style={{fontSize:14,marginBottom:4}}><b>Lo que sostuvo:</b> {ult.logros || '—'}</div>
+            <div style={{fontSize:14,marginBottom:10}}><b>Lo que ajusta:</b> {ult.mejoras || '—'}</div>
+            <button className="btn gh sm" onClick={()=>verSesion(ult)}>Ver sesión completa</button>
+          </div> : <div className="sub">Aún no hay una sesión registrada.</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ListaSesiones({sesiones, verSesion, acuerdos}){
+  if(!sesiones.length) return <div className="card"><Vacio titulo="Sin sesiones registradas" texto="La primera 1 a 1 abre el historial."/></div>;
+  return (
+    <div className="card"><div className="tw">
+      <table><thead><tr><th>Fecha</th><th>Estado</th><th>Rutina</th><th>Ánimo</th><th>Acuerdos</th><th>Meta de la semana</th><th></th></tr></thead>
+      <tbody>{sesiones.map(s=>{
+        const n = acuerdos.filter(a=>a.sesionId===s.id).length;
+        const pr = s.promedioRutina!=='' && s.promedioRutina!==null ? Math.round(parseFloat(s.promedioRutina)*100) : null;
+        return <tr key={s.id}>
+          <td className="dato" style={{whiteSpace:'nowrap'}}>{fFecha(s.fecha)}</td>
+          <td><span className={'tag '+(s.estado==='Realizada'?'t-ok':s.estado==='Cancelada'?'t-rj':'t-nt')}>{s.estado}</span></td>
+          <td className="dato" style={{color:colorPct(pr),fontWeight:600}}>{pr===null?'—':pr+'%'}</td>
+          <td className="dato">{s.animo?s.animo+'/5':'—'}</td>
+          <td className="dato">{n}</td>
+          <td style={{maxWidth:260}}>{s.metaSemana||'—'}</td>
+          <td><button className="btn gh sm" onClick={()=>verSesion(s)}>Abrir</button></td>
+        </tr>;})}
+      </tbody></table>
+    </div></div>
+  );
+}
+
+/* ============================================================
+   11. RUTINA SEMANAL
+   ============================================================ */
+function PanelRutina({colab, data, verSesion}){
+  const ses = data.Sesiones.filter(s=>s.colaboradorId===colab.id)
+                .sort((a,b)=>String(b.fecha).localeCompare(String(a.fecha)));
+  const conRutina = ses.filter(s=>data.Rutinas.some(r=>r.sesionId===s.id));
+  const cat = RUTINAS[clave(colab)] || [];
+
+  // promedio por actividad en las últimas 8 semanas
+  const ultimas = conRutina.slice(0,8).map(s=>s.id);
+  const porAct = cat.map(a=>{
+    const rs = data.Rutinas.filter(r=>ultimas.includes(r.sesionId) && r.actividad===a);
+    const v = rs.length ? rs.reduce((x,r)=>x+(parseFloat(r.score)||0),0)/rs.length : null;
+    return {a, v: v===null?null:Math.round(v*100), n:rs.length};
+  });
+
+  return (
+    <div className="grid g2">
+      <div className="card">
+        <div className="hd"><h3>Semanas registradas</h3></div>
+        <div className="tw">
+          {!conRutina.length ? <Vacio titulo="Sin rutina capturada" texto="La rutina se llena dentro de la sesión, en el bloque 03."/> :
+          <table><thead><tr><th>Semana</th><th>Fecha</th><th>Promedio</th><th></th></tr></thead>
+          <tbody>{conRutina.map(s=>{
+            const pr = Math.round((parseFloat(s.promedioRutina)||0)*100);
+            return <tr key={s.id}>
+              <td className="dato">{s.semana || semanaISO(String(s.fecha).slice(0,10))}</td>
+              <td className="dato">{fFecha(s.fecha)}</td>
+              <td><div className="dato" style={{fontWeight:600,color:colorPct(pr)}}>{pr}%</div><Barra pct={pr} color={colorPct(pr)}/></td>
+              <td><button className="btn gh sm" onClick={()=>verSesion(s)}>Abrir</button></td>
+            </tr>;})}
+          </tbody></table>}
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="hd"><h3>Dónde se gana y dónde se pierde</h3></div>
+        <div className="bd">
+          <div className="sub" style={{marginBottom:12}}>Promedio por actividad en las últimas 8 semanas capturadas. Lo que aparece abajo es lo que hay que trabajar en la 1 a 1.</div>
+          {porAct.slice().sort((a,b)=>(a.v===null?101:a.v)-(b.v===null?101:b.v)).map(x=>(
+            <div key={x.a} style={{padding:'8px 0',borderBottom:'1px solid var(--paper)'}}>
+              <div style={{display:'flex',gap:10,alignItems:'center'}}>
+                <div style={{flex:1,fontSize:13.5}}>{x.a}</div>
+                <div className="dato" style={{fontWeight:600,color:colorPct(x.v),width:50,textAlign:'right'}}>{x.v===null?'—':x.v+'%'}</div>
+              </div>
+              <div style={{marginTop:5}}><Barra pct={x.v||0} color={colorPct(x.v)}/></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   12. KPIs
+   ============================================================ */
+function PanelKPIs({colab, data, periodo, setPeriodo, guardar, soloLectura}){
+  const g = globalDe(colab, periodo, data.KPIs);
+  const [vals, setVals] = useState({});
+  const [coment, setComent] = useState({});
+  const [guardando, setGuardando] = useState(false);
+
+  useEffect(()=>{
+    const v={}, c={};
+    g.detalle.forEach(k=>{ v[k.id]=(k.resultado===0||k.resultado)?String(k.resultado):''; c[k.id]=k.comentario||''; });
+    setVals(v); setComent(c);
+  }, [colab.id, periodo, data.KPIs.length]);
+
+  const ejecArea = data.Colaboradores.find(x=>x.area===colab.area && x.rol==='EJEC');
+  const sugerido = colab.rol==='COORD' && ejecArea ? globalDe(ejecArea, periodo, data.KPIs).pct : null;
+
+  const previo = useMemo(()=>{
+    const lista = kpisDeRol(colab.area, colab.rol);
+    let acum=0, peso=0;
+    lista.forEach(k=>{ const c=cumplimiento(k, vals[k.id]); if(c!==null){acum+=c*k.pesoNorm/100; peso+=k.pesoNorm;} });
+    return peso>0 ? +(acum/peso*100).toFixed(1) : null;
+  }, [vals, colab.id]);
+  const nv = previo!==null ? nivelDe(colab.area, previo, colab.rol) : null;
+
+  async function guardarTodo(){
+    setGuardando(true);
+    const regs = [];
+    kpisDeRol(colab.area, colab.rol).forEach(k=>{
+      const ex = data.KPIs.find(r=>r.colaboradorId===colab.id && r.periodo===periodo && r.kpiId===k.id);
+      if(vals[k.id]==='' && !ex) return;
+      regs.push({id: ex?ex.id:'', colaboradorId:colab.id, periodo, kpiId:k.id, resultado:vals[k.id], comentario:coment[k.id]||''});
+    });
+    if(regs.length) await guardar('KPIs', regs);
+    setGuardando(false);
+  }
+
+  return (
+    <div className="card">
+      <div className="hd"><h3>KPIs de {colab.nombre.split(' ')[0]}</h3><div style={{flex:1}}></div>
+        <input type="month" value={periodo} onChange={e=>setPeriodo(e.target.value)} style={{width:160}}/></div>
+      <div className="bd">
+        <div className="aviso info">
+          {colab.area==='DOC'
+            ? <>Evaluación por semáforo, igual que tu matriz de Documentación: verde vale {FACTOR.verde}%, amarillo {FACTOR.amarillo}% y rojo {FACTOR.rojo}%. Los porcentajes se capturan como número entero (98, no 0.98).</>
+            : <>Evaluación proporcional contra la meta, topada al 100% por indicador: rebasar una meta no compensa otra por debajo.</>}
+        </div>
+
+        <div className="kpirow" style={{borderBottom:'1px solid var(--line)',paddingBottom:6}}>
+          <div className="eyebrow">Indicador</div><div className="eyebrow">Meta</div>
+          <div className="eyebrow">Resultado</div><div className="eyebrow">Cumplimiento</div>
+        </div>
+
+        {kpisDeRol(colab.area, colab.rol).map(k=>{
+          const c = cumplimiento(k, vals[k.id]);
+          return (
+            <div key={k.id}>
+              <div className="kpirow">
+                <div>
+                  <div className="nm">{k.nombre}</div>
+                  <div className="mt">Peso {k.pesoNorm}% · {k.fuente}</div>
+                </div>
+                <div className="dato" style={{fontSize:13}}>
+                  {k.evalua==='semaforo'
+                    ? <>V {k.dir==='menor'?'≤':'≥'}{k.verde} · A {k.amarillo}</>
+                    : <>{k.dir==='menor'?'≤ ':'≥ '}{k.meta} {k.u}</>}
+                </div>
+                <div>
+                  <input type="number" step="0.1" value={vals[k.id]||''} disabled={soloLectura}
+                    onChange={e=>setVals({...vals,[k.id]:e.target.value})} placeholder="—"/>
+                  {k.id==='sc7' && sugerido!==null && !soloLectura &&
+                    <button className="btn gh sm" style={{marginTop:5,width:'100%'}}
+                      onClick={()=>setVals({...vals,[k.id]:String(sugerido)})}>Usar {sugerido}%</button>}
+                </div>
+                <div>
+                  <div className="dato" style={{fontWeight:600,color:colorPct(c)}}>{c===null?'—':Math.round(c)+'%'}</div>
+                  <Barra pct={c||0} color={colorPct(c)}/>
+                </div>
+              </div>
+              {!soloLectura
+                ? <input type="text" placeholder="Nota del periodo (opcional): qué explica este número"
+                    value={coment[k.id]||''} onChange={e=>setComent({...coment,[k.id]:e.target.value})}
+                    style={{marginBottom:10,fontSize:13}}/>
+                : (coment[k.id] ? <div className="sub" style={{marginBottom:10}}>{coment[k.id]}</div> : null)}
+            </div>
+          );
+        })}
+
+        <div className="hr"></div>
+        <div style={{display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}}>
+          <div>
+            <div className="eyebrow">Resultado global del periodo</div>
+            <div className="dato" style={{fontSize:34,fontWeight:600,color:colorPct(previo)}}>{previo===null?'—':previo+'%'}</div>
+          </div>
+          {nv && <div><span className={'tag '+nv.cls}>{nv.nombre}</span>
+            <div className="sub" style={{marginTop:4}}>Bono proyectado: <b>{nv.bonoPct}%</b> {nv.referencia}</div></div>}
+          <div style={{flex:1}}></div>
+          {!soloLectura &&
+            <button className="btn" onClick={guardarTodo} disabled={guardando}>
+              {guardando ? <span className="spin"></span> : null} Guardar KPIs del periodo</button>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   13. ACUERDOS
+   ============================================================ */
+function PanelAcuerdos({colab, acuerdos, guardar, soloLectura}){
+  const [edit, setEdit] = useState(null);
+  const orden = [...acuerdos].sort((a,b)=>String(b.fechaCompromiso).localeCompare(String(a.fechaCompromiso)));
+  async function cambiarEstado(a, estado){
+    await guardar('Acuerdos', [{...a, estado, fechaCierre:(estado==='Cumplido'||estado==='Cancelado')?hoy():''}]);
+  }
+  return (
+    <div className="card">
+      <div className="hd"><h3>Acuerdos de {colab.nombre.split(' ')[0]}</h3><div style={{flex:1}}></div>
+        {!soloLectura && <button className="btn gh sm" onClick={()=>setEdit({colaboradorId:colab.id, estado:'Pendiente', responsable:'Colaborador', fechaCompromiso:hoy()})}>+ Nuevo acuerdo</button>}</div>
+      <div className="tw">
+        {!orden.length ? <Vacio titulo="Sin acuerdos" texto="Los acuerdos nacen en la sesión 1 a 1. Máximo tres por sesión."/> :
+        <table><thead><tr><th>Acuerdo</th><th>Responsable</th><th>Compromiso</th><th>Estado</th><th></th></tr></thead>
+        <tbody>{orden.map(a=>{
+          const tarde = (a.estado==='Pendiente'||a.estado==='En curso') && a.fechaCompromiso && String(a.fechaCompromiso).slice(0,10)<hoy();
+          return <tr key={a.id}>
+            <td style={{maxWidth:360}}>{a.descripcion}{a.evidencia && <div className="sub">Evidencia: {a.evidencia}</div>}</td>
+            <td>{a.responsable}</td>
+            <td className="dato" style={{whiteSpace:'nowrap',color:tarde?'var(--red)':'inherit'}}>{fFecha(a.fechaCompromiso)}</td>
+            <td><span className={'tag '+(a.estado==='Cumplido'?'t-ok':tarde?'t-rj':a.estado==='Cancelado'?'t-gr':'t-al')}>{tarde?'Vencido':a.estado}</span></td>
+            <td style={{whiteSpace:'nowrap'}}>
+              {!soloLectura && <>
+                {a.estado!=='Cumplido' && <button className="btn gh sm" onClick={()=>cambiarEstado(a,'Cumplido')}>Cumplido</button>}{' '}
+                <button className="btn gh sm" onClick={()=>setEdit(a)}>Editar</button></>}
+            </td>
+          </tr>;})}
+        </tbody></table>}
+      </div>
+      {edit && <FormAcuerdo acuerdo={edit} onCerrar={()=>setEdit(null)} guardar={guardar}/>}
+    </div>
+  );
+}
+
+function FormAcuerdo({acuerdo, onCerrar, guardar}){
+  const [f, setF] = useState({descripcion:'', responsable:'Colaborador', fechaCompromiso:hoy(), estado:'Pendiente', evidencia:'', comentario:'', ...acuerdo});
+  const [g, setG] = useState(false);
+  async function ok(){ setG(true); await guardar('Acuerdos',[f]); setG(false); onCerrar(); }
+  return (
+    <Modal titulo={f.id?'Editar acuerdo':'Nuevo acuerdo'} onCerrar={onCerrar}
+      pie={<><button className="btn gh" onClick={onCerrar}>Cancelar</button>
+           <button className="btn" onClick={ok} disabled={!f.descripcion.trim()||g}>{g?<span className="spin"></span>:null} Guardar acuerdo</button></>}>
+      <Campo etiqueta="Acuerdo" ayuda="qué se va a hacer, en una sola frase observable">
+        <textarea value={f.descripcion} onChange={e=>setF({...f,descripcion:e.target.value})}
+          placeholder="Ej.: Enviar el reporte de expedientes pendientes cada viernes antes de las 14:00."/></Campo>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+        <Campo etiqueta="Responsable">
+          <select value={f.responsable} onChange={e=>setF({...f,responsable:e.target.value})}>
+            <option>Colaborador</option><option>Gerente</option><option>Ambos</option></select></Campo>
+        <Campo etiqueta="Fecha compromiso">
+          <input type="date" value={String(f.fechaCompromiso||'').slice(0,10)} onChange={e=>setF({...f,fechaCompromiso:e.target.value})}/></Campo>
+        <Campo etiqueta="Estado">
+          <select value={f.estado} onChange={e=>setF({...f,estado:e.target.value})}>
+            <option>Pendiente</option><option>En curso</option><option>Cumplido</option><option>Cancelado</option></select></Campo>
+        <Campo etiqueta="Evidencia esperada" ayuda="cómo sabremos que se cumplió">
+          <input type="text" value={f.evidencia||''} onChange={e=>setF({...f,evidencia:e.target.value})}/></Campo>
+      </div>
+      <Campo etiqueta="Comentario de seguimiento"><textarea value={f.comentario||''} onChange={e=>setF({...f,comentario:e.target.value})} style={{minHeight:60}}/></Campo>
+    </Modal>
+  );
+}
+
+/* ============================================================
+   14. DESARROLLO Y COMPETENCIAS
+   ============================================================ */
+function PanelDesarrollo({colab, data, guardar, soloLectura}){
+  const items = data.Desarrollo.filter(d=>d.colaboradorId===colab.id);
+  const comps = data.Competencias.filter(d=>d.colaboradorId===colab.id);
+  const cat = COMPETENCIAS[clave(colab)] || [];
+  const [edit, setEdit] = useState(null);
+  const [editC, setEditC] = useState(null);
+
+  return (
+    <div className="grid g2">
+      <div className="card">
+        <div className="hd"><h3>Plan de desarrollo</h3><div style={{flex:1}}></div>
+          {!soloLectura && <button className="btn gh sm" onClick={()=>setEdit({colaboradorId:colab.id, estado:'En curso', avance:0, nivelActual:'2', nivelObjetivo:'4', trimestre:'2026-T3', competencia:cat[0]||''})}>+ Competencia</button>}</div>
+        <div className="bd">
+          {!items.length ? <Vacio titulo="Sin plan de desarrollo" texto="Una o dos competencias por trimestre. Más de dos a la vez no se desarrolla ninguna."/> :
+          items.map(d=>(
+            <div key={d.id} style={{borderBottom:'1px solid var(--paper)',padding:'12px 0'}}>
+              <div style={{display:'flex',gap:12,alignItems:'flex-start',flexWrap:'wrap'}}>
+                <div style={{flex:1,minWidth:210}}>
+                  <div style={{fontWeight:600}}>{d.competencia}</div>
+                  <div className="sub">Nivel {d.nivelActual} → {d.nivelObjetivo} · {d.trimestre} · <span className="tag t-nt">{d.estado}</span></div>
+                  {d.acciones && <div style={{fontSize:13.5,marginTop:6}}><b>Acciones:</b> {d.acciones}</div>}
+                  {d.evidencia && <div style={{fontSize:13.5}}><b>Evidencia:</b> {d.evidencia}</div>}
+                </div>
+                <div style={{width:160}}>
+                  <div className="dato" style={{fontWeight:600,marginBottom:4}}>{d.avance||0}%</div>
+                  <Barra pct={d.avance||0} color={colorPct(d.avance)}/>
+                  {!soloLectura && <button className="btn gh sm" style={{marginTop:8}} onClick={()=>setEdit(d)}>Editar</button>}
+                </div>
+              </div>
+            </div>))}
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="hd"><h3>Competencias del puesto</h3></div>
+        <div className="bd">
+          <div className="sub" style={{marginBottom:12}}>Evaluación de 1 a 5. Sirve para ver el perfil completo, no solo el número del mes.</div>
+          {cat.map(c=>{
+            const ev = comps.find(x=>x.competencia===c);
+            const n = ev ? parseInt(ev.nivel,10)||0 : 0;
+            return (
+              <div key={c} style={{padding:'9px 0',borderBottom:'1px solid var(--paper)'}}>
+                <div style={{display:'flex',gap:10,alignItems:'center'}}>
+                  <div style={{flex:1,fontSize:13.5}}>{c}</div>
+                  <div className="dato" style={{fontWeight:600,color:n?colorPct(n/5*100):'var(--gray)'}}>{n?n+'/5':'—'}</div>
+                  {!soloLectura && <button className="btn gh sm" onClick={()=>setEditC(ev||{colaboradorId:colab.id, competencia:c, nivel:'3', fecha:hoy(), notas:''})}>Evaluar</button>}
+                </div>
+                <div style={{marginTop:5}}><Barra pct={n/5*100} color={colorPct(n/5*100)}/></div>
+                {ev && ev.notas && <div className="sub" style={{marginTop:4}}>{ev.notas}</div>}
+              </div>);
+          })}
+        </div>
+      </div>
+
+      {edit && <FormDesarrollo item={edit} cat={cat} onCerrar={()=>setEdit(null)} guardar={guardar}/>}
+      {editC && <Modal titulo={editC.competencia} onCerrar={()=>setEditC(null)}
+        pie={<><button className="btn gh" onClick={()=>setEditC(null)}>Cancelar</button>
+             <button className="btn" onClick={async()=>{await guardar('Competencias',[editC]); setEditC(null);}}>Guardar evaluación</button></>}>
+        <Campo etiqueta="Nivel actual" ayuda="1 apenas inicia · 3 cumple · 5 referente del área">
+          <select value={editC.nivel} onChange={e=>setEditC({...editC,nivel:e.target.value})}>
+            {[1,2,3,4,5].map(n=><option key={n} value={n}>{n}</option>)}</select></Campo>
+        <Campo etiqueta="Fecha de evaluación"><input type="date" value={String(editC.fecha||'').slice(0,10)} onChange={e=>setEditC({...editC,fecha:e.target.value})}/></Campo>
+        <Campo etiqueta="Evidencia observada" ayuda="qué viste que sustenta este nivel">
+          <textarea value={editC.notas} onChange={e=>setEditC({...editC,notas:e.target.value})} style={{minHeight:70}}/></Campo>
+      </Modal>}
+    </div>
+  );
+}
+
+function FormDesarrollo({item, cat, onCerrar, guardar}){
+  const [f, setF] = useState({competencia:cat[0]||'', acciones:'', evidencia:'', ...item});
+  const [g, setG] = useState(false);
+  async function ok(){ setG(true); await guardar('Desarrollo',[f]); setG(false); onCerrar(); }
+  return (
+    <Modal titulo="Competencia a desarrollar" onCerrar={onCerrar}
+      pie={<><button className="btn gh" onClick={onCerrar}>Cancelar</button>
+           <button className="btn" onClick={ok} disabled={g}>{g?<span className="spin"></span>:null} Guardar</button></>}>
+      <Campo etiqueta="Competencia">
+        <select value={f.competencia} onChange={e=>setF({...f,competencia:e.target.value})}>
+          {cat.map(c=><option key={c}>{c}</option>)}</select></Campo>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12}}>
+        <Campo etiqueta="Nivel actual" ayuda="1 a 5"><input type="number" min="1" max="5" value={f.nivelActual} onChange={e=>setF({...f,nivelActual:e.target.value})}/></Campo>
+        <Campo etiqueta="Nivel objetivo"><input type="number" min="1" max="5" value={f.nivelObjetivo} onChange={e=>setF({...f,nivelObjetivo:e.target.value})}/></Campo>
+        <Campo etiqueta="Trimestre"><input type="text" value={f.trimestre} onChange={e=>setF({...f,trimestre:e.target.value})} placeholder="2026-T3"/></Campo>
+      </div>
+      <Campo etiqueta="Acciones concretas" ayuda="qué va a hacer, no qué va a 'mejorar'">
+        <textarea value={f.acciones} onChange={e=>setF({...f,acciones:e.target.value})}
+          placeholder="Ej.: Dirigir la junta semanal de entregas dos veces al mes y recibir retroalimentación al terminar."/></Campo>
+      <Campo etiqueta="Evidencia de avance"><input type="text" value={f.evidencia} onChange={e=>setF({...f,evidencia:e.target.value})}/></Campo>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+        <Campo etiqueta="Avance (%)"><input type="number" min="0" max="100" value={f.avance} onChange={e=>setF({...f,avance:e.target.value})}/></Campo>
+        <Campo etiqueta="Estado"><select value={f.estado} onChange={e=>setF({...f,estado:e.target.value})}>
+          <option>En curso</option><option>Logrado</option><option>En pausa</option></select></Campo>
+      </div>
+    </Modal>
+  );
+}
+
+/* ============================================================
+   15. PERFIL
+   ============================================================ */
+function PanelPerfil({colab, guardar, soloLectura}){
+  const [f, setF] = useState(colab);
+  const [g, setG] = useState(false);
+  useEffect(()=>{ setF(colab); }, [colab.id]);
+  const campos = [
+    ['driver','Driver / sueños','qué lo mueve de verdad, dentro y fuera del trabajo'],
+    ['gustos','Gustos','de qué se le puede hablar cuando la conversación se pone dura'],
+    ['fortalezas','Fortalezas','en qué es confiable sin supervisión'],
+    ['oportunidades','Áreas de oportunidad','lo que sí hay que trabajar, dicho sin adorno'],
+    ['flowTips','Flow tips','qué le funciona: cómo prefiere recibir feedback, cuándo rinde más']
+  ];
+  return (
+    <div className="card">
+      <div className="hd"><h3>Perfil de {colab.nombre.split(' ')[0]}</h3></div>
+      <div className="bd">
+        <div className="sub" style={{marginBottom:14}}>Esto es lo que hace distinta una 1 a 1 de una revisión de números. Léelo antes de cada sesión.</div>
+        {campos.map(([k,l,a])=>
+          soloLectura
+            ? <div key={k} style={{marginBottom:14}}>
+                <div className="eyebrow" style={{marginBottom:4}}>{l}</div>
+                <div style={{fontSize:14}}>{f[k]||<span className="sub">Sin capturar.</span>}</div>
+              </div>
+            : <Campo key={k} etiqueta={l} ayuda={a}>
+                <textarea value={f[k]||''} onChange={e=>setF({...f,[k]:e.target.value})} style={{minHeight:66}}/>
+              </Campo>)}
+        {!soloLectura &&
+          <button className="btn" disabled={g} onClick={async()=>{setG(true); await guardar('Colaboradores',[f]); setG(false);}}>
+            {g?<span className="spin"></span>:null} Guardar perfil</button>}
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   16. PLAN GERENCIAL DE 90 DÍAS
+   ============================================================ */
+function PlanGerencial({data, guardar, soloLectura}){
+  const [fase, setFase] = useState('Todas');
+  const [edit, setEdit] = useState(null);
+  const filas = data.PlanGerencial.filter(p=>fase==='Todas'||p.fase===fase)
+                  .sort((a,b)=>(+a.semana)-(+b.semana));
+  const nom = (id)=>{ const c=data.Colaboradores.find(x=>x.id===id); return c?c.nombre.split(' ')[0]:(id==='ADMIN'?'Roger':'—'); };
+  const total = data.PlanGerencial.length;
+  const cumpl = data.PlanGerencial.filter(p=>p.estatus==='Cumplida').length;
+  const bloq  = data.PlanGerencial.filter(p=>p.estatus==='Bloqueada').length;
+  const prom  = total ? Math.round(data.PlanGerencial.reduce((a,p)=>a+(parseFloat(p.avance)||0),0)/total) : 0;
+
+  return (
+    <div>
+      <div className="grid g4" style={{marginBottom:18}}>
+        {[['Actividades',total,'var(--ink)'],['Cumplidas',cumpl,'var(--green)'],['Bloqueadas',bloq,bloq?'var(--red)':'var(--ink)'],['Avance promedio',prom+'%',colorPct(prom)]].map(([l,v,c])=>
+          <div key={l} className="card"><div className="bd">
+            <div className="eyebrow">{l}</div>
+            <div className="dato" style={{fontSize:30,fontWeight:600,color:c}}>{v}</div></div></div>)}
+      </div>
+
+      <div className="card">
+        <div className="hd"><h3>Plan operativo de 90 días</h3><div style={{flex:1}}></div>
+          <select value={fase} onChange={e=>setFase(e.target.value)} style={{width:150}}>
+            <option>Todas</option><option>Fase 1</option><option>Fase 2</option><option>Fase 3</option></select></div>
+        <div className="tw">
+          {!filas.length ? <Vacio titulo="Sin actividades" texto="El plan se siembra al ejecutar crearEstructura en el backend."/> :
+          <table><thead><tr><th>Sem</th><th>Área</th><th>Actividad</th><th>Entregable</th><th>Resp.</th><th>Compromiso</th><th>Estatus</th><th>Avance</th><th></th></tr></thead>
+          <tbody>{filas.map(p=>{
+            const tarde = p.estatus!=='Cumplida' && p.estatus!=='Cancelada' && p.fechaCompromiso && String(p.fechaCompromiso).slice(0,10)<hoy();
+            const av = parseFloat(p.avance)||0;
+            return <tr key={p.id}>
+              <td className="dato">{p.semana}</td>
+              <td className="sub">{p.area}</td>
+              <td style={{maxWidth:260}}>{p.actividad}{p.bloqueo && <div className="sub" style={{color:'var(--red)'}}>Bloqueo: {p.bloqueo}</div>}</td>
+              <td className="sub" style={{maxWidth:180}}>{p.entregable}</td>
+              <td>{nom(p.responsableId)}</td>
+              <td className="dato" style={{whiteSpace:'nowrap',color:tarde?'var(--red)':'inherit'}}>{fFecha(p.fechaCompromiso)}</td>
+              <td><span className={'tag '+(p.estatus==='Cumplida'?'t-ok':p.estatus==='Bloqueada'?'t-rj':tarde?'t-rj':p.estatus==='En proceso'?'t-al':'t-gr')}>{tarde&&p.estatus!=='Bloqueada'?'Fuera de fecha':p.estatus}</span></td>
+              <td style={{minWidth:90}}><div className="dato" style={{fontWeight:600,color:colorPct(av)}}>{av}%</div><Barra pct={av} color={colorPct(av)}/></td>
+              <td>{!soloLectura && <button className="btn gh sm" onClick={()=>setEdit(p)}>Editar</button>}</td>
+            </tr>;})}
+          </tbody></table>}
+        </div>
+      </div>
+
+      {edit && <Modal titulo={'Semana '+edit.semana+' · '+edit.area} onCerrar={()=>setEdit(null)}
+        pie={<><button className="btn gh" onClick={()=>setEdit(null)}>Cancelar</button>
+             <button className="btn" onClick={async()=>{await guardar('PlanGerencial',[edit]); setEdit(null);}}>Guardar</button></>}>
+        <div style={{marginBottom:14}}>
+          <div className="eyebrow">Actividad</div><div style={{fontSize:14.5}}>{edit.actividad}</div>
+          <div className="sub" style={{marginTop:4}}>Entregable: {edit.entregable}</div>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+          <Campo etiqueta="Estatus"><select value={edit.estatus} onChange={e=>setEdit({...edit,estatus:e.target.value})}>
+            {ESTATUS_PLAN.map(s=><option key={s}>{s}</option>)}</select></Campo>
+          <Campo etiqueta="Avance (%)"><input type="number" min="0" max="100" value={edit.avance} onChange={e=>setEdit({...edit,avance:e.target.value})}/></Campo>
+          <Campo etiqueta="Fecha compromiso"><input type="date" value={String(edit.fechaCompromiso||'').slice(0,10)} onChange={e=>setEdit({...edit,fechaCompromiso:e.target.value})}/></Campo>
+          <Campo etiqueta="Responsable"><input type="text" value={edit.responsableId} onChange={e=>setEdit({...edit,responsableId:e.target.value})} placeholder="C1, C3, ADMIN…"/></Campo>
+        </div>
+        <Campo etiqueta="Bloqueo principal" ayuda="qué impide avanzar, y de quién depende">
+          <textarea value={edit.bloqueo||''} onChange={e=>setEdit({...edit,bloqueo:e.target.value})} style={{minHeight:60}}/></Campo>
+        <Campo etiqueta="Siguiente acción">
+          <textarea value={edit.siguienteAccion||''} onChange={e=>setEdit({...edit,siguienteAccion:e.target.value})} style={{minHeight:60}}/></Campo>
+      </Modal>}
+    </div>
+  );
+}
+
+/* ============================================================
+   17. SESIÓN 1 A 1
+   ============================================================ */
+function Sesion({data, colaboradorId, sesion, periodo, onCerrar, guardar, soloLectura}){
+  const cols = data.Colaboradores.filter(c=>c.rol!=='ADMIN' && String(c.activo).toUpperCase()!=='NO');
+  const [paso, setPaso] = useState(0);
+  const [f, setF] = useState(()=>({
+    colaboradorId: colaboradorId || (cols[0]?cols[0].id:''),
+    fecha: hoy(), estado:'Realizada', duracionMin:45, animo:3,
+    checkin:'', logros:'', mejoras:'', refuerzo:'', obstaculos:'', apoyo:'',
+    temasColaborador:'', notasPrivadas:'', proximaSesion:'', reglas:'',
+    seguir:'', empezar:'', dejar:'', metaSemana:'', feedbackMeta:'', promedioRutina:'', semana:'',
+    ...(sesion||{})
+  }));
+  const colab = cols.find(c=>c.id===f.colaboradorId) || cols[0];
+  const cat = colab ? (RUTINAS[clave(colab)] || []) : [];
+
+  const [scores, setScores] = useState(()=>{
+    const s = {};
+    if(sesion){ data.Rutinas.filter(r=>r.sesionId===sesion.id).forEach(r=>{ s[r.actividad]=String(r.score); }); }
+    return s;
+  });
+  const [nuevos, setNuevos] = useState([]);
+  const [g, setG] = useState(false);
+
+  const marcadas = String(f.reglas||'').split(',').filter(Boolean);
+  const previos = data.Acuerdos.filter(a=>a.colaboradorId===f.colaboradorId && (a.estado==='Pendiente'||a.estado==='En curso'));
+  const gl = colab ? globalDe(colab, periodo, data.KPIs) : {pct:null, detalle:[]};
+  const sesionPrevia = data.Sesiones.filter(s=>s.colaboradorId===f.colaboradorId && s.id!==f.id && s.estado==='Realizada')
+                        .sort((a,b)=>String(b.fecha).localeCompare(String(a.fecha)))[0];
+
+  const promedio = useMemo(()=>{
+    const v = cat.map(a=>scores[a]).filter(x=>x!==undefined && x!=='').map(parseFloat);
+    return v.length ? v.reduce((a,b)=>a+b,0)/v.length : null;
+  }, [scores, colab && colab.id]);
+
+  function toggleRegla(id){
+    const s = new Set(marcadas);
+    s.has(id) ? s.delete(id) : s.add(id);
+    setF({...f, reglas:[...s].join(',')});
+  }
+
+  const completos = [
+    marcadas.length>=3, !!f.checkin, promedio!==null, gl.pct!==null,
+    !!(f.logros && f.mejoras), !!(f.seguir||f.empezar||f.dejar),
+    !!f.metaSemana || nuevos.length>0
+  ];
+
+  async function guardarSesion(){
+    setG(true);
+    const cab = {...f, promedioRutina: promedio===null?'':promedio.toFixed(3), semana: semanaISO(String(f.fecha).slice(0,10))};
+    const r = await guardar('Sesiones', [cab], true);
+    const idSesion = (r && r[0] && r[0].id) || f.id;
+    if(idSesion){
+      const rut = cat.filter(a=>scores[a]!==undefined && scores[a]!=='').map(a=>{
+        const ex = sesion ? data.Rutinas.find(x=>x.sesionId===sesion.id && x.actividad===a) : null;
+        return {id: ex?ex.id:'', sesionId:idSesion, colaboradorId:f.colaboradorId, semana:cab.semana, actividad:a, score:scores[a], comentario:''};
+      });
+      if(rut.length) await guardar('Rutinas', rut);
+      const listos = nuevos.filter(a=>a.descripcion.trim());
+      if(listos.length) await guardar('Acuerdos', listos.map(a=>({...a, sesionId:idSesion, colaboradorId:f.colaboradorId})));
+    }
+    setG(false); onCerrar();
+  }
+
+  const pie = (
+    <>
+      <button className="btn gh" onClick={onCerrar}>Cancelar</button>
+      {paso>0 && <button className="btn gh" onClick={()=>setPaso(paso-1)}>Anterior</button>}
+      {paso<6 && <button className="btn" onClick={()=>setPaso(paso+1)}>Siguiente</button>}
+      {paso===6 && <button className="btn amb" onClick={guardarSesion} disabled={g}>{g?<span className="spin"></span>:null} Guardar sesión</button>}
+    </>
+  );
+
+  const opciones = [['1','100% — completo'],['0.9','90% — casi'],['0.75','75% — parcial'],['0.5','50% — a medias'],['0.25','25% — apenas'],['0','0% — no se hizo']];
+
+  return (
+    <Modal titulo={(sesion?'Sesión 1 a 1 · ':'Nueva sesión 1 a 1 · ')+(colab?colab.nombre:'')} onCerrar={onCerrar} pie={soloLectura?null:pie}>
+      <div className="riel">
+        {PASOS.map((p,i)=>
+          <button key={p.n} className={(paso===i?'on ':'')+(completos[i]?'hecho':'')} onClick={()=>setPaso(i)}>
+            <span className="n">{p.n}</span><span className="t">{p.t}</span></button>)}
+      </div>
+
+      {paso===0 && <div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+          <Campo etiqueta="Colaborador">
+            <select value={f.colaboradorId} disabled={!!sesion||soloLectura} onChange={e=>setF({...f,colaboradorId:e.target.value})}>
+              {cols.map(c=><option key={c.id} value={c.id}>{c.nombre} — {c.puesto}</option>)}</select></Campo>
+          <Campo etiqueta="Fecha"><input type="date" value={String(f.fecha).slice(0,10)} disabled={soloLectura} onChange={e=>setF({...f,fecha:e.target.value})}/></Campo>
+        </div>
+        {colab && (colab.driver||colab.flowTips) &&
+          <div className="aviso info" style={{marginBottom:14}}>
+            {colab.driver && <div><b>Lo que lo mueve:</b> {colab.driver}</div>}
+            {colab.flowTips && <div style={{marginTop:4}}><b>Cómo trabajar con él:</b> {colab.flowTips}</div>}
+          </div>}
+        {sesionPrevia && sesionPrevia.metaSemana &&
+          <div className="aviso warn" style={{marginBottom:14}}>
+            <b>Meta que se comprometió la vez pasada:</b> {sesionPrevia.metaSemana}
+            <div style={{marginTop:4,fontSize:13}}>Empieza preguntando por esto, no por la operación.</div>
+          </div>}
+        {previos.length>0 &&
+          <div className="aviso info" style={{marginBottom:14}}>
+            <b>Acuerdos abiertos ({previos.length}):</b>
+            <ul style={{margin:'6px 0 0 18px',padding:0}}>
+              {previos.map(a=><li key={a.id} style={{fontSize:13.5}}>{a.descripcion} — vence {fFecha(a.fechaCompromiso)}</li>)}
+            </ul>
+          </div>}
+        <div className="reglas">
+          <h4>Reglas de una interacción productiva</h4>
+          <div className="sub" style={{marginBottom:6}}>Marca las que se cumplieron. Es autoevaluación tuya, no del colaborador.</div>
+          {REGLAS.map(gr=>
+            <div key={gr.g}>
+              <div className="grp">{gr.g}</div>
+              {gr.items.map(i=>
+                <label key={i.id}>
+                  <input type="checkbox" checked={marcadas.includes(i.id)} disabled={soloLectura} onChange={()=>toggleRegla(i.id)}/>
+                  <span>{i.t}</span></label>)}
+            </div>)}
+        </div>
+      </div>}
+
+      {paso===1 && <div>
+        <div className="sub" style={{marginBottom:12}}>Abre por la persona, no por la tarea. Deja que hable primero.</div>
+        <Campo etiqueta="¿Cómo viene? Check-in personal" ayuda="carga de trabajo, ánimo, algo fuera del trabajo que esté pesando">
+          <textarea value={f.checkin} disabled={soloLectura} onChange={e=>setF({...f,checkin:e.target.value})}
+            placeholder="¿Cómo estuvo tu semana? ¿Qué te quitó energía? ¿Qué te la dio?"/></Campo>
+        <Campo etiqueta="Temas que trae el colaborador" ayuda="su agenda va antes que la tuya">
+          <textarea value={f.temasColaborador} disabled={soloLectura} onChange={e=>setF({...f,temasColaborador:e.target.value})} style={{minHeight:64}}/></Campo>
+        <Campo etiqueta="Ánimo percibido (1 a 5)">
+          <input type="range" min="1" max="5" value={f.animo} disabled={soloLectura} onChange={e=>setF({...f,animo:e.target.value})} style={{width:'100%'}}/>
+          <div className="sub">{['Desgastado','Bajo','Estable','Bien','Muy motivado'][(+f.animo||3)-1]}</div></Campo>
+      </div>}
+
+      {paso===2 && <div>
+        <div className="sub" style={{marginBottom:12}}>Rutina de la semana. Puntúa qué tanto se sostuvo cada actividad; el promedio se calcula solo.</div>
+        {!cat.length && <div className="aviso warn">No hay rutina definida para este puesto. Agrégala en la constante RUTINAS del archivo.</div>}
+        {cat.map(a=>{
+          const v = scores[a];
+          const pct = v===undefined||v===''?null:Math.round(parseFloat(v)*100);
+          return (
+            <div key={a} className="rut">
+              <div style={{fontSize:13.5}}>{a}</div>
+              <select value={v===undefined?'':v} disabled={soloLectura} onChange={e=>setScores({...scores,[a]:e.target.value})}>
+                <option value="">Sin evaluar</option>
+                {opciones.map(([val,l])=><option key={val} value={val}>{l}</option>)}
+              </select>
+              <div className="pctc dato" style={{fontWeight:600,color:colorPct(pct),textAlign:'right'}}>{pct===null?'—':pct+'%'}</div>
+            </div>);
+        })}
+        {promedio!==null &&
+          <div style={{marginTop:16,display:'flex',alignItems:'center',gap:14}}>
+            <div>
+              <div className="eyebrow">Promedio de la semana</div>
+              <div className="dato" style={{fontSize:32,fontWeight:600,color:colorPct(promedio*100)}}>{Math.round(promedio*100)}%</div>
+            </div>
+            <div style={{flex:1}}><Barra pct={promedio*100} color={colorPct(promedio*100)}/></div>
+          </div>}
+      </div>}
+
+      {paso===3 && <div>
+        <div className="sub" style={{marginBottom:12}}>Resultados de {fPeriodo(periodo)}. Habla de datos, no de impresiones.</div>
+        {gl.pct===null && <div className="aviso warn">No hay KPIs capturados para este periodo. Captúralos en la pestaña KPIs.</div>}
+        {gl.detalle.map(k=>(
+          <div key={k.id} style={{display:'flex',gap:12,alignItems:'center',padding:'8px 0',borderBottom:'1px solid var(--paper)'}}>
+            <div style={{flex:1}}>
+              <div style={{fontSize:13.5,fontWeight:500}}>{k.nombre}</div>
+              <div className="sub">Meta {k.dir==='menor'?'≤':'≥'} {k.evalua==='semaforo'?k.verde:k.meta} {k.u} · peso {k.pesoNorm}%</div>
+            </div>
+            <div className="dato" style={{width:70,textAlign:'right'}}>{k.resultado===''?'—':k.resultado+' '+k.u}</div>
+            <div style={{width:80}}>
+              <div className="dato" style={{fontWeight:600,color:colorPct(k.cumpl),fontSize:13}}>{k.cumpl===null?'—':Math.round(k.cumpl)+'%'}</div>
+              <Barra pct={k.cumpl||0} color={colorPct(k.cumpl)}/>
+            </div>
+          </div>))}
+        {gl.pct!==null && colab &&
+          <div style={{marginTop:14,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
+            <div className="dato" style={{fontSize:30,fontWeight:600,color:colorPct(gl.pct)}}>{gl.pct}%</div>
+            <span className={'tag '+nivelDe(colab.area,gl.pct,colab.rol).cls}>
+              {nivelDe(colab.area,gl.pct,colab.rol).nombre} · bono {nivelDe(colab.area,gl.pct,colab.rol).bonoPct}%</span>
+          </div>}
+      </div>}
+
+      {paso===4 && <div>
+        <div className="sub" style={{marginBottom:12}}>Se abre reconociendo, se ajusta con un dato, se cierra con confianza.</div>
+        <Campo etiqueta="MÁS · Qué hizo bien" ayuda="hecho concreto y observable, no 'echas ganas'">
+          <textarea value={f.logros} disabled={soloLectura} onChange={e=>setF({...f,logros:e.target.value})}
+            placeholder="Ej.: Sacaste las 14 entregas de la quincena sin una sola reprogramación."/></Campo>
+        <Campo etiqueta="MENOS · Qué necesita ajustar" ayuda="una sola conducta, con el dato que la sostiene y el impacto que tuvo">
+          <textarea value={f.mejoras} disabled={soloLectura} onChange={e=>setF({...f,mejoras:e.target.value})}
+            placeholder="Ej.: Tres expedientes se regresaron por falta de firma; eso movió la entrega dos días."/></Campo>
+        <Campo etiqueta="MÁS · Cierre de confianza" ayuda="por qué crees que puede resolverlo">
+          <textarea value={f.refuerzo} disabled={soloLectura} onChange={e=>setF({...f,refuerzo:e.target.value})} style={{minHeight:64}}/></Campo>
+      </div>}
+
+      {paso===5 && <div>
+        <div className="sub" style={{marginBottom:12}}>Esta parte la contesta él, no tú. Anota sus palabras.</div>
+        <Campo etiqueta="¿Qué debo seguir haciendo?">
+          <textarea value={f.seguir} disabled={soloLectura} onChange={e=>setF({...f,seguir:e.target.value})} style={{minHeight:62}}/></Campo>
+        <Campo etiqueta="¿Qué debo empezar a hacer?">
+          <textarea value={f.empezar} disabled={soloLectura} onChange={e=>setF({...f,empezar:e.target.value})} style={{minHeight:62}}/></Campo>
+        <Campo etiqueta="¿Qué debo dejar de hacer?">
+          <textarea value={f.dejar} disabled={soloLectura} onChange={e=>setF({...f,dejar:e.target.value})} style={{minHeight:62}}/></Campo>
+        <div className="hr"></div>
+        <Campo etiqueta="Obstáculos que reporta" ayuda="lo que le impide avanzar y no depende solo de él">
+          <textarea value={f.obstaculos} disabled={soloLectura} onChange={e=>setF({...f,obstaculos:e.target.value})} style={{minHeight:62}}/></Campo>
+        <Campo etiqueta="Apoyo que necesita de mí" ayuda="qué me toca destrabar como gerente">
+          <textarea value={f.apoyo} disabled={soloLectura} onChange={e=>setF({...f,apoyo:e.target.value})} style={{minHeight:62}}/></Campo>
+        {!soloLectura &&
+          <Campo etiqueta="Notas privadas" ayuda="solo tú las ves; nunca se envían a la vista del colaborador">
+            <textarea value={f.notasPrivadas} onChange={e=>setF({...f,notasPrivadas:e.target.value})} style={{minHeight:62}}/></Campo>}
+      </div>}
+
+      {paso===6 && <div>
+        {sesionPrevia && sesionPrevia.metaSemana &&
+          <Campo etiqueta="Cierre de la meta anterior" ayuda={'Se comprometió a: '+sesionPrevia.metaSemana}>
+            <textarea value={f.feedbackMeta} disabled={soloLectura} onChange={e=>setF({...f,feedbackMeta:e.target.value})}
+              placeholder="¿Se cumplió? ¿Qué la facilitó o la estorbó?" style={{minHeight:62}}/></Campo>}
+        <Campo etiqueta="Una sola meta para el siguiente periodo" ayuda="una. Si son tres, no es meta, es lista de pendientes">
+          <textarea value={f.metaSemana} disabled={soloLectura} onChange={e=>setF({...f,metaSemana:e.target.value})} style={{minHeight:62}}/></Campo>
+        <div className="hr"></div>
+        <div className="sub" style={{marginBottom:12}}>Máximo tres acuerdos. Cada uno con dueño y fecha, o no es un acuerdo.</div>
+        {nuevos.map((a,i)=>(
+          <div key={i} style={{border:'1px solid var(--line)',borderRadius:9,padding:12,marginBottom:10}}>
+            <div style={{display:'flex',gap:8,marginBottom:8}}>
+              <span className="chip">Acuerdo {i+1}</span><div style={{flex:1}}></div>
+              <button className="btn dg sm" onClick={()=>setNuevos(nuevos.filter((_,j)=>j!==i))}>Quitar</button>
+            </div>
+            <textarea value={a.descripcion} placeholder="¿Qué se compromete a hacer, exactamente?" style={{minHeight:56,marginBottom:8}}
+              onChange={e=>{const n=[...nuevos]; n[i]={...a,descripcion:e.target.value}; setNuevos(n);}}/>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8}}>
+              <select value={a.responsable} onChange={e=>{const n=[...nuevos]; n[i]={...a,responsable:e.target.value}; setNuevos(n);}}>
+                <option>Colaborador</option><option>Gerente</option><option>Ambos</option></select>
+              <input type="date" value={a.fechaCompromiso} onChange={e=>{const n=[...nuevos]; n[i]={...a,fechaCompromiso:e.target.value}; setNuevos(n);}}/>
+              <input type="text" placeholder="Evidencia" value={a.evidencia}
+                onChange={e=>{const n=[...nuevos]; n[i]={...a,evidencia:e.target.value}; setNuevos(n);}}/>
+            </div>
+          </div>))}
+        {nuevos.length<3 && !soloLectura &&
+          <button className="btn gh sm" onClick={()=>setNuevos([...nuevos,{descripcion:'',responsable:'Colaborador',fechaCompromiso:hoy(),estado:'Pendiente',evidencia:''}])}>+ Agregar acuerdo</button>}
+        <div className="hr"></div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+          <Campo etiqueta="Próxima sesión"><input type="date" value={String(f.proximaSesion||'').slice(0,10)} disabled={soloLectura} onChange={e=>setF({...f,proximaSesion:e.target.value})}/></Campo>
+          <Campo etiqueta="Estado de esta sesión">
+            <select value={f.estado} disabled={soloLectura} onChange={e=>setF({...f,estado:e.target.value})}>
+              <option>Realizada</option><option>Programada</option><option>Cancelada</option></select></Campo>
+        </div>
+      </div>}
+    </Modal>
+  );
+}
+
+/* ============================================================
+   18. AJUSTES
+   ============================================================ */
+function Ajustes({data, guardar, recargar, claveActual}){
+  const [edit, setEdit] = useState(null);
+  const [claves, setClaves] = useState(null);
+  const [cargandoC, setCargandoC] = useState(false);
+
+  async function verClaves(){
+    setCargandoC(true);
+    try{ setClaves(await jsonp('getClaves',{clave:claveActual})); }catch(e){ setClaves([]); }
+    setCargandoC(false);
+  }
+  return (
+    <div className="grid g2">
+      <div className="card">
+        <div className="hd"><h3>Colaboradores</h3><div style={{flex:1}}></div>
+          <button className="btn gh sm" onClick={()=>setEdit({area:'SC',rol:'EJEC',frecuencia:'QUINCENAL',activo:'SI'})}>+ Agregar</button></div>
+        <div className="tw"><table>
+          <thead><tr><th>Nombre</th><th>Puesto</th><th>1 a 1</th><th>Activo</th><th></th></tr></thead>
+          <tbody>{data.Colaboradores.map(c=>
+            <tr key={c.id}><td>{c.nombre}</td><td className="sub">{c.puesto}</td>
+              <td>{c.frecuencia==='SEMANAL'?'Semanal':c.frecuencia==='QUINCENAL'?'Quincenal':'—'}</td>
+              <td><span className={'tag '+(String(c.activo).toUpperCase()==='NO'?'t-gr':'t-ok')}>{String(c.activo).toUpperCase()==='NO'?'Inactivo':'Activo'}</span></td>
+              <td><button className="btn gh sm" onClick={()=>setEdit(c)}>Editar</button></td></tr>)}
+          </tbody></table></div>
+      </div>
+
+      <div className="card">
+        <div className="hd"><h3>Claves de acceso</h3></div>
+        <div className="bd">
+          <div className="sub" style={{marginBottom:12}}>
+            Cada quien entra con su clave y el servidor le entrega únicamente sus datos. Cambia cualquier clave desde la ficha del colaborador.
+          </div>
+          {!claves && <button className="btn gh sm" onClick={verClaves} disabled={cargandoC}>{cargandoC?<span className="spin"></span>:null} Mostrar claves</button>}
+          {claves && claves.map(c=>
+            <div key={c.id} style={{display:'flex',gap:10,alignItems:'center',padding:'7px 0',borderBottom:'1px solid var(--paper)'}}>
+              <div style={{flex:1,fontSize:13.5}}>{c.nombre}</div>
+              <div className="dato" style={{fontWeight:600}}>{c.clave||'—'}</div>
+            </div>)}
+          <div className="hr"></div>
+          <div className="eyebrow">Backend</div>
+          <div className="dato" style={{fontSize:11.5,wordBreak:'break-all',marginBottom:10}}>{CONFIG.API_URL}</div>
+          <button className="btn gh sm" onClick={recargar}>Recargar datos</button>
+        </div>
+      </div>
+      {edit && <FormColaborador c={edit} onCerrar={()=>setEdit(null)} guardar={guardar}/>}
+    </div>
+  );
+}
+
+function FormColaborador({c, onCerrar, guardar}){
+  const [f, setF] = useState({nombre:'',puesto:'',correo:'',notas:'',fechaIngreso:'',clave:'',...c});
+  const [g, setG] = useState(false);
+  async function ok(){
+    setG(true);
+    const reg = {...f};
+    if(!String(reg.clave||'').trim()) delete reg.clave;   // no borra la clave existente
+    await guardar('Colaboradores',[reg]); setG(false); onCerrar();
+  }
+  return (
+    <Modal titulo={f.id?'Editar colaborador':'Nuevo colaborador'} onCerrar={onCerrar}
+      pie={<><button className="btn gh" onClick={onCerrar}>Cancelar</button>
+           <button className="btn" onClick={ok} disabled={!f.nombre||g}>{g?<span className="spin"></span>:null} Guardar</button></>}>
+      <Campo etiqueta="Nombre"><input type="text" value={f.nombre} onChange={e=>setF({...f,nombre:e.target.value})}/></Campo>
+      <Campo etiqueta="Puesto"><input type="text" value={f.puesto} onChange={e=>setF({...f,puesto:e.target.value})}/></Campo>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+        <Campo etiqueta="Área"><select value={f.area} onChange={e=>setF({...f,area:e.target.value})}>
+          <option value="SC">Servicio a Clientes</option><option value="DOC">Documentos</option><option value="GER">Gerencia</option></select></Campo>
+        <Campo etiqueta="Rol"><select value={f.rol} onChange={e=>setF({...f,rol:e.target.value})}>
+          <option value="COORD">Coordinador</option><option value="EJEC">Ejecutivo</option><option value="ADMIN">Administrador</option></select></Campo>
+        <Campo etiqueta="Frecuencia de 1 a 1"><select value={f.frecuencia} onChange={e=>setF({...f,frecuencia:e.target.value})}>
+          <option value="SEMANAL">Semanal</option><option value="QUINCENAL">Quincenal</option></select></Campo>
+        <Campo etiqueta="Activo"><select value={f.activo} onChange={e=>setF({...f,activo:e.target.value})}>
+          <option value="SI">Sí</option><option value="NO">No</option></select></Campo>
+      </div>
+      <Campo etiqueta="Correo"><input type="email" value={f.correo} onChange={e=>setF({...f,correo:e.target.value})}/></Campo>
+      <Campo etiqueta="Clave de acceso" ayuda="déjala vacía para conservar la actual">
+        <input type="text" value={f.clave||''} onChange={e=>setF({...f,clave:e.target.value.toUpperCase()})} placeholder="Sin cambios"/></Campo>
+    </Modal>
+  );
+}
+
+/* ============================================================
+   19. APP
+   ============================================================ */
+const VACIA = {Colaboradores:[],Sesiones:[],Acuerdos:[],KPIs:[],Desarrollo:[],Rutinas:[],Competencias:[],PlanGerencial:[]};
+
+function App(){
+  const [claveAcceso, setClaveAcceso] = useState(null);
+  const [usuario, setUsuario] = useState(null);
+  const [data, setData] = useState(VACIA);
+  const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState('');
+  const [toast, setToast] = useState(null);
+  const [vista, setVista] = useState('panel');
+  const [sel, setSel] = useState(null);
+  const [periodo, setPeriodo] = useState(periodoActual());
+  const [sesionAbierta, setSesionAbierta] = useState(null);
+
+  function aviso(t, err){ setToast({t,err}); setTimeout(()=>setToast(null), 3200); }
+
+  async function cargar(c){
+    const k = c || claveAcceso;
+    setCargando(true); setError('');
+    try{ const d = await jsonp('getAll',{clave:k}); setData({...VACIA, ...d}); }
+    catch(e){ setError(e.message); }
+    setCargando(false);
+  }
+
+  async function entrar(c, u){
+    setClaveAcceso(c); setUsuario(u);
+    setVista(u.esAdmin?'panel':'mi');
+    if(!u.esAdmin) setSel(u.id);
+    await cargar(c);
+  }
+  function salir(){ setClaveAcceso(null); setUsuario(null); setData(VACIA); setSel(null); window.HT && window.HT.salir(); }
+
+  async function guardar(hoja, registros, devolver){
+    try{
+      const r = await jsonp('upsertLote', {hoja, registros, clave:claveAcceso});
+      const copia = {...data}; copia[hoja] = [...copia[hoja]];
+      r.forEach(reg=>{
+        const i = copia[hoja].findIndex(x=>x.id===reg.id);
+        if(i>=0) copia[hoja][i] = {...copia[hoja][i], ...reg}; else copia[hoja].push(reg);
+      });
+      if(hoja==='Colaboradores' && window.HT){
+        for(const reg of registros){
+          if(reg && reg.id && String(reg.clave||'').trim()){
+            try{ await window.HT.guardarClave(reg.id, String(reg.clave).trim()); }
+            catch(e){ aviso('Se guardó en la hoja, pero no se actualizó el acceso en la plataforma: '+e.message, true); }
+          }
+        }
+      }
+      setData(copia); aviso('Guardado');
+      return devolver ? r : true;
+    }catch(e){ aviso(e.message, true); return false; }
+  }
+
+  if(!usuario) return <Login onEntrar={entrar}/>;
+
+  const esAdmin = usuario.esAdmin;
+  const cols = data.Colaboradores.filter(c=>c.rol!=='ADMIN' && String(c.activo).toUpperCase()!=='NO');
+  const colabSel = sel ? data.Colaboradores.find(c=>c.id===sel) : null;
+  const yo = data.Colaboradores.find(c=>c.id===usuario.id);
+
+  return (
+    <div className="app">
+      <aside className="rail">
+        <div className="marca">
+          <div className="ht">Plataforma HT</div>
+          <div className="sub2">Interacciones 1 a 1</div>
+        </div>
+        <nav className="nav">
+          {esAdmin && <>
+            <button className={vista==='panel'?'on':''} onClick={()=>{setVista('panel');setSel(null);}}>
+              <span className="glyph">▣</span> Panel general</button>
+            <div className="sec">Mi equipo</div>
+            {cols.map(c=>
+              <button key={c.id} className={sel===c.id&&vista==='ficha'?'on':''} onClick={()=>{setSel(c.id);setVista('ficha');}}>
+                <span className="glyph">{c.rol==='COORD'?'◆':'◇'}</span> {c.nombre.split(' ')[0]} {c.nombre.split(' ')[1]||''}</button>)}
+            <div className="sec">Gerencia</div>
+            <button className={vista==='plan'?'on':''} onClick={()=>{setVista('plan');setSel(null);}}>
+              <span className="glyph">▤</span> Plan de 90 días</button>
+            <button className={vista==='ajustes'?'on':''} onClick={()=>{setVista('ajustes');setSel(null);}}>
+              <span className="glyph">⚙</span> Ajustes</button>
+          </>}
+          {!esAdmin && <>
+            <button className={vista==='mi'?'on':''} onClick={()=>setVista('mi')}>
+              <span className="glyph">◈</span> Mi seguimiento</button>
+            {data.PlanGerencial.length>0 &&
+              <button className={vista==='plan'?'on':''} onClick={()=>setVista('plan')}>
+                <span className="glyph">▤</span> Mis actividades</button>}
+          </>}
+        </nav>
+        <div className="pieRail">
+          {usuario.nombre}
+          <br/><a href="index.html">← Volver a módulos</a>
+          <br/><button onClick={salir}>Cerrar sesión</button>
+        </div>
+      </aside>
+
+      <main className="main">
+        <div className="top">
+          <div>
+            <div className="eyebrow">{vista==='ficha'&&colabSel ? colabSel.puesto : (esAdmin?'Servicio a Clientes · Documentos':usuario.puesto)}</div>
+            <h1>{vista==='panel'?'Panel general':vista==='ajustes'?'Ajustes':vista==='plan'?(esAdmin?'Plan operativo de 90 días':'Mis actividades del plan'):(colabSel?colabSel.nombre:'Mi seguimiento')}</h1>
+          </div>
+          <div className="sp"></div>
+          {cargando && <span className="spin"></span>}
+          <a className="btn gh sm" href="index.html" style={{textDecoration:'none'}}>← Módulos</a>
+        </div>
+
+        <div className="cont">
+          {error && <div className="aviso"><b>No se pudo cargar la información.</b> {error}
+            <div style={{marginTop:8}}><button className="btn gh sm" onClick={()=>cargar()}>Reintentar</button></div></div>}
+
+          {!error && esAdmin && vista==='panel' &&
+            <Panel data={data} periodo={periodo} setPeriodo={setPeriodo}
+              abrir={(id)=>{setSel(id);setVista('ficha');}}
+              nuevaSesion={(id)=>setSesionAbierta({nueva:true, colaboradorId:id})}/>}
+
+          {!error && esAdmin && vista==='ficha' && colabSel &&
+            <Ficha colab={colabSel} data={data} periodo={periodo} setPeriodo={setPeriodo} guardar={guardar}
+              nuevaSesion={(id)=>setSesionAbierta({nueva:true, colaboradorId:id})}
+              verSesion={(s)=>setSesionAbierta(s)}/>}
+
+          {!error && !esAdmin && vista==='mi' && yo &&
+            <Ficha colab={yo} data={data} periodo={periodo} setPeriodo={setPeriodo}
+              guardar={async()=>false} nuevaSesion={()=>{}} soloLectura={true}
+              verSesion={(s)=>setSesionAbierta(s)}/>}
+
+          {!error && vista==='plan' &&
+            <PlanGerencial data={data} guardar={guardar} soloLectura={!esAdmin}/>}
+
+          {!error && esAdmin && vista==='ajustes' &&
+            <Ajustes data={data} guardar={guardar} recargar={()=>cargar()} claveActual={claveAcceso}/>}
+        </div>
+      </main>
+
+      {sesionAbierta &&
+        <Sesion data={data} periodo={periodo}
+          colaboradorId={sesionAbierta.colaboradorId || sel || usuario.id}
+          sesion={sesionAbierta.nueva ? null : sesionAbierta}
+          onCerrar={()=>setSesionAbierta(null)} guardar={guardar} soloLectura={!esAdmin}/>}
+
+      {toast && <div className={'toast'+(toast.err?' err':'')}>{toast.t}</div>}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
