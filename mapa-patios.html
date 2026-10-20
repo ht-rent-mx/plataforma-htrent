@@ -200,6 +200,13 @@ dialog textarea{width:100%;border:1px solid var(--borde);border-radius:6px;paddi
 .plano-ayuda{position:absolute;left:24px;top:24px;max-width:520px;color:var(--tinta-suave);line-height:1.5;z-index:2;pointer-events:none}
 .zoom{display:inline-flex;align-items:center;gap:4px} .zoom .btn{padding:0 11px} .zoom span{min-width:44px;text-align:center;font-size:13px;color:var(--tinta-suave);font-variant-numeric:tabular-nums}
 dialog.torre-dlg{width:min(600px,96vw)}
+.exp-opc{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 6px}
+.exp-btn{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:14px;border:1px solid var(--borde);border-radius:8px;background:var(--panel);cursor:pointer;text-align:left;font:inherit;color:var(--tinta)}
+.exp-btn b{font-size:15px;color:var(--ink)} .exp-btn span{font-size:12px;color:var(--tinta-suave)}
+.exp-btn:hover:not(:disabled){border-color:var(--navy);background:var(--concreto)} .exp-btn:disabled{opacity:.5;cursor:default}
+dialog label.exp-check{display:flex;gap:8px;align-items:flex-start;color:var(--tinta);font-size:13px}
+dialog label.exp-check input{width:auto;height:auto;margin-top:2px}
+#expEstado{min-height:18px;margin-top:8px}
 .torre-lista{display:flex;flex-direction:column;gap:6px;margin-top:10px}
 .torre-fila{display:grid;grid-template-columns:30px 64px 1fr auto;gap:10px;align-items:center;border:1px solid var(--borde);border-radius:6px;padding:6px 8px}
 .torre-fila .nv{font-family:var(--fuente-cond);font-style:italic;font-weight:800;font-size:18px;color:var(--ink);text-align:center}
@@ -250,6 +257,7 @@ dialog.torre-dlg{width:min(600px,96vw)}
         <button class="btn claro" id="btnCompacto" title="Avatares más pequeños en las listas">Vista compacta</button>
         <button class="btn claro" id="btnZona">Agregar zona</button>
         <button class="btn claro" id="btnEditar">Editar plano</button>
+        <button class="btn claro" id="btnExportar" title="Descargar el plano con el NIV de cada equipo">Exportar</button>
       </div>
     </div>
     <div class="barra-edicion" id="barraEdicion">
@@ -308,6 +316,18 @@ dialog.torre-dlg{width:min(600px,96vw)}
   <div class="torre-lista" id="torreLista"></div>
   <p class="nota" style="margin:12px 0 0">Arriba está el último que se subió. <b>Bajar</b> lo saca de la torre y lo deja junto a ella en el plano.</p>
   <div class="pie"><button class="btn claro" id="torreGirar">Girar torre</button><button class="btn" id="torreCerrar">Cerrar</button></div>
+</div></dialog>
+
+<dialog id="dlgExport"><div class="dlg-cuerpo">
+  <h3>Exportar plano</h3>
+  <div class="nota">Se descarga el plano completo, sin importar el zoom, con el NIV de cada equipo. En las torres se listan todos los NIV de arriba hacia abajo.</div>
+  <div class="exp-opc">
+    <button class="exp-btn" id="expPng"><b>Imagen PNG</b><span id="expPngSub">Patio actual</span></button>
+    <button class="exp-btn" id="expPdf"><b>PDF</b><span>Todos los patios, una página por patio</span></button>
+  </div>
+  <label class="exp-check"><input type="checkbox" id="expAnexo" checked> Incluir en el PDF la lista de equipos por patio (NIV, placa, tipo, zona, estatus)</label>
+  <div class="nota" id="expEstado"></div>
+  <div class="pie"><button class="btn claro" id="expCerrar">Cerrar</button></div>
 </div></dialog>
 
 <dialog id="dlgEq" class="ficha">
@@ -1015,6 +1035,201 @@ function zoom(paso){
   $('#zVal').textContent=Math.round(ZOOM*100)+'%'; if(patios.length) render();
 }
 $('#zMenos').onclick=()=>zoom(-1); $('#zMas').onclick=()=>zoom(+1); zoom(0);
+
+/* =====================================================================
+   EXPORTAR — PNG del patio actual y PDF de todos los patios.
+   El plano se dibuja desde los datos (no es una captura de la pantalla),
+   así sale completo sin importar el zoom y con el NIV de cada equipo.
+   ===================================================================== */
+const EXP={ CELDA:40, ESCALA:2, MAX_PX:14000,
+  JSPDF:'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js',
+  AUTOTABLE:'https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js' };
+const cssVar=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim()||'#8A8F95';
+function colorEstatusExp(e=''){ const s=e.toUpperCase(); return cssVar(s==='LIBRE'?'--libre':s.startsWith('ASIGNADO')?'--asignado':s.startsWith('EN_TRANS')?'--transito':'--otro'); }
+const cargarImg=(src,cors)=>new Promise(res=>{ const i=new Image(); if(cors) i.crossOrigin='anonymous'; i.onload=()=>res(i); i.onerror=()=>res(null); i.src=src; });
+const cargarScript=src=>new Promise((res,rej)=>{ if(document.querySelector(`script[src="${src}"]`)) return res(); const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=()=>rej(new Error('No se pudo cargar '+src)); document.head.appendChild(s); });
+const avImgs={};
+async function imgAvatar(fam){
+  if(!avImgs[fam]) avImgs[fam]=await cargarImg('data:image/svg+xml;charset=utf-8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 104 52" width="208" height="104">${AV[fam]}</svg>`));
+  return avImgs[fam];
+}
+const fondos={};
+async function imgFondo(url){ if(!url) return null; if(!(url in fondos)) fondos[url]=await cargarImg(url,true); return fondos[url]; }
+
+// mismo acomodo que el plano en pantalla: fijos, sugeridos dentro de su zona y sin acomodar
+function layoutPatio(pid){
+  const plano=planoDe(pid), zp=zonas.filter(z=>z.patio==pid);
+  const enPatio=equipos.filter(e=>e.patio==pid&&!fuera(e)), gr=grupos(enPatio);
+  const fijos=[], sug=[], sin=[];
+  for(const g of gr){ const b=g[0]; if(b.x!=null) fijos.push({g,x:b.x,y:b.y}); else if(b.zona&&zp.some(z=>z.id===b.zona)) sug.push({g}); else sin.push(g); }
+  const occ=fijos.map(t=>({x:t.x,y:t.y,...dims(t.g[0].or)}));
+  for(const t of sug){ const z=zp.find(z=>z.id===t.g[0].zona), f=dims(t.g[0].or);
+    const p=buscarLugar({x:z.x,y:z.y+1,w:z.w,h:z.h-1},f,occ)||{x:z.x,y:z.y+1}; occ.push({x:p.x,y:p.y,...f}); t.x=p.x; t.y=p.y; t.prov=true; }
+  return { plano, zp, enPatio, piezas:[...fijos,...sug], sin, torres:gr.filter(g=>g.length>1).length };
+}
+function ajustarFuente(ctx,txt,maxW,base,peso='600',fam='Consolas, "Courier New", monospace'){
+  let fs=base; ctx.font=`${peso} ${fs}px ${fam}`; const w=ctx.measureText(txt).width;
+  if(w>maxW){ fs=Math.max(6,Math.floor(fs*maxW/w*10)/10); ctx.font=`${peso} ${fs}px ${fam}`; }
+  return fs;
+}
+const textoFit=(ctx,txt,maxW)=>{ if(ctx.measureText(txt).width<=maxW) return txt; let t=txt; while(t.length>1&&ctx.measureText(t+'…').width>maxW) t=t.slice(0,-1); return t+'…'; };
+
+// dibuja un equipo o torre en coordenadas locales (siempre horizontal; la vertical se gira antes)
+async function pintarPieza(ctx,t,W,H){
+  const g=t.g, arriba=g[g.length-1], n=g.length, col=colorEstatusExp(arriba.estatus);
+  ctx.fillStyle='#FFFFFF'; ctx.strokeStyle=t.prov?'#7A8699':'#0B3D66'; ctx.lineWidth=t.prov?1.5:2;
+  if(t.prov) ctx.setLineDash([5,3]); ctx.beginPath(); ctx.roundRect(1,1,W-2,H-2,6); ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle=col; ctx.beginPath(); ctx.roundRect(1,1,7,H-2,[6,0,0,6]); ctx.fill();
+  const img=await imgAvatar(familia(arriba.tipo));
+  const pad=11, aw=W-pad-4;
+  if(n===1){
+    if(img){ ctx.globalAlpha=.9; const ah=Math.min(H*.5,aw/2); ctx.drawImage(img,pad+(aw-ah*2)/2,4,ah*2,ah); ctx.globalAlpha=1; }
+    ctx.fillStyle='#0B1F33'; ajustarFuente(ctx,arriba.niv,aw-2,13,'700');
+    ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(arriba.niv,pad+aw/2,H*.68);
+    ctx.fillStyle='#4A5868'; ajustarFuente(ctx,'x',aw,9,'500','Arial'); ctx.fillText(textoFit(ctx,arriba.tipo||'',aw-2),pad+aw/2,H*.88);
+  }else{
+    // torre: NIV de arriba hacia abajo, con su nivel
+    const lineas=g.slice().reverse(), lh=Math.min(14,(H-16)/n);
+    ctx.fillStyle='#0B3D66'; ctx.beginPath(); ctx.roundRect(W-30,3,27,13,4); ctx.fill();
+    ctx.fillStyle='#FFFFFF'; ctx.font='700 10px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('×'+n,W-16.5,10);
+    ctx.textAlign='left'; ctx.fillStyle='#4A5868'; ctx.font='600 8.5px Arial'; ctx.fillText('TORRE ↑',pad,10);
+    const fs=Math.min(lh*.82, ajustarFuente(ctx,'0. '+lineas.reduce((a,m)=>m.niv.length>a.length?m.niv:a,''),aw-2,12,'700'));
+    lineas.forEach((m,i)=>{ ctx.font=`700 ${fs}px Consolas, "Courier New", monospace`; ctx.fillStyle=i===0?'#0B1F33':'#2E3E50';
+      ctx.fillText(`${m.nivel??n-i}. ${m.niv}`,pad,18+lh*i+lh/2); });
+  }
+  if(arriba.samsara){ ctx.fillStyle=gpsViejo(arriba)?'#8A8F95':'#2F7FD1'; ctx.beginPath(); ctx.arc(W-8,H-8,3.5,0,7); ctx.fill(); }
+}
+
+async function canvasPatio(pid){
+  const L=layoutPatio(pid), C=EXP.CELDA, M=24, HEAD=118, cols=L.plano.columnas, filas=L.plano.filas;
+  const PW=cols*C, PH=filas*C, W=Math.max(PW,900)+M*2;
+  // lista de "sin acomodar" debajo del plano
+  const porFila=Math.max(1,Math.floor((W-M*2)/190)), filasSin=Math.ceil(L.sin.reduce((s,g)=>s+g.length,0)/porFila);
+  const SIN=L.sin.length?40+filasSin*18:0, FOOT=30, H=HEAD+PH+M+SIN+FOOT;
+  const k=Math.min(EXP.ESCALA,EXP.MAX_PX/Math.max(W,H));
+  const cv=document.createElement('canvas'); cv.width=Math.round(W*k); cv.height=Math.round(H*k);
+  const ctx=cv.getContext('2d'); ctx.scale(k,k);
+  ctx.fillStyle='#FFFFFF'; ctx.fillRect(0,0,W,H);
+  // encabezado
+  ctx.fillStyle='#0B3D66'; ctx.fillRect(0,0,W,6);
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic'; ctx.fillStyle='#0B3D66'; ctx.font='italic 800 30px Saira, Arial';
+  ctx.fillText(nombrePatio(pid),M,46);
+  ctx.fillStyle='#4A5868'; ctx.font='500 13px Barlow, Arial';
+  const libres=L.enPatio.filter(e=>e.estatus==='LIBRE').length;
+  ctx.fillText(`${L.enPatio.length} equipos · ${libres} libres${L.torres?` · ${L.torres} torre${L.torres>1?'s':''}`:''}${L.sin.length?` · ${L.sin.reduce((s,g)=>s+g.length,0)} sin acomodar`:''}   ·   Generado ${new Date().toLocaleString('es-MX',{dateStyle:'long',timeStyle:'short'})} por ${$('#nombreUsuario').textContent}`,M,70);
+  const porTipo={}; L.enPatio.forEach(e=>porTipo[e.tipo||'Sin tipo']=(porTipo[e.tipo||'Sin tipo']||0)+1);
+  ctx.font='500 12px Barlow, Arial'; ctx.fillStyle='#2E3E50';
+  ctx.fillText(textoFit(ctx,Object.entries(porTipo).sort((a,b)=>b[1]-a[1]).map(([t,c])=>`${t}: ${c}`).join('  ·  '),W-M*2-360),M,92);
+  // leyenda
+  let lx=W-M-340; ctx.font='500 12px Barlow, Arial';
+  for(const [t,v] of [['Libre','--libre'],['Asignado','--asignado'],['En tránsito','--transito'],['Otro','--otro']]){ ctx.fillStyle=cssVar(v); ctx.fillRect(lx,83,10,10); ctx.fillStyle='#2E3E50'; ctx.fillText(t,lx+14,92); lx+=ctx.measureText(t).width+30; }
+  // plano
+  ctx.save(); ctx.translate(M,HEAD);
+  ctx.fillStyle='#DCE1EA'; ctx.fillRect(0,0,PW,PH);
+  const fondo=await imgFondo(L.plano.imagen_fondo);
+  if(fondo){ ctx.globalAlpha=.55; ctx.drawImage(fondo,0,0,PW,PH); ctx.globalAlpha=1; }
+  ctx.strokeStyle='rgba(11,61,102,.08)'; ctx.lineWidth=1; ctx.beginPath();
+  for(let x=0;x<=cols;x++){ctx.moveTo(x*C,0);ctx.lineTo(x*C,PH)} for(let y=0;y<=filas;y++){ctx.moveTo(0,y*C);ctx.lineTo(PW,y*C)} ctx.stroke();
+  ctx.strokeStyle='#0B3D66'; ctx.lineWidth=2; ctx.strokeRect(0,0,PW,PH);
+  for(const z of L.zp){
+    ctx.fillStyle='rgba(255,255,255,.35)'; ctx.fillRect(z.x*C,z.y*C,z.w*C,z.h*C);
+    ctx.strokeStyle=z.color||'#0B3D66'; ctx.lineWidth=2; ctx.setLineDash([8,4]); ctx.strokeRect(z.x*C,z.y*C,z.w*C,z.h*C); ctx.setLineDash([]);
+    const cnt=L.enPatio.filter(e=>e.zona===z.id).length;
+    ctx.font='700 13px Barlow, Arial'; ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.fillStyle=z.color||'#0B3D66';
+    ctx.fillText(textoFit(ctx,`${z.nombre} (${cnt})`,z.w*C-12),z.x*C+6,z.y*C+C/2);
+  }
+  for(const t of L.piezas){
+    const f=dims(t.g[0].or), w=f.w*C-4, h=f.h*C-4;
+    ctx.save(); ctx.translate(t.x*C+2,t.y*C+2);
+    if(t.g[0].or==='V'){ ctx.translate(w,0); ctx.rotate(Math.PI/2); await pintarPieza(ctx,t,h,w); }
+    else await pintarPieza(ctx,t,w,h);
+    ctx.restore();
+  }
+  ctx.restore();
+  // sin acomodar
+  let y=HEAD+PH+M;
+  if(L.sin.length){
+    ctx.fillStyle='#0B3D66'; ctx.font='700 14px Barlow, Arial'; ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+    ctx.fillText(`Sin acomodar en el plano (${L.sin.reduce((s,g)=>s+g.length,0)})`,M,y+16);
+    const lista=L.sin.flat(); ctx.font='600 12px Consolas, "Courier New", monospace';
+    lista.forEach((e,i)=>{ const cx=M+(i%porFila)*190, cy=y+40+Math.floor(i/porFila)*18;
+      ctx.fillStyle=colorEstatusExp(e.estatus); ctx.fillRect(cx,cy-9,8,8); ctx.fillStyle='#0B1F33'; ctx.fillText(e.niv,cx+13,cy); });
+    y+=SIN;
+  }
+  ctx.fillStyle='#7A8699'; ctx.font='500 11px Barlow, Arial'; ctx.textAlign='left';
+  ctx.fillText('Plataforma HT · Mapa de patios · Contorno punteado = posición sugerida dentro de su zona · Punto azul = con GPS',M,H-12);
+  return { cv, L, sinFondo:!!L.plano.imagen_fondo&&!fondo };
+}
+
+const nombreArchivo=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\w-]+/g,'_').replace(/^_|_$/g,'');
+const hoyArchivo=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`};
+function descargar(blob,nombre){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=nombre; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),5000); }
+const estadoExp=(t,err)=>{ const e=$('#expEstado'); e.textContent=t; e.style.color=err?'var(--red)':''; };
+const bloquearExp=v=>{ $('#expPng').disabled=v||vistaEntregados; $('#expPdf').disabled=v; };
+
+async function exportarPNG(){
+  if(vistaEntregados||!patioActivo) return;
+  bloquearExp(true); estadoExp('Generando imagen…');
+  try{
+    await document.fonts?.ready;
+    const { cv, sinFondo }=await canvasPatio(patioActivo);
+    const blob=await new Promise((res,rej)=>{ try{ cv.toBlob(b=>b?res(b):rej(new Error('El plano es demasiado grande para la imagen')),'image/png'); }catch(e){ rej(e); } });
+    descargar(blob,`Mapa_${nombreArchivo(nombrePatio(patioActivo))}_${hoyArchivo()}.png`);
+    estadoExp('Imagen descargada'+(sinFondo?' (sin la imagen de fondo, que no se pudo leer)':'')+'.');
+  }catch(err){ console.error(err); estadoExp('No se pudo generar la imagen: '+(err.message||err),true); }
+  bloquearExp(false);
+}
+
+async function exportarPDF(){
+  bloquearExp(true);
+  try{
+    estadoExp('Preparando PDF…');
+    await cargarScript(EXP.JSPDF); await cargarScript(EXP.AUTOTABLE); await document.fonts?.ready;
+    const { jsPDF }=window.jspdf;
+    const doc=new jsPDF({orientation:'landscape',unit:'pt',format:'tabloid',compress:true});
+    const PW=doc.internal.pageSize.getWidth(), PH=doc.internal.pageSize.getHeight(), M=28;
+    const lista=patios.filter(p=>equipos.some(e=>e.patio==p.id&&!fuera(e)));
+    // portada con el resumen por patio
+    const resumen=lista.map(p=>{ const L=layoutPatio(p.id), sinN=L.sin.reduce((s,g)=>s+g.length,0);
+      return [p.nombre, L.enPatio.length, L.enPatio.filter(e=>e.estatus==='LIBRE').length, L.enPatio.filter(e=>e.estatus.startsWith('ASIGNADO')).length, L.torres, sinN]; });
+    doc.setFont('helvetica','bold'); doc.setFontSize(24); doc.setTextColor(11,61,102); doc.text('Mapa de patios',M,M+26);
+    doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(74,88,104);
+    doc.text(`Generado ${new Date().toLocaleString('es-MX',{dateStyle:'long',timeStyle:'short'})} por ${$('#nombreUsuario').textContent} · ${resumen.reduce((s,r)=>s+r[1],0)} equipos en ${lista.length} patios · ${equipos.filter(fuera).length} entregados / fuera de patio`,M,M+46);
+    doc.autoTable({ startY:M+62, margin:{left:M,right:M}, head:[['Patio','Equipos','Libres','Asignados','Torres','Sin acomodar']],
+      body:[...resumen,['Total',...[1,2,3,4,5].map(i=>resumen.reduce((s,r)=>s+r[i],0))]],
+      styles:{fontSize:10,cellPadding:5}, headStyles:{fillColor:[11,61,102]}, columnStyles:{1:{halign:'right'},2:{halign:'right'},3:{halign:'right'},4:{halign:'right'},5:{halign:'right'}},
+      didParseCell:d=>{ if(d.section==='body'&&d.row.index===resumen.length) d.cell.styles.fontStyle='bold'; } });
+    let sinFondo=0;
+    for(let i=0;i<lista.length;i++){
+      const p=lista[i]; estadoExp(`Dibujando ${p.nombre} (${i+1} de ${lista.length})…`);
+      await new Promise(r=>setTimeout(r,0));
+      const { cv, L, sinFondo:sf }=await canvasPatio(p.id); if(sf) sinFondo++;
+      doc.addPage('tabloid','landscape');
+      const r=Math.min((PW-M*2)/cv.width,(PH-M*2)/cv.height), w=cv.width*r, h=cv.height*r;
+      doc.addImage(cv.toDataURL('image/jpeg',.92),'JPEG',(PW-w)/2,M,w,h,undefined,'FAST');
+      cv.width=cv.height=0;
+      if($('#expAnexo').checked){
+        doc.addPage('tabloid','landscape');
+        doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor(11,61,102); doc.text(`${p.nombre} · lista de equipos (${L.enPatio.length})`,M,M+14);
+        const filas=L.enPatio.slice().sort((a,b)=>(nombreZona(a.zona)||'~').localeCompare(nombreZona(b.zona)||'~')||(a.pila||a.niv).localeCompare(b.pila||b.niv)||(b.nivel??0)-(a.nivel??0))
+          .map(e=>{ const t=e.pila?torreDe(e).length:1;
+            return [e.niv,e.placa,e.tipo,nombreZona(e.zona)||'—',e.x==null?(L.sin.some(g=>g.includes(e))?'Sin acomodar':'Sugerida'):'En plano',t>1?`Nivel ${e.nivel??'—'} de ${t}`:'',bonito(e.estatus),e.cliente,bonito(e.operativo)]; });
+        doc.autoTable({ startY:M+26, margin:{left:M,right:M}, head:[['NIV','Placa','Tipo','Zona','Acomodo','Torre','Estatus','Cliente','Estatus operativo']], body:filas,
+          styles:{fontSize:8.5,cellPadding:3,overflow:'linebreak'}, headStyles:{fillColor:[11,61,102]}, columnStyles:{0:{font:'courier',fontStyle:'bold',cellWidth:120}} });
+      }
+    }
+    estadoExp('Guardando PDF…');
+    doc.save(`Mapa_de_patios_${hoyArchivo()}.pdf`);
+    estadoExp(`PDF descargado: ${lista.length} patios`+(sinFondo?` (en ${sinFondo} no se pudo incluir la imagen de fondo)`:'')+'.');
+  }catch(err){ console.error(err); estadoExp('No se pudo generar el PDF: '+(err.message||err),true); }
+  bloquearExp(false);
+}
+$('#btnExportar').onclick=()=>{
+  if(editando){ aviso('Termina o cancela la edición del plano primero'); return; }
+  $('#expPngSub').textContent=vistaEntregados?'Elige un patio para exportarlo':`Patio ${nombrePatio(patioActivo)}`;
+  estadoExp(''); bloquearExp(false); $('#dlgExport').showModal();
+};
+$('#expPng').onclick=exportarPNG; $('#expPdf').onclick=exportarPDF; $('#expCerrar').onclick=()=>$('#dlgExport').close();
 
 iniciar();
 </script>
