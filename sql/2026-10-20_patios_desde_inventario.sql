@@ -5,9 +5,8 @@
 -- 3) Trigger: toda ubicación nueva o reactivada en Inventario crea/activa su patio en core.patios.
 
 -- 1) Alta de los patios faltantes (se enlazan por nombre vía core.patio_id)
-insert into core.patios (id, clave, nombre, ciudad, estado, es_local, activo)
-select (select coalesce(max(id),0) from core.patios) + row_number() over (order by v.nombre),
-       v.clave, v.nombre, 'MONTERREY', 'NUEVO LEON', true, true
+insert into core.patios (clave, nombre, ciudad, estado, es_local, activo)
+select v.clave, v.nombre, 'MONTERREY', 'NUEVO LEON', true, true
 from (values ('MTY-BROKER-HS','MONTERREY - BROKER HS'),
              ('MTY-GALLEGOS','MONTERREY - GALLEGOS'),
              ('MTY-IRON-LITE','MONTERREY - IRON LITE'),
@@ -36,8 +35,8 @@ begin
     if exists (select 1 from core.patios where upper(clave) = v_clave) then
       v_clave := v_clave || '-' || substr(new.id::text, 1, 4);
     end if;
-    insert into core.patios (id, clave, nombre, ciudad, es_local, activo)
-    values ((select coalesce(max(id),0) + 1 from core.patios), v_clave, upper(new.nombre::text),
+    insert into core.patios (clave, nombre, ciudad, es_local, activo)
+    values (v_clave, upper(new.nombre::text),
             nullif(split_part(upper(new.nombre::text), ' - ', 1), ''), false, coalesce(new.activo, true));
   elsif coalesce(new.activo, true) then
     update core.patios set activo = true where id = v_id and not activo;
