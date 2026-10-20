@@ -15,6 +15,15 @@
 --    y a la jefatura; al completar todas las tareas avisa al encargado.
 -- =====================================================================
 
+-- ---------------------------------------------------------------- corrección de seguridad
+-- core.puede_escribir() devolvía NULL (no false) a quien no tiene el rol, y en
+-- funciones con "if not core.puede_escribir(...) then raise" un NULL NO rechaza.
+-- Afectaba a crear_orden, cambiar_estatus, agregar_cotizacion, comentar,
+-- enviar_factura, borrar_pruebas y core.completar_movimiento. En políticas RLS
+-- NULL y false se comportan igual, así que el cambio solo cierra el hueco.
+create or replace function core.puede_escribir(p_modulo text) returns boolean
+language sql stable as $$ select coalesce(core.nivel_modulo(p_modulo) in ('escritura','admin'), false); $$;
+
 -- ---------------------------------------------------------------- módulo y rol
 insert into core.modulos(clave, nombre, orden) values ('taller', 'Taller · avance de unidades', 4)
 on conflict (clave) do nothing;
@@ -71,7 +80,7 @@ $$;
 
 create or replace function operaciones.es_encargado_taller() returns boolean
 language sql stable security definer set search_path to 'operaciones','core','public' as $$
-  select core.puede_escribir('operaciones')
+  select coalesce(core.puede_escribir('operaciones'), false)
 $$;
 
 -- personal: ahora también lista a los mecánicos (para asignarles tareas)
@@ -161,8 +170,8 @@ returns void language plpgsql security definer set search_path to 'operaciones',
 declare t operaciones.orden_tareas; o operaciones.ordenes; v_enc boolean; v_folio text; v_pend int; v_quien text;
 begin
   if p_estatus not in ('pendiente','en_curso','hecha','detenida') then raise exception 'Estatus no válido'; end if;
-  v_enc := operaciones.es_encargado_taller();
-  if not (v_enc or core.puede_escribir('taller')) then raise exception 'No tienes permiso para registrar avance'; end if;
+  v_enc := coalesce(operaciones.es_encargado_taller(), false);
+  if not (v_enc or coalesce(core.puede_escribir('taller'), false)) then raise exception 'No tienes permiso para registrar avance'; end if;
 
   select * into t from operaciones.orden_tareas where id = p_id for update;
   if t.id is null then raise exception 'La tarea no existe'; end if;
@@ -185,9 +194,8 @@ begin
     estatus = p_estatus,
     -- quien la toma sin asignar se la queda
     mecanico_id = case when mecanico_id is null and not v_enc then auth.uid() else mecanico_id end,
-    nota = case when p_estatus = 'detenida' then trim(p_nota)
-                when p_estatus = 'pendiente' then null
-                else coalesce(nullif(trim(p_nota),''), nota) end,
+    -- la nota describe el estado actual: al reanudar o terminar se limpia el motivo del paro
+    nota = case when p_estatus = 'detenida' then trim(p_nota) else nullif(trim(p_nota),'') end,
     iniciada_en = case when p_estatus in ('en_curso','hecha') then coalesce(iniciada_en, now()) else iniciada_en end,
     terminada_en = case when p_estatus = 'hecha' then now() else null end,
     terminada_por = case when p_estatus = 'hecha' then auth.uid() else null end,
@@ -339,7 +347,7 @@ begin
   select * into o from operaciones.ordenes where id = p_orden;
   if o.id is null then raise exception 'La orden no existe'; end if;
   if not (operaciones.es_encargado_taller()
-          or (core.puede_escribir('taller') and exists (
+          or (coalesce(core.puede_escribir('taller'), false) and exists (
                 select 1 from operaciones.orden_tareas where orden_id = p_orden
                  and (mecanico_id = auth.uid() or mecanico_id is null)))) then
     raise exception 'Solo quien trabaja la unidad puede subir fotos';
