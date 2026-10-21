@@ -110,6 +110,11 @@ label>span.lbl{margin-bottom:5px}
 .stepper button{width:42px;height:42px;background:var(--surface);font-size:20px;color:var(--navy);font-weight:700}
 .stepper input{width:56px;border:0;text-align:center;font-family:var(--mono);font-weight:700;padding:0}
 
+/* GPS dentro de adicionales */
+.gps-foto{display:flex;gap:10px;align-items:center;margin-top:8px}
+.gps-foto .angle{width:120px;flex:0 0 120px}
+.gps-foto .hint{flex:1}
+
 /* histórico */
 .hist{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
 .hist .fecha{font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:nowrap;padding-top:3px}
@@ -209,7 +214,7 @@ label>span.lbl{margin-bottom:5px}
    Vive sobre core: equipos, patios, fotos, eventos y adicionales.
    Captura en campo con cola local: si no hay señal, se guarda y sube después.
    ===================================================================== */
-const APP_VERSION = 'v8 · plataforma · 18 oct 2026';
+const APP_VERSION = 'v9 · plataforma · 21 oct 2026';
 
 const SUPABASE_URL  = 'https://ahfjstuwekcuxshclprl.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFoZmpzdHV3ZWtjdXhzaGNscHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwNDg2MjYsImV4cCI6MjEwMzYyNDYyNn0.lf1uw8WHPRy21GuYlK9NzeI5JgJK2be1LrODq22CodM';
@@ -714,7 +719,7 @@ function pintarMov(){
       <div class="angles">${CAT.angulos.map(a=>botonAngulo(m.id,a)).join('')}</div>
       <div class="thumbs" id="thumbsMov">${pintarThumbs(m.id)}</div>
       <div class="row" style="margin-top:10px">
-        <select id="angGal" style="flex:1">${opciones(CAT.angulos,'Documentos')}</select>
+        <select id="angGal" style="flex:1">${opciones([...CAT.angulos, ANG_GPS],'Documentos')}</select>
         <button class="btn claro chico" onclick="pedirGaleria('${m.id}','angGal')">Desde galería</button>
       </div>
     </div>` : ''}
@@ -758,9 +763,34 @@ async function elegirEquipo(id){
 function quitarEquipo(){ const m=movActual(); m.equipo_id=''; m.niv=''; m.adicionales=[]; delete m._ref; pintarMov(); }
 
 /* --------------------- Adicionales y cotejo ------------------------- */
+const ANG_GPS = 'GPS';
+const esGPS = a => norm(a && a.nombre) === 'GPS';
+function filaGPS(m,a,i){
+  return `
+    <div class="add-row">
+      <div class="row"><span style="font-weight:700;font-size:14px">GPS</span><span class="sp"></span>
+        <button class="btn claro chico" onclick="quitarAdicional(${i})">✕</button></div>
+      <div class="grid2" style="margin-top:6px">
+        <label><span class="lbl">Número de serie del GPS</span>
+          <input id="gpsSerie" value="${esc(a.serie||'')}" placeholder="Ej. 862345051234567" autocapitalize="characters" autocomplete="off"
+            onchange="setSerieGPS(${i},this.value)"></label>
+        <label><span class="lbl">Condición</span><select onchange="setAdic(${i},'condicion',this.value)">${opciones(CAT.condiciones,a.condicion)}</select></label>
+      </div>
+      <span class="lbl" style="display:block;margin-top:8px">Foto del GPS</span>
+      <div class="gps-foto">
+        ${botonAngulo(m.id, ANG_GPS)}
+        <span class="hint">Toma la foto donde se lea el número de serie (etiqueta del equipo GPS).</span>
+      </div>
+    </div>`;
+}
+function setSerieGPS(i,v){
+  const m=movActual(); const a=m.adicionales[i]; if(!a) return;
+  a.serie = String(v||'').trim().toUpperCase(); a.detalle = a.serie ? 'Serie '+a.serie : '';
+  $('#cotejo').innerHTML=cotejo(m);
+}
 function pintarAdicionales(m){
   if(!m.adicionales.length) return `<p class="hint" style="padding:4px 2px">Sin adicionales registrados.</p>`;
-  return m.adicionales.map((a,i)=>`
+  return m.adicionales.map((a,i)=> esGPS(a) ? filaGPS(m,a,i) : `
     <div class="add-row">
       <div class="row"><span style="font-weight:700;font-size:14px">${esc(a.nombre)}</span><span class="sp"></span>
         <div class="stepper"><button onclick="qty(${i},-1)">−</button>
@@ -777,8 +807,12 @@ function agregarAdicional(){
   const sel = $('#selAdic'); const id = sel.value; if(!id) return;
   const cat = CAT.adicionales.find(a=>String(a.id)===String(id)); if(!cat) return;
   const m = movActual();
-  m.adicionales.push({adicional_id:cat.id, nombre:cat.nombre, cantidad:1, detalle:'', condicion:'Usado - Bueno'});
+  if(esGPS(cat) && m.adicionales.some(esGPS)){ nota('El GPS ya está agregado'); sel.value=''; return; }
+  m.adicionales.push(esGPS(cat)
+    ? {adicional_id:cat.id, nombre:cat.nombre, cantidad:1, serie:'', detalle:'', condicion:'Usado - Bueno'}
+    : {adicional_id:cat.id, nombre:cat.nombre, cantidad:1, detalle:'', condicion:'Usado - Bueno'});
   sel.value=''; refrescarAdic(m);
+  if(esGPS(cat)){ const g=$('#gpsSerie'); if(g) g.focus(); }
 }
 function quitarAdicional(i){ const m=movActual(); m.adicionales.splice(i,1); refrescarAdic(m); }
 function qty(i,d){ const m=movActual(); m.adicionales[i].cantidad=Math.max(0,(+m.adicionales[i].cantidad||0)+d); refrescarAdic(m); }
@@ -816,6 +850,9 @@ function cotejo(m){
       dif.push(`${nom}: ${a} → ${b}`);
     }
   });
+  const gA=(m._ref||[]).find(esGPS), gB=(m.adicionales||[]).find(esGPS);
+  if(gA && gB && gA.serie && gB.serie && norm(gA.serie)!==norm(gB.serie))
+    dif.push(`Serie GPS: ${gA.serie} → ${gB.serie}`);
   return dif.length
     ? `<div class="banner b-warn" style="margin-bottom:0"><b>Difiere de ${esc(m._refTexto||'el registro anterior')}:</b><br>${dif.map(esc).join('<br>')}</div>`
     : `<div class="banner b-ok" style="margin-bottom:0">Coincide con ${esc(m._refTexto||'el registro anterior')}.</div>`;
@@ -847,6 +884,7 @@ async function recibirImagenes(ev){
   if(m){
     const c=$('#movBody .angles'); if(c) c.innerHTML=CAT.angulos.map(a=>botonAngulo(m.id,a)).join('');
     const t=$('#thumbsMov'); if(t) t.innerHTML=pintarThumbs(m.id);
+    if(m.adicionales.some(esGPS) && $('#listaAdic')) $('#listaAdic').innerHTML=pintarAdicionales(m);
   }
   pedirSync();
 }
@@ -859,7 +897,8 @@ function pintarThumbs(movId){
 async function borrarFoto(id){
   await store.del('fotos', id); S.fotos = S.fotos.filter(f=>f.id!==id);
   const m=movActual(); if(m){ $('#thumbsMov').innerHTML=pintarThumbs(m.id);
-    $('#movBody .angles').innerHTML=CAT.angulos.map(a=>botonAngulo(m.id,a)).join(''); }
+    $('#movBody .angles').innerHTML=CAT.angulos.map(a=>botonAngulo(m.id,a)).join('');
+    if(m.adicionales.some(esGPS) && $('#listaAdic')) $('#listaAdic').innerHTML=pintarAdicionales(m); }
 }
 function comprimir(file, max=1440, q=0.72){
   return new Promise((res,rej)=>{
@@ -929,6 +968,12 @@ async function guardarMov(){
   }
   m.operador=$('#mOperador').value.trim(); m.placas_tractor=$('#mPlacas').value.trim().toUpperCase();
   m.carta_porte=$('#mCarta').value.trim(); m.condicion=$('#mCondicion').value; m.obs=$('#mObs').value.trim();
+  const gps = (m.adicionales||[]).find(esGPS);
+  if(gps){
+    const g=$('#gpsSerie'); if(g) setSerieGPS(m.adicionales.indexOf(gps), g.value);
+    if(!gps.serie){ nota('Captura el número de serie del GPS'); if(g) g.focus(); return; }
+    if(!S.fotos.some(f=>f.movId===m.id && f.angulo===ANG_GPS)){ nota('Falta la foto del GPS'); return; }
+  }
   if(!completo(m)){ nota('Faltan datos del movimiento'); return; }
   m.dirty=true; m.reparado=true;
   await store.put('movimientos', m);
@@ -979,7 +1024,7 @@ async function verUnidad(equipoId){
         const t = tipos[m.tipo_mov]||['', m.tipo_mov];
         const contra = m.tipo_mov==='entrada' ? m.origen_nombre
                      : m.tipo_mov==='traspaso' ? nombrePatio(m.patio_destino_id) : m.destino_nombre;
-        const adic = (m.adicionales||[]).map(a=>`${a.nombre} (${a.cantidad})`).join(', ');
+        const adic = (m.adicionales||[]).map(a=> esGPS(a) ? `GPS${a.serie?' serie '+a.serie:''}` : `${a.nombre} (${a.cantidad})`).join(', ');
         return `<li class="${t[0]}">
           <span class="t">${t[1]}${contra?' · '+esc(contra):''}</span>
           <span class="m">${esc(fCorta(m.fecha))} · ${esc(nombrePatio(m.patio_id))}${m.dirty?' · sin subir':''}</span>
