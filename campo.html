@@ -254,7 +254,7 @@ const PUNTOS = [
 ];
 const PUNTO_TRABAJO = { llantas:'llantas', frenos:'frenos', luces:'electrica', electrico:'electrica', suspension:'suspension',
   chasis:'estructural', piso:'piso', puertas:'puertas', lamina:'lamina', patines:'mecanica' };
-const EVID = [['frente','Frente'],['lateral_izq','Lateral izq'],['lateral_der','Lateral der'],['trasera','Trasera'],['niv','NIV'],['kilometraje','Kilometraje']];
+const EVID = [['frente','Frente'],['lateral_izq','Lateral izq'],['lateral_der','Lateral der'],['trasera','Trasera'],['niv','NIV']];  // remolques: sin odómetro
 const EST_TAREA = { pendiente:'Pendiente', en_curso:'En curso', hecha:'Hecha', detenida:'Detenida' };
 
 /* ============================ almacén local (IndexedDB) ============================ */
@@ -414,7 +414,7 @@ function items(){
     const tiene = new Set(S.fotosRev[r.id] || []);
     const enCamino = S.cola.filter(c => c.tipo === 'foto' && c.datos.revision_id === r.id).map(c => c.datos.angulo);
     enCamino.forEach(a => tiene.add(a));
-    const faltan = (r.puntos._evidencia || []).filter(a => !tiene.has(a));
+    const faltan = (r.puntos._evidencia || []).filter(a => EVID.some(([k]) => k === a) && !tiene.has(a));
     if(!faltan.length) continue;
     const vencida = Date.now() - new Date(r.creado_en) > 24 * 36e5;
     lista.push({ clave:'r:' + r.id, tipo:'fotos', niv:r.niv, placa:r.placa, fecha:r.creado_en, vencida, pendiente:true, hoy:esHoy(r.creado_en),
