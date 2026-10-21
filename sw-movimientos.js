@@ -3,7 +3,7 @@
 // service worker controla TODAS las páginas (index.html, mapa-patios.html, inventario/...).
 // Por eso las páginas propias se piden siempre a la red primero; la copia guardada
 // solo se usa si no hay conexión (caseta sin señal).
-const VERSION = 'mov-v11-2026-10-21';
+const VERSION = 'mov-v12-2026-10-21';
 const CACHE = 'movimientos-ht-' + VERSION;
 const EXTERNOS = [
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js',

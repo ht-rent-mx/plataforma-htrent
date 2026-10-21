@@ -17,7 +17,7 @@
 <style>
 /* =====================================================================
    Operaciones en patio · app de celular para los asistentes de Operaciones
-   Mis equipos hoy · inspección de recepción con evidencia · avance de taller
+   Mis tareas (asignadas por la jefatura + las del proceso) · inspección de recepción · avance de taller
    Funciona sin señal: lo capturado se guarda en el teléfono y se sube solo.
    ===================================================================== */
 html,body{background:var(--bg)}
@@ -62,6 +62,25 @@ body.prueba .top{border-bottom-color:var(--amber)}
 .chip.reparacion{background:var(--amber-soft);color:#7A5200}
 .chip.terminado{background:var(--lime-soft);color:var(--lime-ink)}
 .chip.listo{background:var(--lime-soft);color:var(--lime-ink)}
+.chip.asignada{background:#E1ECF8;color:#0C447C}
+.chip.alta{background:var(--red-soft);color:var(--red)}
+.chip.encurso{background:var(--amber-soft);color:#7A5200}
+.chip.hecha{background:var(--lime-soft);color:var(--lime-ink)}
+.eq .tit{font-size:16px;font-weight:700;color:var(--ink);flex:1;min-width:0;line-height:1.25}
+.eq .tipo{font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+.grupo{margin:16px 2px 8px;font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.grupo.mal{color:var(--red)}
+.grupo:first-of-type{margin-top:4px}
+.linea-t{border-left:2px solid var(--line);margin:4px 0 0 7px;padding-left:16px}
+.linea-t .p{position:relative;padding:4px 0 12px;font-size:14.5px}
+.linea-t .p:before{content:'';position:absolute;left:-22px;top:9px;width:10px;height:10px;border-radius:50%;background:var(--navy);border:2px solid var(--bg)}
+.linea-t .p.hecha:before{background:var(--lime-ink)}
+.linea-t .p.cola:before{background:var(--amber)}
+.linea-t .p small{display:block;color:var(--muted);font-size:12.5px;margin-top:1px}
+.datos{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:14.5px;margin-top:10px}
+.datos dt{color:var(--muted)}
+.datos dd{margin:0;font-weight:600;color:var(--ink)}
+.btn-grande.alerta{background:var(--surface);border-color:var(--red);color:var(--red)}
 
 .btn-linea{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;border:1px solid var(--edge);border-radius:10px;background:var(--surface);font-weight:700;font-size:15px;color:var(--ink);text-decoration:none;margin-top:6px}
 .btn-linea svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
@@ -145,6 +164,7 @@ body.prueba .top{border-bottom-color:var(--amber)}
 
 /* navegación inferior */
 .nav{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:flex;justify-content:center;padding:6px 0 calc(6px + env(safe-area-inset-bottom));z-index:25}
+.nav[hidden]{display:none}
 .nav .in{display:flex;width:100%;max-width:640px}
 .nav button{flex:1;background:transparent;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:12.5px;font-weight:600;color:var(--muted);padding:4px 0}
 .nav button svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.8}
@@ -185,7 +205,7 @@ body.prueba .top{border-bottom-color:var(--amber)}
 </div>
 
 <nav class="nav" id="nav" hidden><div class="in">
-  <button data-v="equipos" aria-current="page"><svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M3.5 6l1.2 1.2L7 5M3.5 12l1.2 1.2L7 11M3.5 18l1.2 1.2L7 17"/></svg>Equipos</button>
+  <button data-v="tareas" aria-current="page" class="pt"><svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M3.5 6l1.2 1.2L7 5M3.5 12l1.2 1.2L7 11M3.5 18l1.2 1.2L7 17"/></svg>Tareas<i id="navTareas"></i></button>
   <button data-v="capturar"><svg viewBox="0 0 24 24"><path d="M3 8h3l2-3h8l2 3h3v11H3z"/><circle cx="12" cy="13" r="3.6"/></svg>Capturar</button>
   <button data-v="buscar"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>Buscar</button>
   <button data-v="yo" class="pt"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Yo<i id="navPend"></i></button>
@@ -281,7 +301,8 @@ const IDB = {
 const S = {
   yo:null, nivel:null, prueba:false, patios:[], tipos:{}, patioSel:null,
   porRevisar:[], ordenes:[], revisiones:[], fotosRev:{}, avanceHoy:new Set(), tareas:{},
-  vista:'equipos', filtro:'pendientes', pila:[], cola:[], subiendo:false, cargado:false
+  vista:'tareas', filtro:'pendientes', pila:[], cola:[], subiendo:false, cargado:false,
+  asig:[], alcance:{ jefe:false, mis_patios:[], patios_con_responsable:[] }, personas:[], persona:null
 };
 try{ S.patioSel = JSON.parse(localStorage.getItem('campo_patio') || 'null'); }catch(_){}
 const puedeEscribir = () => S.nivel === 'escritura' || S.nivel === 'admin';
@@ -324,7 +345,7 @@ async function iniciar(){
 
   await refrescarCola();
   const pedida = new URLSearchParams(location.search).get('vista');
-  ir(VISTAS[pedida] ? pedida : 'equipos');
+  ir(VISTAS[pedida] ? pedida : 'tareas');
   cargar();
   subirCola();
   setInterval(() => { if(document.visibilityState === 'visible'){ subirCola(); } }, 30000);
@@ -336,22 +357,32 @@ async function iniciar(){
 
 function aplicarCache(c){
   return { patios:c.patios || [], tipos:c.tipos || {}, porRevisar:c.porRevisar || [], ordenes:c.ordenes || [],
-    revisiones:c.revisiones || [], fotosRev:c.fotosRev || {}, avanceHoy:new Set(c.avanceHoy || []), tareas:c.tareas || {}, cargado:true };
+    revisiones:c.revisiones || [], fotosRev:c.fotosRev || {}, avanceHoy:new Set(c.avanceHoy || []), tareas:c.tareas || {},
+    asig:c.asig || [], alcance:c.alcance || S.alcance, personas:c.personas || [], cargado:true };
 }
 
 async function cargar(){
   try{
     const desde = new Date(Date.now() - 7 * 864e5).toISOString();
-    const [pa, ti, pr, ord, rev] = await Promise.all([
+    const [pa, ti, pr, ord, rev, alc, asg, per] = await Promise.all([
       core.from('patios').select('id,nombre').eq('activo', true).order('nombre'),
       core.from('tipos_equipo').select('id,nombre'),
       db.rpc('entradas_por_revisar', { p_dias:15 }),
-      db.from('v_ordenes').select('id,folio_txt,equipo_id,niv,placa,tipo_equipo,patio_id,patio,tipo,prioridad,descripcion,estatus,linea,taller,fecha_compromiso,fecha_inicio,fecha_termino,actualizado_en,creado_en,revision_id')
+      db.from('v_ordenes').select('id,folio_txt,equipo_id,niv,placa,tipo_equipo,patio_id,patio,tipo,prioridad,descripcion,estatus,linea,taller,fecha_compromiso,fecha_inicio,fecha_termino,actualizado_en,creado_en,revision_id,responsable_id,responsable')
         .eq('es_prueba', S.prueba).in('estatus', ['abierta','cotizacion','por_autorizar','autorizada','en_proceso','terminada']).order('creado_en', { ascending:false }).limit(400),
-      db.from('v_revisiones').select('id,equipo_id,niv,placa,patio_id,patio,puntos,resultado,condicion,creado_en,creado_por_nombre,orden_id')
-        .eq('es_prueba', S.prueba).gte('creado_en', desde).order('creado_en', { ascending:false }).limit(200)
+      db.from('v_revisiones').select('id,equipo_id,niv,placa,patio_id,patio,puntos,resultado,condicion,creado_en,creado_por,creado_por_nombre,orden_id')
+        .eq('es_prueba', S.prueba).gte('creado_en', desde).order('creado_en', { ascending:false }).limit(200),
+      db.rpc('mi_alcance'),
+      db.from('v_asignaciones').select('*').eq('es_prueba', S.prueba).neq('estatus', 'cancelada')
+        .or(`estatus.in.(pendiente,en_curso),actualizado_en.gte."${desde}"`).order('creado_en', { ascending:false }).limit(500),
+      db.rpc('personas_asignables')
     ]);
-    for(const r of [pa, pr, ord, rev]) if(r.error) throw r.error;
+    for(const r of [pa, pr, ord, rev, alc, asg]) if(r.error) throw r.error;
+    S.alcance = Object.assign({ jefe:false, mis_patios:[], patios_con_responsable:[] }, alc.data || {});
+    S.asig = asg.data || [];
+    S.personas = per.data || [];
+    if(S.persona === null) S.persona = S.alcance.jefe ? 'todos' : S.yo.id;
+    if(!S.alcance.jefe) S.persona = S.yo.id;
     S.patios = pa.data || [];
     S.tipos = Object.fromEntries((ti.data || []).map(t => [t.id, t.nombre]));
     S.porRevisar = pr.data || [];
@@ -389,16 +420,63 @@ async function cargar(){
     }
     S.cargado = true;
     try{ localStorage.setItem('campo_cache', JSON.stringify({ yo:S.yo.id, patios:S.patios, tipos:S.tipos, porRevisar:S.porRevisar,
-      ordenes:S.ordenes, revisiones:S.revisiones, fotosRev:S.fotosRev, avanceHoy:[...S.avanceHoy], tareas:S.tareas, en:new Date().toISOString() })); }catch(_){}
+      ordenes:S.ordenes, revisiones:S.revisiones, fotosRev:S.fotosRev, avanceHoy:[...S.avanceHoy], tareas:S.tareas,
+      asig:S.asig, alcance:S.alcance, personas:S.personas, en:new Date().toISOString() })); }catch(_){}
   }catch(e){
     if(!esRed(e)) nota('No se pudo actualizar: ' + errTxt(e), 6000);
   }
-  if(!S.pila.length) pintar();
+  if(!S.pila.length) pintar(); else pintarCinta();
 }
 
-/* ============================ lista "Mis equipos hoy" ============================ */
+/* ============================ lista "Mis tareas" ============================ */
+const primerNombre = n => String(n || '').split(' ')[0];
+const diasA = f => Math.round((new Date(f + 'T12:00:00') - new Date(hoyISO() + 'T12:00:00')) / 864e5);
+function compromisoTxt(f){
+  if(!f) return 'Sin fecha compromiso';
+  const d = diasA(f);
+  if(d < 0) return `Vencida hace ${-d} día${d === -1 ? '' : 's'} (${fechaCorta(f)})`;
+  if(d === 0) return 'Compromiso: hoy';
+  if(d === 1) return 'Compromiso: mañana';
+  return 'Compromiso: ' + fechaCorta(f);
+}
+// patios que me tocan: los míos y los que no tiene asignados ningún asistente
+const miPatio = p => (S.alcance.mis_patios || []).includes(p) || !(S.alcance.patios_con_responsable || []).includes(p);
+// de quién es cada tarea (null = del patio, se reparte por patio)
+function dueno(i){
+  if(i.tipo === 'asignada') return i.dato.responsable_id;
+  if(i.tipo === 'fotos') return i.dato.creado_por || null;
+  if(['diagnostico','reparacion','terminado'].includes(i.tipo)) return i.dato.responsable_id || null;
+  return null;
+}
+function visible(i){
+  const d = dueno(i);
+  if(S.alcance.jefe && S.persona === 'todos') return true;
+  const quien = S.alcance.jefe ? S.persona : S.yo.id;
+  if(d) return d === quien;
+  return quien === S.yo.id && (S.alcance.jefe ? false : miPatio(i.dato.patio_id));
+}
+const visibles = () => items().filter(visible);
+
 function items(){
   const lista = [];
+  for(const a of S.asig){
+    if(a.estatus === 'cancelada') continue;
+    const hecha = a.estatus === 'hecha';
+    const enCola = S.cola.filter(c => c.tipo === 'avance_tarea' && c.datos.id === a.id);
+    const estCola = enCola.map(c => c.datos.estatus).filter(Boolean).pop();
+    const est = estCola || (enCola.length && a.estatus === 'pendiente' ? 'en_curso' : a.estatus);
+    const hechaYa = est === 'hecha';
+    const venc = !hechaYa && a.fecha_compromiso && diasA(a.fecha_compromiso) < 0;
+    lista.push({ clave:'a:' + a.id, tipo:'asignada', titulo:a.titulo, niv:a.niv, placa:a.placa, dato:a, est,
+      fecha: a.fecha_compromiso ? a.fecha_compromiso + 'T12:00:00' : a.creado_en, vencida:!!venc,
+      pendiente:!hechaYa, hoy: hechaYa ? esHoy(a.terminada_en) || enCola.length > 0 : !!(a.fecha_compromiso && diasA(a.fecha_compromiso) <= 0),
+      tenue:hechaYa, hecha:hechaYa,
+      chip: hechaYa ? ['hecha','Hecha'] : venc ? ['vencida','Vencida'] : a.prioridad === 'alta' ? ['alta','Prioridad alta'] : est === 'en_curso' ? ['encurso','En curso'] : ['asignada','Nueva'],
+      l2:[ (a.asignada_por === S.yo.id ? 'Asignada por ti' : 'De ' + primerNombre(a.asignada_por_nombre)),
+           (S.alcance.jefe && a.responsable_id !== S.yo.id ? 'para ' + primerNombre(a.responsable) : ''),
+           a.niv ? 'NIV ·' + String(a.niv).slice(-4) : '' ].filter(Boolean).join(' · '),
+      l3: hechaYa ? (a.terminada_en ? 'Terminada ' + hace(a.terminada_en) : 'Terminada') : compromisoTxt(a.fecha_compromiso), l3mal:!!venc });
+  }
   const enPatio = p => !S.patioSel || p === S.patioSel;
   const enCola = new Set(S.cola.filter(c => c.tipo === 'revision').map(c => c.datos.fila.movimiento_id || c.datos.fila.equipo_id));
   for(const m of S.porRevisar){
@@ -424,7 +502,7 @@ function items(){
   }
   for(const o of S.ordenes){
     if(!enPatio(o.patio_id)) continue;
-    const base = { niv:o.niv, placa:o.placa, fecha:o.actualizado_en, dato:o, l2:[o.tipo_equipo || (o.tipo === 'adecuacion' ? 'Adecuación' : 'Reparación'), o.linea || o.taller || o.patio].filter(Boolean).join(' · ') };
+    const base = { niv:o.niv, placa:o.placa, fecha:o.actualizado_en, dato:o, l2:[o.tipo_equipo || (o.tipo === 'adecuacion' ? 'Adecuación' : 'Reparación'), o.linea || o.taller || o.patio, S.alcance.jefe && o.responsable ? 'a cargo de ' + primerNombre(o.responsable) : ''].filter(Boolean).join(' · ') };
     if(['abierta','cotizacion','por_autorizar'].includes(o.estatus)){
       lista.push({ ...base, clave:'o:' + o.id, tipo:'diagnostico', chip:['diagnostico','En diagnóstico'], pendiente:false, hoy:esHoy(o.creado_en),
         l3: o.estatus === 'por_autorizar' ? 'Cotización en autorización' : 'Ilse revisa y cotiza' });
@@ -438,7 +516,7 @@ function items(){
         l3:'Enviado a Ilse para liberar' });
     }
   }
-  const peso = i => (i.vencida ? 0 : 10) + ({ inspeccionar:1, fotos:2, reparacion:3, diagnostico:4, terminado:5 })[i.tipo];
+  const peso = i => (i.hecha ? 20 : 0) + (i.vencida ? 0 : 10) + ({ asignada:1, inspeccionar:2, fotos:3, reparacion:4, diagnostico:5, terminado:6 })[i.tipo];
   return lista.sort((a, b) => peso(a) - peso(b) || new Date(a.fecha) - new Date(b.fecha));
 }
 
@@ -452,14 +530,14 @@ function topLista(titulo){
 }
 
 // Pestañas de la app. El parámetro de la dirección es ?vista= (el ?v= lo usa el inicio para la versión).
-const VISTAS = { equipos:() => vistaEquipos(), capturar:() => vistaCapturar(), buscar:() => vistaBuscar(), yo:() => vistaYo() };
+const VISTAS = { tareas:() => vistaTareas(), capturar:() => vistaCapturar(), buscar:() => vistaBuscar(), yo:() => vistaYo() };
 function pintar(){
   if(S.pila.length) return;
-  (VISTAS[S.vista] || VISTAS.equipos)();
+  (VISTAS[S.vista] || VISTAS.tareas)();
   pintarCinta();
 }
 function ir(v){
-  if(!VISTAS[v]) v = 'equipos';
+  if(!VISTAS[v]) v = 'tareas';
   S.vista = v; S.pila = [];
   $('nav').querySelectorAll('button').forEach(b => b.setAttribute('aria-current', b.dataset.v === v ? 'page' : 'false'));
   const u = new URL(location); u.searchParams.set('vista', v); history.replaceState(null, '', u);
@@ -468,35 +546,64 @@ function ir(v){
 }
 $('nav').onclick = e => { const b = e.target.closest('[data-v]'); if(b) ir(b.dataset.v); };
 
+const TIPO_TXT = { asignada:'Tarea asignada', inspeccionar:'Inspección de recepción', fotos:'Fotos de recepción', reparacion:'Seguimiento de reparación',
+  diagnostico:'En espera de Ilse', terminado:'En espera de liberar' };
 function tarjeta(i){
+  const cab = i.tipo === 'asignada'
+    ? `<span class="tit">${esc(i.titulo)}</span>`
+    : `<span class="niv">NIV ·${ultimos(i.niv)}<small>${esc(i.placa || '')}</small></span>`;
   return `<button class="eq ${i.vencida ? 'vencida' : ''} ${i.tenue ? 'tenue' : ''}" data-item="${esc(i.clave)}">
-    <div class="f1"><span class="niv">NIV ·${ultimos(i.niv)}<small>${esc(i.placa || '')}</small></span><span class="chip ${i.chip[0]}">${i.chip[1]}</span></div>
+    <div class="tipo">${TIPO_TXT[i.tipo] || ''}</div>
+    <div class="f1">${cab}<span class="chip ${i.chip[0]}">${i.chip[1]}</span></div>
     <div class="l2">${esc(i.l2)}</div>
     <div class="l3 ${i.l3mal ? 'mal' : ''}">${i.ico ? ICO_CAM : ''}${esc(i.l3)}</div>
   </button>`;
 }
 
-function vistaEquipos(){
-  topLista('Mis equipos hoy');
-  const todos = items();
+function vistaTareas(){
+  const jefe = S.alcance.jefe;
+  const quien = S.persona === 'todos' ? null : S.personas.find(p => p.id === S.persona);
+  topLista(jefe ? (S.persona === 'todos' ? 'Tareas del equipo' : S.persona === S.yo.id ? 'Mis tareas' : 'Tareas de ' + primerNombre(quien?.nombre)) : 'Mis tareas');
+  const todos = visibles();
   const pend = todos.filter(i => i.pendiente), hoy = todos.filter(i => i.hoy);
   const lista = S.filtro === 'pendientes' ? pend : S.filtro === 'hoy' ? hoy : todos;
+  const asistentes = S.personas.filter(p => !p.jefe && p.id !== S.yo.id);
+
+  let cuerpo = '';
+  if(S.filtro === 'pendientes' && lista.length){
+    const venc = lista.filter(i => i.vencida);
+    const ahora = lista.filter(i => !i.vencida && (i.tipo !== 'asignada' || i.hoy));
+    const luego = lista.filter(i => !i.vencida && i.tipo === 'asignada' && !i.hoy);
+    if(venc.length) cuerpo += `<div class="grupo mal">Vencidas · ${venc.length}</div>` + venc.map(tarjeta).join('');
+    if(ahora.length) cuerpo += `<div class="grupo">Para hoy · ${ahora.length}</div>` + ahora.map(tarjeta).join('');
+    if(luego.length) cuerpo += `<div class="grupo">Próximas · ${luego.length}</div>` + luego.map(tarjeta).join('');
+  } else cuerpo = lista.map(tarjeta).join('');
+
   $('vista').innerHTML = `
+    ${jefe ? `<div class="filtro" id="personas">
+        <button data-p="todos" aria-pressed="${S.persona === 'todos'}">Todo el equipo</button>
+        <button data-p="${S.yo.id}" aria-pressed="${S.persona === S.yo.id}">Mías</button>
+        ${asistentes.map(p => `<button data-p="${p.id}" aria-pressed="${S.persona === p.id}">${esc(primerNombre(p.nombre))}</button>`).join('')}
+      </div>
+      <button class="btn-grande navy" id="asignar" style="margin-bottom:12px">+ Asignar tarea</button>` : ''}
     <div class="filtro" id="filtro">
       <button data-f="pendientes" aria-pressed="${S.filtro === 'pendientes'}">Pendientes <span class="n">${pend.length}</span></button>
       <button data-f="hoy" aria-pressed="${S.filtro === 'hoy'}">Hoy <span class="n">${hoy.length}</span></button>
-      <button data-f="todos" aria-pressed="${S.filtro === 'todos'}">Todos <span class="n">${todos.length}</span></button>
+      <button data-f="todos" aria-pressed="${S.filtro === 'todos'}">Todas <span class="n">${todos.length}</span></button>
     </div>
-    ${lista.map(tarjeta).join('') || `<div class="vacio2">${!S.cargado ? 'Cargando…' : S.filtro === 'pendientes' ? '<b>Sin pendientes.</b><br>Todo lo que llegó ya está inspeccionado y con su avance del día.' : 'Nada por aquí.'}</div>`}
+    ${cuerpo || `<div class="vacio2">${!S.cargado ? 'Cargando…' : S.filtro === 'pendientes' ? '<b>Sin pendientes.</b><br>No hay tareas asignadas abiertas ni unidades por atender.' : 'Nada por aquí.'}</div>`}
     <a class="btn-linea" href="movimientos.html">Registrar arribo de unidad ${ICO_FLECHA}</a>`;
-  $('filtro').onclick = e => { const b = e.target.closest('[data-f]'); if(!b) return; S.filtro = b.dataset.f; vistaEquipos(); };
+  $('filtro').onclick = e => { const b = e.target.closest('[data-f]'); if(!b) return; S.filtro = b.dataset.f; vistaTareas(); };
+  if($('personas')) $('personas').onclick = e => { const b = e.target.closest('[data-p]'); if(!b) return; S.persona = b.dataset.p; vistaTareas(); };
+  if($('asignar')) $('asignar').onclick = () => abrirFormTarea(null);
   const mapa = Object.fromEntries(todos.map(i => [i.clave, i]));
   $('vista').querySelectorAll('[data-item]').forEach(b => b.onclick = () => abrirItem(mapa[b.dataset.item]));
 }
 
 function abrirItem(i){
   if(!i) return;
-  if(i.tipo === 'inspeccionar') abrirInspeccion({ mov:i.dato });
+  if(i.tipo === 'asignada') abrirAsignada(i.dato);
+  else if(i.tipo === 'inspeccionar') abrirInspeccion({ mov:i.dato });
   else if(i.tipo === 'fotos') abrirFaltantes(i.dato, i.faltan);
   else abrirOrden(i.dato);
 }
@@ -504,7 +611,7 @@ function abrirItem(i){
 /* ============================ Capturar ============================ */
 function vistaCapturar(){
   topLista('Capturar');
-  const it = items();
+  const it = visibles();
   const insp = it.filter(i => i.tipo === 'inspeccionar' || i.tipo === 'fotos');
   const rep = it.filter(i => i.tipo === 'reparacion' && i.dato.estatus === 'en_proceso');
   $('vista').innerHTML = `
@@ -631,7 +738,7 @@ const TXT_RES = { listo:'Listo para operar', reparacion:'En diagnóstico · avis
 
 async function pintarInspeccion(b){
   window.scrollTo(0, 0);
-  pintarTop(`<button class="volver" id="volver">‹ Mis equipos</button>
+  pintarTop(`<button class="volver" id="volver">‹ Tareas</button>
     <h1>Inspección · NIV ·${ultimos(b.niv)}</h1>
     <div class="sub2">${esc([b.tipo_equipo, nombrePatio(b.patio_id)].filter(Boolean).join(' · '))}</div>`);
   $('volver').onclick = () => { S.pila = []; pintar(); };
@@ -784,7 +891,7 @@ async function cerrarInspeccion(b){
 async function abrirFaltantes(r, faltan){
   S.pila = ['faltantes'];
   window.scrollTo(0, 0);
-  pintarTop(`<button class="volver" id="volver">‹ Mis equipos</button><h1>Fotos de recepción · NIV ·${ultimos(r.niv)}</h1>
+  pintarTop(`<button class="volver" id="volver">‹ Tareas</button><h1>Fotos de recepción · NIV ·${ultimos(r.niv)}</h1>
     <div class="sub2">${esc(r.patio || '')} · inspeccionada ${hace(r.creado_en)}</div>`);
   $('volver').onclick = () => { S.pila = []; pintar(); };
   const tomadas = {};
@@ -816,7 +923,7 @@ function abrirOrden(o){
   const pct = tareas.length ? Math.round(hechas * 100 / tareas.length) : 0;
   const ESTO = { abierta:'En diagnóstico', cotizacion:'En cotización', por_autorizar:'Cotización por autorizar', autorizada:'Autorizada · espera pasar a taller',
     en_proceso:'En reparación', terminada:'Terminada · enviada a Ilse para liberar' };
-  pintarTop(`<button class="volver" id="volver">‹ Mis equipos</button><h1>${esc(o.folio_txt)} · NIV ·${ultimos(o.niv)}</h1>
+  pintarTop(`<button class="volver" id="volver">‹ Tareas</button><h1>${esc(o.folio_txt)} · NIV ·${ultimos(o.niv)}</h1>
     <div class="sub2">${esc([o.tipo_equipo, o.linea || o.taller || o.patio].filter(Boolean).join(' · '))}</div>`);
   $('volver').onclick = () => { S.pila = []; pintar(); };
   const enCola = S.cola.filter(c => c.datos?.orden_id === o.id).length;
@@ -873,6 +980,142 @@ function abrirOrden(o){
   };
 }
 
+
+/* ============================ TAREA ASIGNADA ============================ */
+const EST_ASIG = { pendiente:'Nueva', en_curso:'En curso', hecha:'Hecha', cancelada:'Cancelada' };
+async function abrirAsignada(a){
+  if(!a) return;
+  S.pila = ['asig'];
+  window.scrollTo(0, 0);
+  const jefe = S.alcance.jefe, mia = a.responsable_id === S.yo.id;
+  const puede = puedeEscribir() && (mia || jefe) && a.estatus !== 'cancelada';
+  const enCola = S.cola.filter(c => c.tipo === 'avance_tarea' && c.datos.id === a.id);
+  const est = enCola.map(c => c.datos.estatus).filter(Boolean).pop() || (enCola.length && a.estatus === 'pendiente' ? 'en_curso' : a.estatus);
+  const hecha = est === 'hecha';
+  pintarTop(`<button class="volver" id="volver">‹ Tareas</button><h1 style="font-size:21px">${esc(a.titulo)}</h1>
+    <div class="sub2">${a.prioridad === 'alta' ? 'Prioridad alta · ' : ''}${hecha ? 'Terminada' + (a.terminada_en ? ' ' + hace(a.terminada_en) : '') : esc(compromisoTxt(a.fecha_compromiso))}</div>`);
+  $('volver').onclick = () => { S.pila = []; pintar(); };
+  const venc = !hecha && a.fecha_compromiso && diasA(a.fecha_compromiso) < 0;
+  const orden = a.orden_id ? S.ordenes.find(o => o.id === a.orden_id) : null;
+
+  const pintarDetalle = av => {
+    const lineas = [...av.map(v => ({ texto:v.texto, estatus:v.estatus, por:v.por_nombre, en:v.en })),
+      ...enCola.map(c => ({ texto:c.datos.texto, estatus:c.datos.estatus, por:S.yo.nombre, en:c.creado, cola:true }))];
+    $('vista').innerHTML = `
+      <div class="caja">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <span class="chip ${hecha ? 'hecha' : venc ? 'vencida' : est === 'en_curso' ? 'encurso' : 'asignada'}">${venc ? 'Vencida' : EST_ASIG[est]}</span>
+          ${a.prioridad === 'alta' ? '<span class="chip alta">Prioridad alta</span>' : ''}</div>
+        ${a.detalle ? `<p style="font-size:15px;margin-top:10px;white-space:pre-wrap">${esc(a.detalle)}</p>` : ''}
+        <dl class="datos">
+          <dt>Responsable</dt><dd>${esc(a.responsable)}</dd>
+          <dt>Asignó</dt><dd>${esc(a.asignada_por_nombre)} · ${hace(a.creado_en)}</dd>
+          <dt>Compromiso</dt><dd>${a.fecha_compromiso ? fechaCorta(a.fecha_compromiso) : 'Sin fecha'}</dd>
+          ${a.niv ? `<dt>Equipo</dt><dd style="font-family:var(--mono)">${esc(a.niv)}${a.placa ? ' · ' + esc(a.placa) : ''}</dd>` : ''}
+          ${a.orden_folio ? `<dt>Orden</dt><dd>${orden ? `<a href="#" id="verOrden">${esc(orden.folio_txt)}</a>` : 'OT-' + a.orden_folio}</dd>` : ''}
+        </dl>
+      </div>
+      <div class="sec">Avance</div>
+      <div class="caja"><div class="linea-t">
+        ${lineas.length ? lineas.map(l => `<div class="p ${l.estatus === 'hecha' ? 'hecha' : ''} ${l.cola ? 'cola' : ''}">
+            ${l.estatus && l.estatus !== 'pendiente' ? `<b>${EST_ASIG[l.estatus] || l.estatus}.</b> ` : ''}${esc(l.texto || '')}
+            <small>${esc(primerNombre(l.por))} · ${l.cola ? 'guardado en el teléfono, por subir' : new Date(l.en).toLocaleString('es-MX', { timeZone:'America/Monterrey', day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}</small></div>`).join('')
+          : '<div class="p"><small>Sin avances todavía.</small></div>'}
+      </div></div>
+      ${puede && !hecha ? `
+        <button class="btn-grande navy" id="tAvance" style="margin-top:14px">Reportar avance</button>
+        <button class="btn-grande" id="tHecha" style="margin-top:8px">Marcar como hecha</button>` : ''}
+      ${puede && hecha ? `<button class="btn-grande claro" id="tReabrir" style="margin-top:14px">Reabrir tarea</button>` : ''}
+      ${jefe && puedeEscribir() && a.estatus !== 'cancelada' ? `
+        <button class="btn-grande claro" id="tEditar" style="margin-top:8px">Editar, reasignar o cambiar fecha</button>
+        <button class="btn-grande alerta" id="tCancelar" style="margin-top:8px">Cancelar tarea</button>` : ''}`;
+
+    if($('verOrden')) $('verOrden').onclick = e => { e.preventDefault(); abrirOrden(orden); };
+    const registrar = async (texto, estatus, msg) => {
+      await encolar('avance_tarea', { id:a.id, texto, estatus }, `Tarea: ${a.titulo.slice(0, 40)}`);
+      nota(navigator.onLine ? msg : 'Guardado en el teléfono: se sube al recuperar señal', 4500);
+      await subirCola(); await cargar();
+      const nueva = S.asig.find(x => x.id === a.id);
+      if(nueva && estatus !== 'cancelada') abrirAsignada(nueva); else { S.pila = []; pintar(); }
+    };
+    if($('tAvance')) $('tAvance').onclick = async () => {
+      const t = await pedirTexto('Reportar avance', 'Qué hiciste, qué falta o qué estás esperando.', 'Avance', true);
+      if(t) registrar(t, null, 'Avance guardado');
+    };
+    if($('tHecha')) $('tHecha').onclick = async () => {
+      const t = await pedirTexto('Marcar como hecha', `Se le avisa a ${primerNombre(a.asignada_por_nombre)} que la terminaste.`, 'Comentario (opcional)', false);
+      if(t !== null) registrar(t || null, 'hecha', 'Tarea terminada');
+    };
+    if($('tReabrir')) $('tReabrir').onclick = async () => {
+      const t = await pedirTexto('Reabrir tarea', 'La tarea vuelve a quedar en curso.', 'Motivo', true);
+      if(t) registrar(t, 'en_curso', 'Tarea reabierta');
+    };
+    if($('tEditar')) $('tEditar').onclick = () => abrirFormTarea(a);
+    if($('tCancelar')) $('tCancelar').onclick = async () => {
+      if(!navigator.onLine){ nota('Para cancelar se necesita señal.'); return; }
+      const t = await pedirTexto('Cancelar tarea', 'Deja de aparecer en la lista del responsable.', 'Motivo', true);
+      if(t) registrar(t, 'cancelada', 'Tarea cancelada');
+    };
+  };
+
+  pintarDetalle([]);
+  if(navigator.onLine){
+    const { data } = await db.from('v_asignacion_avances').select('texto,estatus,por_nombre,en').eq('asignacion_id', a.id).order('en');
+    if(S.pila[0] === 'asig') pintarDetalle(data || []);
+  }
+}
+
+/* ============================ ASIGNAR / EDITAR TAREA (jefatura) ============================ */
+function abrirFormTarea(a){
+  if(!S.alcance.jefe || !puedeEscribir()){ nota('Solo la jefatura de Operaciones asigna tareas.'); return; }
+  S.pila = ['formTarea'];
+  window.scrollTo(0, 0);
+  const asist = S.personas.filter(p => !p.jefe), jefes = S.personas.filter(p => p.jefe);
+  const resp = a ? a.responsable_id : (S.persona !== 'todos' && S.persona !== S.yo.id ? S.persona : (asist[0]?.id || S.yo.id));
+  const opc = p => `<option value="${p.id}" ${p.id === resp ? 'selected' : ''}>${esc(p.nombre)}${p.id === S.yo.id ? ' (yo)' : ''}</option>`;
+  pintarTop(`<button class="volver" id="volver">‹ ${a ? 'Tarea' : 'Tareas'}</button><h1>${a ? 'Editar tarea' : 'Asignar tarea'}</h1>`);
+  $('volver').onclick = () => { if(a) abrirAsignada(a); else { S.pila = []; pintar(); } };
+  $('vista').innerHTML = `
+    <label class="campo2"><span>Qué hay que hacer *</span><input id="fTit" maxlength="200" value="${esc(a?.titulo || '')}" placeholder="Ej. Recoger caja en patio Lázaro y llevar a taller"></label>
+    <label class="campo2"><span>Detalle (opcional)</span><textarea id="fDet" rows="3" placeholder="Instrucciones, contacto, lo que se necesite">${esc(a?.detalle || '')}</textarea></label>
+    <label class="campo2"><span>Responsable *</span><select id="fResp">
+      ${asist.length ? `<optgroup label="Asistentes">${asist.map(opc).join('')}</optgroup>` : ''}
+      ${jefes.length ? `<optgroup label="Jefatura">${jefes.map(opc).join('')}</optgroup>` : ''}</select></label>
+    <label class="campo2"><span>Fecha compromiso</span><input id="fFecha" type="date" value="${a ? (a.fecha_compromiso || '') : hoyISO()}"></label>
+    ${a ? '' : `<label class="campo2"><span>NIV del equipo (opcional · últimos dígitos)</span><input id="fNiv" inputmode="text" autocomplete="off" spellcheck="false" style="text-transform:uppercase;font-family:var(--mono)" placeholder="Ej. 4821"></label>`}
+    <label class="toggle"><input type="checkbox" id="fAlta" ${a?.prioridad === 'alta' ? 'checked' : ''}> Prioridad alta</label>
+    <p class="aviso" id="fErr" style="margin-top:10px"></p>
+    <button class="btn-grande" id="fGuardar" style="margin-top:12px">${a ? 'Guardar cambios' : 'Asignar'}</button>`;
+  setTimeout(() => !a && $('fTit').focus(), 60);
+  $('fGuardar').onclick = async () => {
+    const err = t => { $('fErr').textContent = t; $('fGuardar').disabled = false; };
+    const titulo = $('fTit').value.trim();
+    if(!titulo) return err('Escribe qué hay que hacer.');
+    if(!navigator.onLine) return err('Para asignar se necesita señal.');
+    $('fGuardar').disabled = true; $('fErr').textContent = '';
+    let equipo = null;
+    const niv = ($('fNiv')?.value || '').trim().toUpperCase();
+    if(niv){
+      if(niv.length < 4) return err('Escribe al menos 4 dígitos del NIV.');
+      const { data, error } = await core.from('equipos').select('id,niv').ilike('niv', '%' + niv).eq('activo', true).limit(3);
+      if(error) return err(errTxt(error));
+      if(!data.length) return err('No encontré un equipo con ese NIV.');
+      if(data.length > 1) return err('Hay varios equipos que terminan así; escribe más dígitos.');
+      equipo = data[0].id;
+    }
+    const comun = { p_titulo:titulo, p_responsable:$('fResp').value, p_detalle:$('fDet').value.trim() || null,
+      p_fecha:$('fFecha').value || null, p_prioridad:$('fAlta').checked ? 'alta' : 'normal' };
+    const r = a ? await db.rpc('editar_tarea', { p_id:a.id, ...comun })
+                : await db.rpc('asignar_tarea', { ...comun, p_equipo:equipo, p_orden:null });
+    if(r.error) return err(errTxt(r.error));
+    const quien = S.personas.find(p => p.id === comun.p_responsable);
+    nota(a ? 'Cambios guardados' : `Tarea asignada a ${primerNombre(quien?.nombre)}`);
+    await cargar();
+    if(a){ const n = S.asig.find(x => x.id === a.id); if(n) return abrirAsignada(n); }
+    S.pila = []; pintar();
+  };
+}
+
 /* ============================ cola de subida (sin señal) ============================ */
 async function encolar(tipo, datos, titulo){
   const c = { id:uuid(), tipo, datos, titulo, creado:new Date().toISOString() };
@@ -889,6 +1132,8 @@ async function refrescarCola(){
 function pintarCinta(){
   const n = S.cola.length, err = S.cola.filter(c => c.error).length;
   $('navPend').textContent = n || '';
+  try{ const v = S.cargado ? items().filter(i => i.pendiente && (S.alcance.jefe ? dueno(i) === S.yo.id : visible(i))).length : 0;
+       $('navTareas').textContent = v || ''; }catch(_){}
   const c = $('cintaSync');
   if(!n){ c.innerHTML = navigator.onLine ? '' : `<div class="cinta-sync">${ICO_NUBE}Sin señal: puedes seguir capturando, se guarda en el teléfono.</div>`; return; }
   c.innerHTML = err
@@ -928,7 +1173,7 @@ async function ejecutar(c){
     if(error && !(error.code === '23505')) throw error;           // ya se había subido
   } else if(c.tipo === 'orden'){
     const { data:id, error } = await db.rpc('crear_orden', { p_equipo:d.equipo_id, p_tipo:d.tipo, p_trabajos:d.trabajos, p_prioridad:d.prioridad,
-      p_descripcion:d.descripcion, p_patio:d.patio_id, p_revision:d.revision_id });
+      p_descripcion:d.descripcion, p_patio:d.patio_id, p_revision:d.revision_id, p_responsable:S.yo.id });
     if(error){
       if(/ya tiene una orden/i.test(errTxt(error))){            // ya existe la orden abierta: se avisa igual
         const r = await db.rpc('avisar_revision', { p_revision:d.revision_id, p_orden:null, p_texto:d.aviso + ' (ya tenía orden abierta)' });
@@ -941,6 +1186,9 @@ async function ejecutar(c){
     if(r.error) throw r.error;
   } else if(c.tipo === 'aviso'){
     const { error } = await db.rpc('avisar_revision', { p_revision:d.revision_id, p_orden:null, p_texto:d.aviso });
+    if(error) throw error;
+  } else if(c.tipo === 'avance_tarea'){
+    const { error } = await db.rpc('avance_tarea', { p_id:d.id, p_texto:d.texto || null, p_estatus:d.estatus || null });
     if(error) throw error;
   } else if(c.tipo === 'comentario'){
     const { error } = await db.rpc('comentar', { p_orden:d.orden_id, p_texto:d.texto }); if(error) throw error;
