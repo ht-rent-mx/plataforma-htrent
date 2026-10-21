@@ -323,7 +323,8 @@ async function iniciar(){
   $('app').style.display = 'block'; $('nav').hidden = false;
 
   await refrescarCola();
-  ir(new URLSearchParams(location.search).get('v') || 'equipos');
+  const pedida = new URLSearchParams(location.search).get('vista');
+  ir(VISTAS[pedida] ? pedida : 'equipos');
   cargar();
   subirCola();
   setInterval(() => { if(document.visibilityState === 'visible'){ subirCola(); } }, 30000);
@@ -450,15 +451,18 @@ function topLista(titulo){
   pintarTop(`<p class="quien">${esc(S.yo.nombre)} · ${esc(patio)}</p><h1>${esc(titulo)}</h1>`);
 }
 
+// Pestañas de la app. El parámetro de la dirección es ?vista= (el ?v= lo usa el inicio para la versión).
+const VISTAS = { equipos:() => vistaEquipos(), capturar:() => vistaCapturar(), buscar:() => vistaBuscar(), yo:() => vistaYo() };
 function pintar(){
   if(S.pila.length) return;
-  ({ equipos:vistaEquipos, capturar:vistaCapturar, buscar:vistaBuscar, yo:vistaYo })[S.vista]();
+  (VISTAS[S.vista] || VISTAS.equipos)();
   pintarCinta();
 }
 function ir(v){
+  if(!VISTAS[v]) v = 'equipos';
   S.vista = v; S.pila = [];
   $('nav').querySelectorAll('button').forEach(b => b.setAttribute('aria-current', b.dataset.v === v ? 'page' : 'false'));
-  const u = new URL(location); u.searchParams.set('v', v); history.replaceState(null, '', u);
+  const u = new URL(location); u.searchParams.set('vista', v); history.replaceState(null, '', u);
   window.scrollTo(0, 0);
   pintar();
 }
