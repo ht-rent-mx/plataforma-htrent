@@ -221,6 +221,7 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 const BUCKET = 'fotos-equipos';
 const LIB    = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js';
 
+const BROKER_TXT = 'Monterrey - Broker HS';
 const CAT = {
   condiciones:   ["Nuevo","Usado - Bueno","Usado - Regular","Usado - Malo","Chatarra"],
   estatusFisico: ["Operativo","Requiere reparación menor","Requiere reparación mayor","Siniestrado","Fuera de operación"],
@@ -228,6 +229,7 @@ const CAT = {
   /* Motivo de la entrada → procedencia que se guarda y lo que pasa en Inventario */
   motivosEntrada: [
     {v:'DEVOLUCION', t:'Devolución de cliente',              origen:'Cliente',         ayuda:'Queda LIBRE y PENDIENTE de entrega (si era Nuevo pasa a Recuperado) y se registra en Devoluciones.'},
+    {v:'BROKER',     t:'Regresa de Monterrey - Broker HS',   origen:'Otro patio',      ayuda:'Cambia la ubicación al patio que recibe; conserva su estatus de entrega.'},
     {v:'TRASPASO',   t:'Llega de otro patio (traspaso)',     origen:'Otro patio',      ayuda:'Cambia la ubicación al patio que recibe y recupera su estatus si venía En tránsito.'},
     {v:'NUEVO',      t:'Equipo nuevo de fabricante',         origen:'Fabricante',      ayuda:'Cambia la ubicación al patio que recibe.'},
     {v:'TALLER',     t:'Regresa de taller o reparación',     origen:'Taller',          ayuda:'Cambia la ubicación al patio que recibe y recupera su estatus si venía En tránsito.'},
@@ -237,6 +239,8 @@ const CAT = {
   quienInforma: [],          // se llena de core.catalogos_entrada()
   motivosDev:   [],
   destino: ["Cliente","Otro patio","Taller","Venta","Subasta","Sin especificar"],
+  /* Lo que ve el usuario en Destino de una salida; Broker HS se guarda como 'Otro patio' + ese patio */
+  destinoOpc: ["Cliente", BROKER_TXT, "Otro patio","Taller","Venta","Subasta","Sin especificar"],
   angulos: ["Frontal","Lateral izquierdo","Lateral derecho","Trasera","NIV grabado","Placas",
             "Piso / plataforma","Ejes y suspensión","Llantas","Adicionales","Daños","Documentos"],
   adicionales: []            // se llena de core.catalogo_adicionales
@@ -258,6 +262,9 @@ function opciones(arr, sel){
 }
 const opcionesPatio = sel => `<option value="">— Seleccionar —</option>` +
   S.patios.map(p=>`<option value="${p.id}"${String(p.id)===String(sel)?' selected':''}>${esc(p.nombre)}</option>`).join('');
+/* Patio sin caseta (Broker HS): el equipo se da por recibido al salir hacia él */
+const patioBroker = () => S.patios.find(p=>p.clave==='MTY-BROKER-HS') || S.patios.find(p=>norm(p.nombre)==='MONTERREY BROKER HS');
+const esDirecto = id => { const p = S.patios.find(x=>String(x.id)===String(id)); return !!(p && (p.recepcion_directa || p.clave==='MTY-BROKER-HS')); };
 const nombrePatio = id => (S.patios.find(p=>String(p.id)===String(id))||{}).nombre || '';
 function nota(t, ms=4000){
   const n=$('#nota'); n.textContent=t; n.classList.add('on');
@@ -374,7 +381,7 @@ async function bajarCatalogos(aviso){
   if(!SB || !navigator.onLine) return;
   if(aviso) nota('Descargando catálogos…', 8000);
   const [{data:patios}, {data:adic}, {data:tipos}, {data:marcas}] = await Promise.all([
-    CORE.from('patios').select('id,clave,nombre,activo').eq('activo',true).order('nombre'),
+    CORE.from('patios').select('id,clave,nombre,activo,recepcion_directa').eq('activo',true).order('nombre'),
     CORE.from('catalogo_adicionales').select('id,nombre,activo').eq('activo',true).order('nombre'),
     CORE.from('tipos_equipo').select('id,nombre'),
     CORE.from('marcas').select('id,nombre')
@@ -509,11 +516,15 @@ async function subirFotos(){
 /* la ubicación local se refresca al momento; el servidor hace lo mismo por su cuenta */
 async function aplicarLocal(m){
   const e = equipoDe(m.equipo_id); if(!e) return;
-  if(m.tipo_mov==='salida')        { e.patio_fisico_id = null;
+  const directo = ['salida','traspaso'].includes(m.tipo_mov) && m.patio_destino_id && esDirecto(m.patio_destino_id)
+                  && (m.tipo_mov==='traspaso' || m.destino_tipo==='Otro patio');
+  if(directo)                      { e.patio_fisico_id = Number(m.patio_destino_id); e.patio_id = e.patio_fisico_id; }
+  else if(m.tipo_mov==='salida')   { e.patio_fisico_id = null;
     e.estatus = ({Cliente:'ENTREGADO','Otro patio':'EN_TRANSITO',Taller:'EN_TRANSITO',Venta:'RESIDUAL_PAGADO',Subasta:'SUBASTA_RB'})[m.destino_tipo] || e.estatus; }
   else if(m.tipo_mov==='traspaso') { e.patio_fisico_id = null; e.estatus = 'EN_TRANSITO'; }   // viaja: llega con su entrada
   else                             { e.patio_fisico_id = Number(m.patio_id)||null; e.patio_id = e.patio_fisico_id; e.estatus = 'DISPONIBLE'; }
   if(m.tipo_mov==='salida' && m.destino_tipo==='Cliente') e.cliente = m.destino_nombre;
+  if(directo){ await store.put('equipos', e); return; }
   if(m.tipo_mov==='entrada' && m.motivo_entrada!=='SERVICIO') e.cliente = '';
   await store.put('equipos', e);
 }
@@ -713,8 +724,9 @@ function pintarMov(){
         <div id="bloqueMotivo">${bloqueMotivo(m,e)}</div>
         <label><span class="lbl">Quién lo entrega</span><input id="mOrigenNombre" value="${esc(m.origen_nombre)}" placeholder="Cliente, fabricante o patio de procedencia"></label>`
       : es==='salida' ? `
-        <label><span class="lbl">Destino</span><select id="mDestinoTipo">${opciones(CAT.destino, m.destino_tipo||'Cliente')}</select></label>
-        <label><span class="lbl">Quién lo recibe</span><input id="mDestinoNombre" value="${esc(m.destino_nombre)}" placeholder="Cliente, taller o comprador"></label>`
+        <label><span class="lbl">Destino</span><select id="mDestinoTipo" onchange="cambiarDestino(this.value)">${opciones(CAT.destinoOpc, destinoVisible(m))}</select></label>
+        <div id="bloqueDestino">${bloqueDestino(m)}</div>
+        <label><span class="lbl">Quién lo recibe</span><input id="mDestinoNombre" value="${esc(m.destino_nombre)}" placeholder="Cliente, taller, comprador o patio"></label>`
       : `<label><span class="lbl">Patio destino</span><select id="mPatioDestino">${opcionesPatio(m.patio_destino_id)}</select></label>`}
       <div class="grid2">
         <label><span class="lbl">Operador</span><input id="mOperador" value="${esc(m.operador)}"></label>
@@ -758,6 +770,11 @@ function bloqueMotivo(m,e){
   const o = CAT.motivosEntrada.find(x=>x.v===m.motivo_entrada);
   if(!o) return `<div class="hint">El motivo define cómo se actualiza el equipo en Inventario.</div>`;
   let h = `<div class="hint" style="margin:4px 0 8px">${esc(o.ayuda)}</div>`;
+  if(o.v==='TRASPASO'){
+    const sel = (S.patios.find(p=>p.nombre===m.origen_nombre)||{}).id || '';
+    h += `<label><span class="lbl">Patio de procedencia</span>
+      <select id="mPatioOrigen" onchange="const n=$('#mOrigenNombre'); if(n) n.value=nombrePatio(this.value);">${opcionesPatio(sel)}</select></label>`;
+  }
   if(o.v==='DEVOLUCION'){
     if(e && e.estatus && e.estatus!=='ENTREGADO')
       h += `<div class="hint" style="color:#b45309;margin-bottom:8px">En el sistema este equipo no figura como entregado (${esc(e.estatus)}). Se liberará, pero no quedará registrado en Devoluciones; avisa a Operaciones.</div>`;
@@ -777,11 +794,37 @@ function bloqueMotivo(m,e){
   }
   return h;
 }
+/* ------------------------- Destino de la salida ------------------------- */
+function destinoVisible(m){
+  if(m.destino_tipo==='Otro patio' && m.patio_destino_id && esDirecto(m.patio_destino_id)) return BROKER_TXT;
+  return m.destino_tipo || 'Cliente';
+}
+function bloqueDestino(m){
+  const v = destinoVisible(m);
+  if(v===BROKER_TXT){
+    const b = patioBroker();
+    return b ? `<div class="hint" style="margin:4px 0 8px">El equipo queda en <b>${esc(b.nombre)}</b> en cuanto sale y conserva su estatus de entrega (no se marca Entregado ni En tránsito).</div>`
+             : `<div class="hint" style="color:#b45309;margin:4px 0 8px">Este dispositivo aún no tiene el patio Broker HS: conéctate y usa "Forzar actualización".</div>`;
+  }
+  if(v==='Otro patio') return `<label><span class="lbl">Patio destino</span>
+      <select id="mPatioDestinoSal" onchange="const n=$('#mDestinoNombre'); if(n) n.value=nombrePatio(this.value);">${opcionesPatio(m.patio_destino_id)}</select></label>
+    <div class="hint" style="margin-bottom:8px">Queda En tránsito hasta que se registre su entrada en el patio destino.</div>`;
+  return '';
+}
+function cambiarDestino(v){
+  const m = movActual(); if(!m) return;
+  const n = $('#mDestinoNombre');
+  if(v===BROKER_TXT){ const b=patioBroker(); m.destino_tipo='Otro patio'; m.patio_destino_id = b ? String(b.id) : ''; if(n) n.value = b ? b.nombre : BROKER_TXT; }
+  else { if(destinoVisible(m)===BROKER_TXT && n) n.value=''; m.destino_tipo=v; if(v!=='Otro patio') m.patio_destino_id=''; }
+  $('#bloqueDestino').innerHTML = bloqueDestino(m);
+}
 function cambiarMotivoEntrada(v){
   const m = movActual(); if(!m) return;
   m.motivo_entrada = v;
   const o = CAT.motivosEntrada.find(x=>x.v===v);
   m.origen_tipo = o ? o.origen : '';
+  const n0 = $('#mOrigenNombre');
+  if(v==='BROKER' && n0){ const b=patioBroker(); n0.value = b ? b.nombre : BROKER_TXT; }
   if(v==='DEVOLUCION'){
     const e = equipoDe(m.equipo_id);
     const n = $('#mOrigenNombre'); if(n && !n.value.trim() && e && e.cliente) n.value = e.cliente;
@@ -1017,6 +1060,12 @@ async function guardarMov(){
     const o = CAT.motivosEntrada.find(x=>x.v===m.motivo_entrada);
     if(!o){ nota('Elige el motivo de la entrada'); $('#mMotivoEntrada').focus(); return; }
     m.origen_tipo = o.origen; m.origen_nombre = $('#mOrigenNombre').value.trim();
+    if(o.v==='TRASPASO'){
+      const po = ($('#mPatioOrigen')||{}).value;
+      if(!po){ nota('Elige el patio de procedencia'); return; }
+      m.origen_nombre = nombrePatio(po);
+    }
+    if(o.v==='BROKER'){ const b=patioBroker(); m.origen_nombre = b ? b.nombre : BROKER_TXT; }
     if(o.v==='DEVOLUCION'){
       m.quien_informa_id = ($('#mQuienInforma')||{}).value || '';
       m.motivo_devolucion_id = ($('#mMotivoDev')||{}).value || '';
@@ -1024,7 +1073,16 @@ async function guardarMov(){
     } else { m.quien_informa_id=''; m.motivo_devolucion_id=''; }
   }
   if(m.tipo_mov==='salida'){
-    m.destino_tipo=$('#mDestinoTipo').value; m.destino_nombre=$('#mDestinoNombre').value.trim();
+    const dv = $('#mDestinoTipo').value; m.destino_nombre=$('#mDestinoNombre').value.trim();
+    if(dv===BROKER_TXT){
+      const b = patioBroker(); if(!b){ nota('Falta el patio Broker HS en este dispositivo: usa "Forzar actualización"'); return; }
+      m.destino_tipo='Otro patio'; m.patio_destino_id=String(b.id); if(!m.destino_nombre) m.destino_nombre=b.nombre;
+    } else if(dv==='Otro patio'){
+      m.destino_tipo='Otro patio'; m.patio_destino_id = ($('#mPatioDestinoSal')||{}).value || '';
+      if(!m.patio_destino_id){ nota('Elige el patio destino'); return; }
+      if(String(m.patio_destino_id)===String(m.patio_id)){ nota('El patio destino no puede ser el mismo'); return; }
+      if(!m.destino_nombre) m.destino_nombre = nombrePatio(m.patio_destino_id);
+    } else { m.destino_tipo=dv; m.patio_destino_id=''; }
     if(!m.destino_nombre){ nota('Captura a quién se entrega'); return; }
     const bl = (S.bloqueos||{})[m.equipo_id];
     if(bl && m.destino_tipo!=='Taller'){

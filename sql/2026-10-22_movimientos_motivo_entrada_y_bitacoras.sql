@@ -16,6 +16,10 @@
 --    · Entrada por traspaso, taller, fabricante, servicio u otro → solo
 --      cambia la ubicación (y si venía EN TRÁNSITO recupera su estatus).
 --    · Traspaso o salida a otro patio / taller → EN TRÁNSITO.
+--    · Salida o traspaso a un patio de RECEPCIÓN DIRECTA (Monterrey - Broker HS):
+--      no hay caseta que capture la llegada, así que el equipo queda de una vez
+--      en ese patio y conserva su estatus de entrega (no pasa a En tránsito
+--      ni a Entregado).
 --    Si el equipo no está en el estatus que pide la bitácora, se aplica el
 --    cambio directo y queda una alerta en el historial del equipo.
 -- =====================================================================
@@ -27,10 +31,16 @@ alter table core.movimientos
 
 alter table core.movimientos drop constraint if exists movimientos_motivo_entrada_check;
 alter table core.movimientos add constraint movimientos_motivo_entrada_check
-  check (motivo_entrada is null or motivo_entrada in ('DEVOLUCION','TRASPASO','NUEVO','TALLER','SERVICIO','OTRO'));
+  check (motivo_entrada is null or motivo_entrada in ('DEVOLUCION','TRASPASO','BROKER','NUEVO','TALLER','SERVICIO','OTRO'));
+
+-- Patios sin caseta: el equipo se da por recibido en cuanto sale hacia ellos
+alter table core.patios add column if not exists recepcion_directa boolean not null default false;
+update core.patios set recepcion_directa = true where clave = 'MTY-BROKER-HS';
+comment on column core.patios.recepcion_directa is
+  'Patio sin caseta (p. ej. Monterrey - Broker HS): una salida o traspaso hacia él deja el equipo ahí de inmediato, sin En tránsito';
 
 comment on column core.movimientos.motivo_entrada is
-  'Razón de la entrada: DEVOLUCION (cliente regresa el equipo), TRASPASO (llega de otro patio), NUEVO (de fabricante), TALLER (regresa de reparación), SERVICIO (equipo de cliente que entra a revisión y sigue con él), OTRO';
+  'Razón de la entrada: DEVOLUCION (cliente regresa el equipo), TRASPASO (llega de otro patio), BROKER (regresa de Monterrey - Broker HS), NUEVO (de fabricante), TALLER (regresa de reparación), SERVICIO (equipo de cliente que entra a revisión y sigue con él), OTRO';
 
 -- ---------------------------------------------------------------------
 create or replace function core.catalogos_entrada()
@@ -50,6 +60,76 @@ revoke all on function core.catalogos_entrada() from public, anon;
 grant execute on function core.catalogos_entrada() to authenticated;
 
 -- ---------------------------------------------------------------------
+-- core.equipos (Mapa de patios, ubicación en la plataforma)
+create or replace function core.aplicar_movimiento()
+ returns trigger language plpgsql security definer
+as $function$
+declare
+  v_estatus text; v_contra text; v_patio smallint; a jsonb; v_tarde boolean; v_directo boolean;
+begin
+  v_contra := coalesce(case when new.tipo_mov = 'entrada' then new.origen_tipo else new.destino_tipo end, '*');
+  select estatus_resultante into v_estatus from core.movimiento_estatus
+   where tipo_mov = new.tipo_mov and contraparte_tipo = v_contra;
+  if not found then
+    select estatus_resultante into v_estatus from core.movimiento_estatus
+     where tipo_mov = new.tipo_mov and contraparte_tipo = '*';
+  end if;
+
+  -- Salida / traspaso a un patio sin caseta: llega de una vez y conserva su estatus
+  v_directo := new.tipo_mov in ('salida','traspaso') and new.patio_destino_id is not null
+               and coalesce(new.destino_tipo,'Otro patio') = 'Otro patio'
+               and exists (select 1 from core.patios p where p.id = new.patio_destino_id and p.recepcion_directa);
+  if v_directo then v_estatus := null; end if;
+
+  v_tarde := exists (select 1 from core.movimientos m
+                     where m.equipo_id = new.equipo_id and m.id <> new.id
+                       and m.tipo_mov in ('entrada','salida','traspaso') and m.fecha > new.fecha);
+
+  v_patio := case when v_directo then new.patio_destino_id
+                  when new.tipo_mov in ('salida','traspaso') then null else new.patio_id end;
+
+  if not v_tarde then
+    update core.equipos e set
+      patio_fisico_id = case when new.tipo_mov = 'correccion' then e.patio_fisico_id else v_patio end,
+      patio_id = case when new.tipo_mov in ('entrada','levantamiento') and new.patio_id is not null then new.patio_id
+                      when v_directo then new.patio_destino_id
+                      else e.patio_id end,
+      estatus_operativo = coalesce(v_estatus, e.estatus_operativo),
+      cliente_actual = case
+          when new.tipo_mov = 'salida' and new.destino_tipo = 'Cliente' then new.destino_nombre
+          when new.tipo_mov in ('entrada','levantamiento') and coalesce(new.motivo_entrada,'') <> 'SERVICIO' then null
+          else e.cliente_actual end,
+      zona_id = coalesce(new.zona_id, e.zona_id),
+      actualizado_en = now()
+    where e.id = new.equipo_id;
+  end if;
+
+  insert into core.eventos_equipo (equipo_id, modulo, tipo, descripcion, datos, patio_id, registrado_por, ocurrido_en)
+  values (new.equipo_id, 'movimientos', new.tipo_mov,
+          concat_ws(' · ', initcap(new.tipo_mov),
+                    (select nombre from core.patios where id = coalesce(new.patio_destino_id, new.patio_id)),
+                    coalesce(new.origen_nombre, new.destino_nombre)),
+          jsonb_build_object('movimiento_id', new.id, 'operador', new.operador,
+                             'carta_porte', new.carta_porte, 'condicion', new.condicion,
+                             'motivo_entrada', new.motivo_entrada, 'recepcion_directa', v_directo,
+                             'estatus_aplicado', case when v_tarde then null else v_estatus end,
+                             'omitido_por_posterior', v_tarde),
+          coalesce(new.patio_destino_id, new.patio_id), new.registrado_por, new.fecha);
+
+  if not v_tarde and jsonb_array_length(coalesce(new.adicionales,'[]'::jsonb)) > 0 then
+    delete from core.equipo_adicionales where equipo_id = new.equipo_id;
+    for a in select * from jsonb_array_elements(new.adicionales) loop
+      insert into core.equipo_adicionales (equipo_id, adicional_id, cantidad, actualizado_en)
+      select new.equipo_id, c.id, coalesce((a->>'cantidad')::smallint, 1), new.fecha
+      from core.catalogo_adicionales c
+      where c.id = nullif(a->>'adicional_id','')::smallint or upper(c.nombre) = upper(a->>'nombre')
+      limit 1 on conflict do nothing;
+    end loop;
+  end if;
+  return new;
+end $function$;
+
+-- ---------------------------------------------------------------------
 create or replace function core.fn_movimiento_a_inventario()
 returns trigger
 language plpgsql
@@ -63,6 +143,7 @@ declare
   v_ent        text;
   v_cond       text;
   v_ubic       uuid;
+  v_ubic_dest  uuid;               -- patio de recepción directa (Broker HS)
   v_motivo     text;
   v_ent_nuevo  text;
   v_asig_nuevo text;
@@ -118,6 +199,14 @@ begin
       'ubicacion', (select u.nombre::text from catalogos.tbl_ubicaciones u where u.id = t.ubicacion_id),
       'estatus_asignacion', v_asig, 'estatus_entrega', v_ent, 'condicion', v_cond,
       'cliente', t.cliente_asignado);
+
+    if new.tipo_mov in ('salida','traspaso') and new.patio_destino_id is not null
+       and coalesce(new.destino_tipo,'Otro patio') = 'Otro patio'
+       and exists (select 1 from core.patios p where p.id = new.patio_destino_id and p.recepcion_directa) then
+      select u.id into v_ubic_dest from catalogos.tbl_ubicaciones u
+       where core.patio_id(u.nombre::text) = new.patio_destino_id order by u.activo desc limit 1;
+      if v_ubic_dest is null then v_alerta := 'El patio destino no tiene ubicación equivalente en Inventario'; end if;
+    end if;
 
     -- =========================== ENTRADA ===========================
     if new.tipo_mov = 'entrada' then
@@ -177,6 +266,10 @@ begin
       end if;
 
     -- =========================== TRASPASO ==========================
+    elsif v_ubic_dest is not null then
+      -- Salida o traspaso a Broker HS: queda ahí y conserva su estatus de entrega
+      null;
+
     elsif new.tipo_mov = 'traspaso' then
       if v_ent is distinct from 'EN TRANSITO' then v_ent_nuevo := 'EN TRANSITO'; end if;
 
@@ -229,6 +322,7 @@ begin
 
     v_hay := v_bitacora is not null or v_dev
           or (v_ubic is not null and new.tipo_mov = 'entrada' and v_ubic is distinct from t.ubicacion_id)
+          or (v_ubic_dest is not null and v_ubic_dest is distinct from t.ubicacion_id)
           or (v_ent_id  is not null and v_ent_id  is distinct from t.estatus_entrega_id)
           or (v_asig_id is not null and v_asig_id is distinct from t.estatus_asignacion_id)
           or (v_cond_id is not null and v_cond_id is distinct from t.condicion_id);
@@ -244,7 +338,9 @@ begin
     end if;
 
     update inventario.tbl_equipos set
-      ubicacion_id          = case when new.tipo_mov = 'entrada' then coalesce(v_ubic, ubicacion_id) else ubicacion_id end,
+      ubicacion_id          = case when new.tipo_mov = 'entrada' then coalesce(v_ubic, ubicacion_id)
+                                   when v_ubic_dest is not null then v_ubic_dest
+                                   else ubicacion_id end,
       estatus_asignacion_id = coalesce(v_asig_id, estatus_asignacion_id),
       estatus_entrega_id    = coalesce(v_ent_id, estatus_entrega_id),
       condicion_id          = coalesce(v_cond_id, condicion_id),
