@@ -214,7 +214,7 @@ label>span.lbl{margin-bottom:5px}
    Vive sobre core: equipos, patios, fotos, eventos y adicionales.
    Captura en campo con cola local: si no hay señal, se guarda y sube después.
    ===================================================================== */
-const APP_VERSION = 'v9 · plataforma · 21 oct 2026';
+const APP_VERSION = 'v10 · plataforma · 22 oct 2026';
 
 const SUPABASE_URL  = 'https://ahfjstuwekcuxshclprl.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFoZmpzdHV3ZWtjdXhzaGNscHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwNDg2MjYsImV4cCI6MjEwMzYyNDYyNn0.lf1uw8WHPRy21GuYlK9NzeI5JgJK2be1LrODq22CodM';
@@ -225,6 +225,17 @@ const CAT = {
   condiciones:   ["Nuevo","Usado - Bueno","Usado - Regular","Usado - Malo","Chatarra"],
   estatusFisico: ["Operativo","Requiere reparación menor","Requiere reparación mayor","Siniestrado","Fuera de operación"],
   origen:  ["Cliente","Fabricante","Otro patio","Taller","Sin especificar"],
+  /* Motivo de la entrada → procedencia que se guarda y lo que pasa en Inventario */
+  motivosEntrada: [
+    {v:'DEVOLUCION', t:'Devolución de cliente',              origen:'Cliente',         ayuda:'Queda LIBRE y PENDIENTE de entrega (si era Nuevo pasa a Recuperado) y se registra en Devoluciones.'},
+    {v:'TRASPASO',   t:'Llega de otro patio (traspaso)',     origen:'Otro patio',      ayuda:'Cambia la ubicación al patio que recibe y recupera su estatus si venía En tránsito.'},
+    {v:'NUEVO',      t:'Equipo nuevo de fabricante',         origen:'Fabricante',      ayuda:'Cambia la ubicación al patio que recibe.'},
+    {v:'TALLER',     t:'Regresa de taller o reparación',     origen:'Taller',          ayuda:'Cambia la ubicación al patio que recibe y recupera su estatus si venía En tránsito.'},
+    {v:'SERVICIO',   t:'Equipo de cliente a revisión o servicio', origen:'Cliente',    ayuda:'El equipo sigue asignado y entregado al cliente; solo cambia la ubicación.'},
+    {v:'OTRO',       t:'Otro motivo',                        origen:'Sin especificar', ayuda:'Solo cambia la ubicación al patio que recibe.'}
+  ],
+  quienInforma: [],          // se llena de core.catalogos_entrada()
+  motivosDev:   [],
   destino: ["Cliente","Otro patio","Taller","Venta","Subasta","Sin especificar"],
   angulos: ["Frontal","Lateral izquierdo","Lateral derecho","Trasera","NIV grabado","Placas",
             "Piso / plataforma","Ejes y suspensión","Llantas","Adicionales","Daños","Documentos"],
@@ -310,6 +321,7 @@ const S = { tab:'capturar', yo:null, patioId:'', equipos:[], patios:[], movimien
 const nuevoMov = o => Object.assign({
   id:uid(), equipo_id:'', niv:'', tipo_mov:'entrada', fecha:new Date().toISOString(),
   patio_id:'', patio_destino_id:'', origen_tipo:'', origen_nombre:'', destino_tipo:'', destino_nombre:'',
+  motivo_entrada:'', motivo_devolucion_id:'', quien_informa_id:'',
   operador:'', placas_tractor:'', carta_porte:'', condicion:'', adicionales:[], obs:'',
   gps_lat:null, gps_lng:null, dirty:true
 }, o||{});
@@ -373,6 +385,13 @@ async function bajarCatalogos(aviso){
     if(!eb){ S.bloqueos = Object.fromEntries((bl||[]).map(b=>[b.equipo_id, b])); await store.put('kv',{k:'bloqueos', v:S.bloqueos}); }
   }catch(e){}
   CAT.adicionales = (adic||[]).map(a=>({id:a.id, nombre:a.nombre}));
+  try{
+    const { data:ce, error:ec } = await CORE.rpc('catalogos_entrada');
+    if(!ec && ce){
+      CAT.quienInforma = ce.quien_informa||[]; CAT.motivosDev = ce.motivos_devolucion||[];
+      await store.put('kv',{k:'catEntrada', v:{q:CAT.quienInforma, m:CAT.motivosDev}});
+    }
+  }catch(e){}
   await store.bulk('patios', S.patios);
   await store.put('kv',{k:'adicionales', v:CAT.adicionales});
 
@@ -425,6 +444,9 @@ const filaDe = m => ({
       patio_id: m.patio_id ? Number(m.patio_id) : null,
       patio_destino_id: m.patio_destino_id ? Number(m.patio_destino_id) : null,
       origen_tipo:m.origen_tipo||null, origen_nombre:m.origen_nombre||null,
+      motivo_entrada: m.tipo_mov==='entrada' ? (m.motivo_entrada||null) : null,
+      motivo_devolucion_id: (m.tipo_mov==='entrada' && m.motivo_entrada==='DEVOLUCION') ? (m.motivo_devolucion_id||null) : null,
+      quien_informa_id:     (m.tipo_mov==='entrada' && m.motivo_entrada==='DEVOLUCION') ? (m.quien_informa_id||null) : null,
       destino_tipo:m.destino_tipo||null, destino_nombre:m.destino_nombre||null,
       operador:m.operador||null, placas_tractor:m.placas_tractor||null, carta_porte:m.carta_porte||null,
       condicion:m.condicion||null, adicionales:m.adicionales, obs:m.obs||null,
@@ -492,7 +514,7 @@ async function aplicarLocal(m){
   else if(m.tipo_mov==='traspaso') { e.patio_fisico_id = null; e.estatus = 'EN_TRANSITO'; }   // viaja: llega con su entrada
   else                             { e.patio_fisico_id = Number(m.patio_id)||null; e.patio_id = e.patio_fisico_id; e.estatus = 'DISPONIBLE'; }
   if(m.tipo_mov==='salida' && m.destino_tipo==='Cliente') e.cliente = m.destino_nombre;
-  if(m.tipo_mov==='entrada') e.cliente = '';
+  if(m.tipo_mov==='entrada' && m.motivo_entrada!=='SERVICIO') e.cliente = '';
   await store.put('equipos', e);
 }
 window.addEventListener('online', ()=>{ nota('Conexión recuperada'); sincronizar(); });
@@ -683,7 +705,12 @@ function pintarMov(){
         <label><span class="lbl">Fecha y hora</span><input type="datetime-local" id="mFecha" value="${esc(paraInput(m.fecha))}"></label>
       </div>
       ${es==='entrada' ? `
-        <label><span class="lbl">Procedencia</span><select id="mOrigenTipo">${opciones(CAT.origen, m.origen_tipo||'Cliente')}</select></label>
+        <label><span class="lbl">Motivo de la entrada</span>
+          <select id="mMotivoEntrada" onchange="cambiarMotivoEntrada(this.value)">
+            <option value="">— Seleccionar —</option>
+            ${CAT.motivosEntrada.map(o=>`<option value="${o.v}" ${m.motivo_entrada===o.v?'selected':''}>${esc(o.t)}</option>`).join('')}
+          </select></label>
+        <div id="bloqueMotivo">${bloqueMotivo(m,e)}</div>
         <label><span class="lbl">Quién lo entrega</span><input id="mOrigenNombre" value="${esc(m.origen_nombre)}" placeholder="Cliente, fabricante o patio de procedencia"></label>`
       : es==='salida' ? `
         <label><span class="lbl">Destino</span><select id="mDestinoTipo">${opciones(CAT.destino, m.destino_tipo||'Cliente')}</select></label>
@@ -725,6 +752,41 @@ function pintarMov(){
     </div>` : ''}
     <div style="height:24px"></div>`;
   if($('#mNiv')) $('#mNiv').focus();
+}
+/* ---------------- Motivo de la entrada (y datos de devolución) ---------------- */
+function bloqueMotivo(m,e){
+  const o = CAT.motivosEntrada.find(x=>x.v===m.motivo_entrada);
+  if(!o) return `<div class="hint">El motivo define cómo se actualiza el equipo en Inventario.</div>`;
+  let h = `<div class="hint" style="margin:4px 0 8px">${esc(o.ayuda)}</div>`;
+  if(o.v==='DEVOLUCION'){
+    if(e && e.estatus && e.estatus!=='ENTREGADO')
+      h += `<div class="hint" style="color:#b45309;margin-bottom:8px">En el sistema este equipo no figura como entregado (${esc(e.estatus)}). Se liberará, pero no quedará registrado en Devoluciones; avisa a Operaciones.</div>`;
+    if(e && e.cliente) h += `<div class="hint" style="margin-bottom:8px">Cliente que lo tenía: <b>${esc(e.cliente)}</b></div>`;
+    const sinCat = !CAT.quienInforma.length;
+    h += `<div class="grid2">
+      <label><span class="lbl">Quién avisó de la devolución</span>
+        <select id="mQuienInforma" onchange="movActual().quien_informa_id=this.value">
+          <option value="">${sinCat?'— Sin catálogo: conéctate y actualiza —':'— Seleccionar —'}</option>
+          ${CAT.quienInforma.map(q=>`<option value="${q.id}" ${m.quien_informa_id===q.id?'selected':''}>${esc(q.nombre)}</option>`).join('')}
+        </select></label>
+      <label><span class="lbl">Motivo de la devolución</span>
+        <select id="mMotivoDev" onchange="movActual().motivo_devolucion_id=this.value">
+          ${CAT.motivosDev.map(q=>`<option value="${q.id}" ${(m.motivo_devolucion_id?m.motivo_devolucion_id===q.id:q.nombre==='DEVOLUCION')?'selected':''}>${esc(q.nombre)}</option>`).join('')}
+        </select></label>
+    </div>`;
+  }
+  return h;
+}
+function cambiarMotivoEntrada(v){
+  const m = movActual(); if(!m) return;
+  m.motivo_entrada = v;
+  const o = CAT.motivosEntrada.find(x=>x.v===v);
+  m.origen_tipo = o ? o.origen : '';
+  if(v==='DEVOLUCION'){
+    const e = equipoDe(m.equipo_id);
+    const n = $('#mOrigenNombre'); if(n && !n.value.trim() && e && e.cliente) n.value = e.cliente;
+  }
+  $('#bloqueMotivo').innerHTML = bloqueMotivo(m, equipoDe(m.equipo_id));
 }
 const paraInput = iso => { const d=new Date(iso); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,16); };
 function avisoBloqueo(m,e){
@@ -950,7 +1012,17 @@ async function guardarMov(){
   m.patio_id = S.patioId;              // el patio del movimiento es siempre el de la sesión
   if(!m.patio_id){ nota('Falta el patio: elígelo en Sesión'); return; }
   if($('#mFecha').value) m.fecha = new Date($('#mFecha').value).toISOString();
-  if(m.tipo_mov==='entrada'){ m.origen_tipo=$('#mOrigenTipo').value; m.origen_nombre=$('#mOrigenNombre').value.trim(); }
+  if(m.tipo_mov==='entrada'){
+    m.motivo_entrada = $('#mMotivoEntrada').value;
+    const o = CAT.motivosEntrada.find(x=>x.v===m.motivo_entrada);
+    if(!o){ nota('Elige el motivo de la entrada'); $('#mMotivoEntrada').focus(); return; }
+    m.origen_tipo = o.origen; m.origen_nombre = $('#mOrigenNombre').value.trim();
+    if(o.v==='DEVOLUCION'){
+      m.quien_informa_id = ($('#mQuienInforma')||{}).value || '';
+      m.motivo_devolucion_id = ($('#mMotivoDev')||{}).value || '';
+      if(!m.quien_informa_id){ nota('Indica quién avisó de la devolución'); return; }
+    } else { m.quien_informa_id=''; m.motivo_devolucion_id=''; }
+  }
   if(m.tipo_mov==='salida'){
     m.destino_tipo=$('#mDestinoTipo').value; m.destino_nombre=$('#mDestinoNombre').value.trim();
     if(!m.destino_nombre){ nota('Captura a quién se entrega'); return; }
@@ -1046,6 +1118,7 @@ $$('nav.tabs button').forEach(b=>b.onclick=()=>{
   const kp = await store.get('kv','patioId');     S.patioId = (kp&&kp.v)||'';
   const ka = await store.get('kv','adicionales'); CAT.adicionales = (ka&&ka.v)||[];
   const kb = await store.get('kv','bloqueos');    S.bloqueos = (kb&&kb.v)||{};
+  const kc = await store.get('kv','catEntrada');  if(kc&&kc.v){ CAT.quienInforma = kc.v.q||[]; CAT.motivosDev = kc.v.m||[]; }
   S.patios      = await store.all('patios');
   S.equipos     = await store.all('equipos');
   const todosMov = await store.all('movimientos');
