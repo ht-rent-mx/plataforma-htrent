@@ -881,10 +881,10 @@ function filaGPS(m,a,i){
             onchange="setSerieGPS(${i},this.value)"></label>
         <label><span class="lbl">Condición</span><select onchange="setAdic(${i},'condicion',this.value)">${opciones(CAT.condiciones,a.condicion)}</select></label>
       </div>
-      <span class="lbl" style="display:block;margin-top:8px">Foto del GPS</span>
+      <span class="lbl" style="display:block;margin-top:8px">Foto del GPS (opcional)</span>
       <div class="gps-foto">
         ${botonAngulo(m.id, ANG_GPS)}
-        <span class="hint">Toma la foto donde se lea el número de serie (etiqueta del equipo GPS).</span>
+        <span class="hint">Si la tienes a la mano, toma la foto donde se lea el número de serie (etiqueta del equipo GPS). Puedes guardar sin ella.</span>
       </div>
     </div>`;
 }
@@ -1102,7 +1102,6 @@ async function guardarMov(){
   if(gps){
     const g=$('#gpsSerie'); if(g) setSerieGPS(m.adicionales.indexOf(gps), g.value);
     if(!gps.serie){ nota('Captura el número de serie del GPS'); if(g) g.focus(); return; }
-    if(!S.fotos.some(f=>f.movId===m.id && f.angulo===ANG_GPS)){ nota('Falta la foto del GPS'); return; }
   }
   if(!completo(m)){ nota('Faltan datos del movimiento'); return; }
   m.dirty=true; m.reparado=true;
