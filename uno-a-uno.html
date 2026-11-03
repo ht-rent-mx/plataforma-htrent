@@ -179,6 +179,24 @@ window.HT = {
     if(error) throw new Error(error.message);
     return data;   // { colaboradorId, clave }
   },
+  async contexto(){
+    const { data:{ session } } = await db.auth.getSession();
+    if(!session){ location.href = 'index.html'; throw new Error('Sin sesión'); }
+    const { data, error } = await db.rpc('uno_a_uno_contexto');
+    if(error) throw new Error(error.message);
+    return data;   // { colaboradorId, clave, coordina, esAdmin, tieneCoordinador, nombre, puesto }
+  },
+  /* Equipos de los coordinadores (viven en la base de la plataforma, no en la hoja) */
+  async equipoLeer(modo){
+    const { data, error } = await db.rpc('uno_a_uno_equipo_leer', { p_modo: modo });
+    if(error) throw new Error(error.message);
+    return data;
+  },
+  async equipoGuardar(hoja, registros){
+    const { data, error } = await db.rpc('uno_a_uno_equipo_guardar', { p_hoja: hoja, p_registros: registros });
+    if(error) throw new Error(error.message);
+    return data;
+  },
   async guardarClave(colaborador, clave){
     const { error } = await db.rpc('uno_a_uno_guardar_clave', { p_colaborador: colaborador, p_clave: clave });
     if(error) throw new Error(error.message);
@@ -469,9 +487,15 @@ function Login({onEntrar}){
     setErr('');
     try{
       const ht = await esperarHT();
-      const a = await ht.acceso();
-      const u = await jsonp('login', {clave:a.clave});
-      onEntrar(a.clave, u);
+      const a = await ht.contexto();
+      const extra = {coordina:a.coordina||null, tieneCoordinador:!!a.tieneCoordinador, esAdminPlataforma:!!a.esAdmin};
+      if(a.colaboradorId && a.clave){
+        const u = await jsonp('login', {clave:a.clave});
+        onEntrar(a.clave, {...u, ...extra});
+      }else{
+        // Ejecutivo que solo tiene seguimiento con su coordinador (no está en la hoja)
+        onEntrar(null, {id:null, nombre:a.nombre||'', puesto:a.puesto||'', esAdmin:false, soloEquipo:true, ...extra});
+      }
     }catch(e){ if(e.message!=='Sin sesión') setErr(e.message); }
   }
   useEffect(()=>{ conectar(); }, []);
@@ -1496,6 +1520,75 @@ function FormColaborador({c, onCerrar, guardar}){
 }
 
 /* ============================================================
+   18b. MI EQUIPO (coordinadores con sus ejecutivos)
+   ============================================================ */
+const NOMBRE_AREA = {SC:'Servicio a Clientes', DOC:'Documentos'};
+
+function EquipoAjustes({data, coordina, guardar}){
+  const [edit, setEdit] = useState(null);
+  return (
+    <div className="grid g2">
+      <div className="card">
+        <div className="hd"><h3>Mis ejecutivos</h3><div style={{flex:1}}></div>
+          <button className="btn gh sm" onClick={()=>setEdit({area:coordina,rol:'EJEC',frecuencia:'SEMANAL',activo:'SI'})}>+ Agregar</button></div>
+        <div className="tw">
+          {!data.Colaboradores.length
+            ? <Vacio titulo="Aún no das de alta a tu equipo" texto="Agrega a cada ejecutivo que lleva sesiones 1 a 1 contigo."/>
+            : <table>
+              <thead><tr><th>Nombre</th><th>Puesto</th><th>1 a 1</th><th>Ve su ficha</th><th>Activo</th><th></th></tr></thead>
+              <tbody>{data.Colaboradores.map(c=>
+                <tr key={c.id}><td>{c.nombre}</td><td className="sub">{c.puesto}</td>
+                  <td>{c.frecuencia==='SEMANAL'?'Semanal':c.frecuencia==='QUINCENAL'?'Quincenal':'—'}</td>
+                  <td>{c.correoPlataforma ? <span className="tag t-ok">Sí</span> : <span className="tag t-gr">No</span>}</td>
+                  <td><span className={'tag '+(String(c.activo).toUpperCase()==='NO'?'t-gr':'t-ok')}>{String(c.activo).toUpperCase()==='NO'?'Inactivo':'Activo'}</span></td>
+                  <td><button className="btn gh sm" onClick={()=>setEdit(c)}>Editar</button></td></tr>)}
+              </tbody></table>}
+        </div>
+      </div>
+      <div className="card">
+        <div className="hd"><h3>Cómo funciona</h3></div>
+        <div className="bd" style={{fontSize:13.5}}>
+          <p style={{marginTop:0}}>Aquí llevas tus 1 a 1 con tu equipo, con las mismas herramientas con las que Roger lleva las suyas contigo: sesión guiada, rutina semanal, KPIs, acuerdos, plan de desarrollo y perfil.</p>
+          <p>Solo tú capturas. Si tu ejecutivo tiene usuario en Plataforma HT, escribe su correo en su ficha y podrá consultar su seguimiento en solo lectura.</p>
+          <p style={{marginBottom:0}}>Roger puede consultar el avance de tu equipo, sin modificarlo.</p>
+        </div>
+      </div>
+      {edit && <FormEjecutivo c={edit} coordina={coordina} onCerrar={()=>setEdit(null)} guardar={guardar}/>}
+    </div>
+  );
+}
+
+function FormEjecutivo({c, coordina, onCerrar, guardar}){
+  const [f, setF] = useState({nombre:'',puesto:'',correoPlataforma:'',fechaIngreso:'',...c, area:coordina, rol:'EJEC'});
+  const [g, setG] = useState(false);
+  async function ok(){
+    setG(true);
+    const reg = {...f, correoPlataforma:String(f.correoPlataforma||'').trim()};
+    const r = await guardar('Colaboradores',[reg]);
+    setG(false); if(r) onCerrar();
+  }
+  return (
+    <Modal titulo={f.id?'Editar ejecutivo':'Nuevo ejecutivo'} onCerrar={onCerrar}
+      pie={<><button className="btn gh" onClick={onCerrar}>Cancelar</button>
+           <button className="btn" onClick={ok} disabled={!f.nombre||g}>{g?<span className="spin"></span>:null} Guardar</button></>}>
+      <Campo etiqueta="Nombre"><input type="text" value={f.nombre} onChange={e=>setF({...f,nombre:e.target.value})}/></Campo>
+      <Campo etiqueta="Puesto"><input type="text" value={f.puesto} onChange={e=>setF({...f,puesto:e.target.value})}
+        placeholder={coordina==='DOC'?'Ejecutiva de Documentos':'Ejecutivo de Servicio a Clientes'}/></Campo>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+        <Campo etiqueta="Área"><input type="text" value={NOMBRE_AREA[coordina]||coordina} disabled/></Campo>
+        <Campo etiqueta="Fecha de ingreso"><input type="date" value={f.fechaIngreso||''} onChange={e=>setF({...f,fechaIngreso:e.target.value})}/></Campo>
+        <Campo etiqueta="Frecuencia de 1 a 1"><select value={f.frecuencia} onChange={e=>setF({...f,frecuencia:e.target.value})}>
+          <option value="SEMANAL">Semanal</option><option value="QUINCENAL">Quincenal</option></select></Campo>
+        <Campo etiqueta="Activo"><select value={f.activo} onChange={e=>setF({...f,activo:e.target.value})}>
+          <option value="SI">Sí</option><option value="NO">No</option></select></Campo>
+      </div>
+      <Campo etiqueta="Correo en Plataforma HT" ayuda="opcional: con esto tu ejecutivo puede ver su ficha en solo lectura">
+        <input type="email" value={f.correoPlataforma||''} onChange={e=>setF({...f,correoPlataforma:e.target.value})} placeholder="nombre@htrent.mx"/></Campo>
+    </Modal>
+  );
+}
+
+/* ============================================================
    19. APP
    ============================================================ */
 const VACIA = {Colaboradores:[],Sesiones:[],Acuerdos:[],KPIs:[],Desarrollo:[],Rutinas:[],Competencias:[],PlanGerencial:[]};
@@ -1511,24 +1604,45 @@ function App(){
   const [sel, setSel] = useState(null);
   const [periodo, setPeriodo] = useState(periodoActual());
   const [sesionAbierta, setSesionAbierta] = useState(null);
+  // Equipo del coordinador (base de la plataforma)
+  const [eq, setEq] = useState(VACIA);
+  const [eqModo, setEqModo] = useState(null);        // 'coord' | 'mio' | 'todos' | null
+  const [eqSel, setEqSel] = useState(null);
+  const [eqError, setEqError] = useState('');
+  const [sesionEq, setSesionEq] = useState(false);
 
   function aviso(t, err){ setToast({t,err}); setTimeout(()=>setToast(null), 3200); }
 
   async function cargar(c){
     const k = c || claveAcceso;
+    if(!k) return;
     setCargando(true); setError('');
     try{ const d = await jsonp('getAll',{clave:k}); setData({...VACIA, ...d}); }
     catch(e){ setError(e.message); }
     setCargando(false);
   }
 
-  async function entrar(c, u){
-    setClaveAcceso(c); setUsuario(u);
-    setVista(u.esAdmin?'panel':'mi');
-    if(!u.esAdmin) setSel(u.id);
-    await cargar(c);
+  async function cargarEq(modo){
+    const m = modo || eqModo;
+    if(!m) return;
+    setCargando(true); setEqError('');
+    try{
+      const d = await window.HT.equipoLeer(m);
+      const res = {...VACIA, ...d};
+      if(m==='todos') res.Colaboradores = res.Colaboradores.map(c=>({...c, puesto:(c.puesto||'Ejecutivo')+' · equipo de '+String(c.coordinador||'').split(' ')[0]}));
+      setEq(res);
+    }catch(e){ setEqError(e.message); }
+    setCargando(false);
   }
-  function salir(){ setClaveAcceso(null); setUsuario(null); setData(VACIA); setSel(null); window.HT && window.HT.salir(); }
+
+  async function entrar(c, u){
+    const modo = u.coordina ? 'coord' : (u.esAdmin && u.esAdminPlataforma) ? 'todos' : u.tieneCoordinador ? 'mio' : null;
+    setClaveAcceso(c); setUsuario(u); setEqModo(modo);
+    setVista(u.soloEquipo ? 'eq-mi' : (u.esAdmin ? 'panel' : 'mi'));
+    if(!u.esAdmin && u.id) setSel(u.id);
+    await Promise.all([ c ? cargar(c) : Promise.resolve(), modo ? cargarEq(modo) : Promise.resolve() ]);
+  }
+  function salir(){ setClaveAcceso(null); setUsuario(null); setData(VACIA); setEq(VACIA); setSel(null); setEqSel(null); window.HT && window.HT.salir(); }
 
   async function guardar(hoja, registros, devolver){
     try{
@@ -1551,12 +1665,55 @@ function App(){
     }catch(e){ aviso(e.message, true); return false; }
   }
 
+  // Mismo contrato que guardar(), pero contra la base de la plataforma.
+  // Usa la forma funcional de setEq para que varios guardados seguidos
+  // (sesión + rutina + acuerdos) no se pisen entre sí.
+  async function guardarEq(hoja, registros, devolver){
+    if(eqModo!=='coord'){ aviso('Solo el coordinador puede capturar en su equipo', true); return false; }
+    try{
+      const r = await window.HT.equipoGuardar(hoja, registros) || [];
+      setEq(prev=>{
+        const copia = {...prev}; copia[hoja] = [...(copia[hoja]||[])];
+        r.forEach(reg=>{
+          const i = copia[hoja].findIndex(x=>x.id===reg.id);
+          if(i>=0) copia[hoja][i] = {...copia[hoja][i], ...reg}; else copia[hoja].push(reg);
+        });
+        return copia;
+      });
+      aviso('Guardado');
+      return devolver ? r : true;
+    }catch(e){ aviso(e.message, true); return false; }
+  }
+
   if(!usuario) return <Login onEntrar={entrar}/>;
 
   const esAdmin = usuario.esAdmin;
   const cols = data.Colaboradores.filter(c=>c.rol!=='ADMIN' && String(c.activo).toUpperCase()!=='NO');
   const colabSel = sel ? data.Colaboradores.find(c=>c.id===sel) : null;
-  const yo = data.Colaboradores.find(c=>c.id===usuario.id);
+  const yo = usuario.id ? data.Colaboradores.find(c=>c.id===usuario.id) : null;
+
+  const eqCols = eq.Colaboradores.filter(c=>String(c.activo).toUpperCase()!=='NO');
+  const eqColabSel = eqSel ? eq.Colaboradores.find(c=>c.id===eqSel) : null;
+  const eqMio = eq.Colaboradores.filter(c=>String(c.activo).toUpperCase()!=='NO');
+  const eqMioSel = eqMio.find(c=>c.id===eqSel) || eqMio[0] || null;
+  const eqEdita = eqModo==='coord';
+
+  const titulos = {
+    panel:'Panel general', ajustes:'Ajustes',
+    plan: esAdmin?'Plan operativo de 90 días':'Mis actividades del plan',
+    'eq-panel': eqModo==='todos' ? 'Equipos de los coordinadores' : 'Panel de mi equipo',
+    'eq-ajustes':'Mis ejecutivos',
+    'eq-ficha': eqColabSel ? eqColabSel.nombre : 'Mi equipo',
+    'eq-mi':'Seguimiento con mi coordinador'
+  };
+  const titulo = titulos[vista] || (colabSel ? colabSel.nombre : 'Mi seguimiento');
+  const ceja = vista==='ficha'&&colabSel ? colabSel.puesto
+             : vista==='eq-ficha'&&eqColabSel ? eqColabSel.puesto
+             : vista.indexOf('eq-')===0 ? (eqModo==='coord' ? 'Mi equipo · '+(NOMBRE_AREA[usuario.coordina]||'') : eqModo==='todos' ? 'Consulta · solo lectura' : (eqMioSel ? 'Con '+eqMioSel.coordinador : ''))
+             : (esAdmin?'Servicio a Clientes · Documentos':usuario.puesto);
+
+  const abrirSesionEq = (s)=>{ setSesionEq(true); setSesionAbierta(s); };
+  const abrirSesion   = (s)=>{ setSesionEq(false); setSesionAbierta(s); };
 
   return (
     <div className="app">
@@ -1578,13 +1735,37 @@ function App(){
               <span className="glyph">▤</span> Plan de 90 días</button>
             <button className={vista==='ajustes'?'on':''} onClick={()=>{setVista('ajustes');setSel(null);}}>
               <span className="glyph">⚙</span> Ajustes</button>
+            {eqModo==='todos' && <>
+              <div className="sec">Equipos de coordinadores</div>
+              <button className={vista==='eq-panel'?'on':''} onClick={()=>{setVista('eq-panel');setEqSel(null);}}>
+                <span className="glyph">▣</span> Consultar equipos</button>
+            </>}
           </>}
-          {!esAdmin && <>
+
+          {!esAdmin && !usuario.soloEquipo && <>
+            <div className="sec">Con Roger</div>
             <button className={vista==='mi'?'on':''} onClick={()=>setVista('mi')}>
               <span className="glyph">◈</span> Mi seguimiento</button>
             {data.PlanGerencial.length>0 &&
               <button className={vista==='plan'?'on':''} onClick={()=>setVista('plan')}>
                 <span className="glyph">▤</span> Mis actividades</button>}
+          </>}
+
+          {eqModo==='coord' && <>
+            <div className="sec">Mi equipo</div>
+            <button className={vista==='eq-panel'?'on':''} onClick={()=>{setVista('eq-panel');setEqSel(null);}}>
+              <span className="glyph">▣</span> Panel de mi equipo</button>
+            {eqCols.map(c=>
+              <button key={c.id} className={eqSel===c.id&&vista==='eq-ficha'?'on':''} onClick={()=>{setEqSel(c.id);setVista('eq-ficha');}}>
+                <span className="glyph">◇</span> {c.nombre.split(' ')[0]} {c.nombre.split(' ')[1]||''}</button>)}
+            <button className={vista==='eq-ajustes'?'on':''} onClick={()=>{setVista('eq-ajustes');setEqSel(null);}}>
+              <span className="glyph">⚙</span> Mis ejecutivos</button>
+          </>}
+
+          {eqModo==='mio' && <>
+            <div className="sec">Con mi coordinador</div>
+            <button className={vista==='eq-mi'?'on':''} onClick={()=>setVista('eq-mi')}>
+              <span className="glyph">◈</span> Mi seguimiento</button>
           </>}
         </nav>
         <div className="pieRail">
@@ -1597,8 +1778,8 @@ function App(){
       <main className="main">
         <div className="top">
           <div>
-            <div className="eyebrow">{vista==='ficha'&&colabSel ? colabSel.puesto : (esAdmin?'Servicio a Clientes · Documentos':usuario.puesto)}</div>
-            <h1>{vista==='panel'?'Panel general':vista==='ajustes'?'Ajustes':vista==='plan'?(esAdmin?'Plan operativo de 90 días':'Mis actividades del plan'):(colabSel?colabSel.nombre:'Mi seguimiento')}</h1>
+            <div className="eyebrow">{ceja}</div>
+            <h1>{titulo}</h1>
           </div>
           <div className="sp"></div>
           {cargando && <span className="spin"></span>}
@@ -1606,37 +1787,75 @@ function App(){
         </div>
 
         <div className="cont">
-          {error && <div className="aviso"><b>No se pudo cargar la información.</b> {error}
+          {/* ---------- Seguimiento con Roger (hoja 1a1_HTRENT) ---------- */}
+          {vista.indexOf('eq-')!==0 && error && <div className="aviso"><b>No se pudo cargar la información.</b> {error}
             <div style={{marginTop:8}}><button className="btn gh sm" onClick={()=>cargar()}>Reintentar</button></div></div>}
 
           {!error && esAdmin && vista==='panel' &&
             <Panel data={data} periodo={periodo} setPeriodo={setPeriodo}
               abrir={(id)=>{setSel(id);setVista('ficha');}}
-              nuevaSesion={(id)=>setSesionAbierta({nueva:true, colaboradorId:id})}/>}
+              nuevaSesion={(id)=>abrirSesion({nueva:true, colaboradorId:id})}/>}
 
           {!error && esAdmin && vista==='ficha' && colabSel &&
             <Ficha colab={colabSel} data={data} periodo={periodo} setPeriodo={setPeriodo} guardar={guardar}
-              nuevaSesion={(id)=>setSesionAbierta({nueva:true, colaboradorId:id})}
-              verSesion={(s)=>setSesionAbierta(s)}/>}
+              nuevaSesion={(id)=>abrirSesion({nueva:true, colaboradorId:id})}
+              verSesion={abrirSesion}/>}
 
           {!error && !esAdmin && vista==='mi' && yo &&
             <Ficha colab={yo} data={data} periodo={periodo} setPeriodo={setPeriodo}
               guardar={async()=>false} nuevaSesion={()=>{}} soloLectura={true}
-              verSesion={(s)=>setSesionAbierta(s)}/>}
+              verSesion={abrirSesion}/>}
 
           {!error && vista==='plan' &&
             <PlanGerencial data={data} guardar={guardar} soloLectura={!esAdmin}/>}
 
           {!error && esAdmin && vista==='ajustes' &&
             <Ajustes data={data} guardar={guardar} recargar={()=>cargar()} claveActual={claveAcceso}/>}
+
+          {/* ---------- Equipo del coordinador (base de la plataforma) ---------- */}
+          {vista.indexOf('eq-')===0 && eqError && <div className="aviso"><b>No se pudo cargar el equipo.</b> {eqError}
+            <div style={{marginTop:8}}><button className="btn gh sm" onClick={()=>cargarEq()}>Reintentar</button></div></div>}
+
+          {!eqError && vista==='eq-panel' && (eqCols.length
+            ? <Panel data={eq} periodo={periodo} setPeriodo={setPeriodo}
+                abrir={(id)=>{setEqSel(id);setVista('eq-ficha');}}
+                nuevaSesion={eqEdita ? (id)=>abrirSesionEq({nueva:true, colaboradorId:id||eqCols[0].id}) : ()=>aviso('Consulta en solo lectura', true)}/>
+            : <Vacio titulo={eqEdita?'Aún no tienes ejecutivos registrados':'Los coordinadores aún no registran a sus equipos'}
+                texto={eqEdita?'Da de alta a tu equipo para empezar a registrar sus sesiones 1 a 1.':'Aquí verás el avance de los equipos de Jésica y César cuando empiecen a capturar.'}
+                accion={eqEdita ? <button className="btn" onClick={()=>setVista('eq-ajustes')}>Agregar ejecutivos</button> : null}/>)}
+
+          {!eqError && vista==='eq-ficha' && eqColabSel &&
+            <Ficha key={eqColabSel.id} colab={eqColabSel} data={eq} periodo={periodo} setPeriodo={setPeriodo}
+              guardar={guardarEq} soloLectura={!eqEdita}
+              nuevaSesion={(id)=>abrirSesionEq({nueva:true, colaboradorId:id})}
+              verSesion={abrirSesionEq}/>}
+
+          {!eqError && vista==='eq-ajustes' && eqEdita &&
+            <EquipoAjustes data={eq} coordina={usuario.coordina} guardar={guardarEq}/>}
+
+          {!eqError && vista==='eq-mi' && (eqMioSel
+            ? <>
+                {eqMio.length>1 &&
+                  <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:14}}>
+                    {eqMio.map(c=><button key={c.id} className={'btn sm '+(eqMioSel.id===c.id?'':'gh')} onClick={()=>setEqSel(c.id)}>Con {String(c.coordinador||'').split(' ')[0]}</button>)}
+                  </div>}
+                <Ficha key={eqMioSel.id} colab={eqMioSel} data={eq} periodo={periodo} setPeriodo={setPeriodo}
+                  guardar={async()=>false} nuevaSesion={()=>{}} soloLectura={true}
+                  verSesion={abrirSesionEq}/>
+              </>
+            : <Vacio titulo="Sin seguimiento todavía" texto="Cuando tu coordinador registre tu primera sesión 1 a 1, aquí la verás."/>)}
         </div>
       </main>
 
-      {sesionAbierta &&
-        <Sesion data={data} periodo={periodo}
-          colaboradorId={sesionAbierta.colaboradorId || sel || usuario.id}
-          sesion={sesionAbierta.nueva ? null : sesionAbierta}
-          onCerrar={()=>setSesionAbierta(null)} guardar={guardar} soloLectura={!esAdmin}/>}
+      {sesionAbierta && (sesionEq
+        ? <Sesion data={eq} periodo={periodo}
+            colaboradorId={sesionAbierta.colaboradorId || eqSel || (eqCols[0]&&eqCols[0].id)}
+            sesion={sesionAbierta.nueva ? null : sesionAbierta}
+            onCerrar={()=>setSesionAbierta(null)} guardar={guardarEq} soloLectura={!eqEdita}/>
+        : <Sesion data={data} periodo={periodo}
+            colaboradorId={sesionAbierta.colaboradorId || sel || usuario.id}
+            sesion={sesionAbierta.nueva ? null : sesionAbierta}
+            onCerrar={()=>setSesionAbierta(null)} guardar={guardar} soloLectura={!esAdmin}/>)}
 
       {toast && <div className={'toast'+(toast.err?' err':'')}>{toast.t}</div>}
     </div>
