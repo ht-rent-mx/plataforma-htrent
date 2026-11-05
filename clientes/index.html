@@ -1277,24 +1277,151 @@ function solQuien(sol,tipoPersona){const out=[];
   (sol.avales||[]).forEach((a,i)=>{if(a.nombre)out.push({rol:"aval"+i,etq:`Aval ${i+1}`,...a});});
   return out;}
 
-/* ---------- Importar el Excel de la solicitud ---------- */
+/* ---------- Importar el Excel de la solicitud (por etiquetas, no por posición) ----------
+   Busca cada dato por su etiqueta ("RAZON SOCIAL", "RFC", "COLONIA"…) dentro de su sección
+   ("DATOS FISCALES", "REPRESENTANTE LEGAL", "AVAL"…), así funciona con cualquier versión del formato. */
+const SOL_LBL={
+  razonSocial:/^(NOMBRE O |DENOMINACION O )?RAZON SOCIAL( DEL CLIENTE| DEL CTE)?$|^DENOMINACION( SOCIAL)?$/,
+  nombreComercial:/^NOMBRE COMERCIAL( DEL)?( CTE| CLIENTE)?$/,
+  calle:/^(CALLE( Y)?( NUM(ERO)?| NO| N)?( EXT(ERIOR)?)?|DOMICILIO( FISCAL)?|DIRECCION)$/,
+  colonia:/^COL(ONIA)?$/,
+  cp:/^(C ?P|CODIGO POSTAL)$/,
+  municipio:/^(MUNICIPIO|MUNICIPO|MPIO|DELEGACION|ALCALDIA|MUNICIPIO O (ALCALDIA|DELEGACION)|CIUDAD)$/,
+  estado:/^(ESTADO|EDO|ENTIDAD( FEDERATIVA)?)$/,
+  rfc:/^R ?F ?C$/,
+  curp:/^CURP$/,
+  tipoCliente:/^TIPO DE CLIENTE$/,
+  contacto:/^(CONTACTO|PERSONA DE CONTACTO|CONTACTO DIRECTO)$/,
+  celular:/^(TEL(EFONO)? )?(CELULAR|CEL|MOVIL)$/,
+  telefono:/^TEL(EFONO)?$/,
+  correo:/^(CORREO( ELECTRONICO)?|E ?MAIL)$/,
+  web:/^(PAGINA WEB|SITIO WEB|PAGINA WEB REDES SOCIALES|REDES SOCIALES|WEB)$/,
+  nombre:/^NOMBRE( COMPLETO)?$/,
+  estadoCivil:/^(ESTADO CIVIL|EDO CIVIL)$/,
+  profesion:/^(PROFESION|OCUPACION|PROFESION U OCUPACION)$/,
+  telCasa:/^TEL(EFONO)? (DE )?CASA$/,
+  telOficina:/^TEL(EFONO)? (DE )?OFICINA$/,
+  tiempo:/^TIEMPO (DE )?CONOCERLO$/,
+  parentesco:/^PARENTESCO$/,
+  usoCfdi:/^USO (DE )?CFDI$/,
+  metodoPago:/^METODO (DE )?PAGO$/,
+  formaPago:/^FORMA (DE )?PAGO$/,
+  correosFactura:/^CORREOS? (PARA )?(EL )?ENVIO (DE )?(LAS )?FACTURAS?$|^CORREOS? (DE |PARA )?FACTURACION$/,
+  comentarios:/^(COMENTARIOS|OBSERVACIONES)$/};
+const SOL_CAMPOS_SEC={
+  fiscal:["razonSocial","nombreComercial","calle","colonia","cp","municipio","estado","rfc","tipoCliente","contacto","celular","telefono","correo","web"],
+  rep:["nombre","rfc","curp","calle","colonia","cp","municipio","estado","estadoCivil","profesion","celular","telCasa","telOficina","correo"],
+  aval:["nombre","rfc","curp","calle","colonia","cp","municipio","estado","estadoCivil","profesion","celular","telCasa","telOficina","correo","tiempo","parentesco"],
+  pagos:["nombre","celular","telOficina","usoCfdi","metodoPago","formaPago","correosFactura","comentarios"]};
+const SOL_SECCION=[
+  ["bancos",/^REFERENCIAS BANCARIAS$/],["transporte",/^(EQUIPO|EQUIPOS|UNIDADES) (DE )?TRANSPORTE$/],
+  ["fiscal",/^DATOS (FISCALES|GENERALES|DEL CLIENTE)$/],["rep",/^(DATOS DEL |INFORMACION DEL )?REPRESENTANTE LEGAL$/],
+  ["aval",/^((INFORMACION|DATOS) (DEL )?)?(AVAL|OBLIGADO SOLIDARIO)( \d+)?$/],["pagos",/^(DATOS DEL )?RESPONSABLE DE (LOS )?PAGOS?$/],
+  ["refs",/^REFERENCIAS( PERSONALES| COMERCIALES| FAMILIARES Y COMERCIALES)?$/],
+  ["operativo",/^DOMICILIO (OPERATIVO|DE OPERACION|DE RESGUARDO)|^RESGUARDO DE UNIDADES/]]; // no se captura, solo corta la sección anterior
+function solTxtCelda(v){if(v==null)return "";if(v instanceof Date)return isNaN(v)?"":v.toISOString().slice(0,10);if(typeof v==="number")return Number.isInteger(v)?String(v):String(v);return String(v).trim();}
+function solEsEtiqueta(N){if(!N||N.length>60)return null;for(const k in SOL_LBL)if(SOL_LBL[k].test(N))return k;return null;}
+function solEsNota(N){return /^(NOTA|NO APLICA|DATOS DE LAS UNIDADES|LA SOLICITUD DEBE)/.test(N);}
 function solDesdeExcel(wb){
-  const nombreHoja=wb.SheetNames.find(n=>/DATOS/i.test(n))||wb.SheetNames[0];const ws=wb.Sheets[nombreHoja];
-  // ancla: renglón de la etiqueta "RAZON SOCIAL" (en la plantilla está en B10)
-  let off=0;for(let r=1;r<=40;r++){const c=ws["B"+r];if(c&&/RAZON SOCIAL/i.test(String(c.v))){off=r-10;break;}}
-  const v=(col,row)=>{const c=ws[col+(row+off)];if(!c||c.v==null)return "";if(c.v instanceof Date)return c.v.toISOString().slice(0,10);return String(c.v).trim();};
-  const s=solVacia();
-  s.fiscal={razonSocial:v("E",10),nombreComercial:v("Q",10),calle:v("E",11),tipoCliente:v("Q",11),colonia:v("E",12),cp:v("E",13),contacto:v("Q",13),municipio:v("E",14),celular:v("Q",14),estado:v("E",15),correo:v("Q",15),rfc:solRfc(v("E",16)),web:v("Q",16)};
-  const per=r=>({nombre:v("E",r),rfc:solRfc(v("S",r)),calle:v("E",r+1),colonia:v("K",r+1),cp:v("O",r+1),municipio:v("R",r+1),estado:v("U",r+1),estadoCivil:v("E",r+2),profesion:v("L",r+2),celular:v("S",r+2),telCasa:v("E",r+3),telOficina:v("L",r+3),correo:v("S",r+3)});
-  s.rep=per(22);
-  s.avales=[{...per(31),tiempo:v("E",35),parentesco:v("L",35)}];
-  s.pagos={nombre:v("E",41),celular:v("L",41),telOficina:v("S",41),usoCfdi:v("E",42),metodoPago:v("L",42),formaPago:v("S",42),correosFactura:v("H",43),comentarios:v("E",44)};
-  s.refFam=[51,52,53].map(r=>({nombre:v("C",r),direccion:v("J",r),telefono:v("Q",r),parentesco:v("T",r)}));
-  s.refCli=[56,57,58].map(r=>({empresa:v("C",r),contacto:v("J",r),telefono:v("Q",r),tiempo:v("T",r)}));
-  s.refProv=[61,62,63].map(r=>({empresa:v("C",r),contacto:v("J",r),telefono:v("Q",r),tiempo:v("T",r)}));
-  s.bancos=[72,73,74].map(r=>({banco:v("C",r),cuenta:v("G",r),apertura:v("J",r),saldo:v("M",r),ejecutivo:v("P",r),telefono:v("T",r)})).filter((b,i)=>i===0||b.banco);
-  s.transporte=[79,80,81].map((r,i)=>({clase:v("C",r)||SOL_CLASES_TR[i],tipo:v("G",r),marca:v("J",r),modelo:v("M",r),placa:v("P",r),color:v("T",r)}));
-  return s;}
+  const ocultas=new Set(((wb.Workbook||{}).Sheets||[]).filter(s=>s.Hidden).map(s=>s.name));
+  const cands=wb.SheetNames.map(n=>{const ws=wb.Sheets[n];const G=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null,blankrows:true});
+    // celdas tapadas por una combinación: se ignoran (a veces guardan texto viejo invisible)
+    const o=ws["!ref"]?XLSX.utils.decode_range(ws["!ref"]).s:{r:0,c:0};
+    (ws["!merges"]||[]).forEach(m=>{for(let r=m.s.r;r<=m.e.r;r++)for(let c=m.s.c;c<=m.e.c;c++){if(r===m.s.r&&c===m.s.c)continue;const fila=G[r-o.r];if(fila&&c-o.c<fila.length)fila[c-o.c]=null;}});const txt=G.map(r=>r.map(c=>solN(solTxtCelda(c))).join(" ")).join(" ");
+    let p=0;if(/RAZON SOCIAL|DENOMINACION/.test(txt))p+=5;if(/REPRESENTANTE LEGAL/.test(txt))p+=2;if(/AVAL/.test(txt))p+=2;if(/RFC/.test(txt))p+=2;if(ocultas.has(n))p-=4;return {n,G,p};}).sort((a,b)=>b.p-a.p);
+  const {G,n:hoja}=cands[0]||{G:[]};
+  const T=G.map(r=>(r||[]).map(c=>solTxtCelda(c)));const N=T.map(r=>r.map(c=>solN(c)));
+  /* secciones */
+  const secs=[];N.forEach((row,r)=>{for(let c=0;c<row.length;c++){const x=row[c];if(!x||x.length>60)continue;const s=SOL_SECCION.find(([,re])=>re.test(x));if(s){secs.push({tipo:s[0],r});break;}}});
+  if(!secs.length||secs[0].tipo!=="fiscal")secs.unshift({tipo:"fiscal",r:-1});
+  secs.forEach((s,i)=>s.fin=i+1<secs.length?secs[i+1].r:N.length);
+  const valorDerecha=(r,c)=>{const row=T[r];for(let j=c+1;j<row.length;j++){if(!row[j])continue;const n=N[r][j];if(solEsEtiqueta(n))return "";if(solEsNota(n))continue;return row[j];}return "";};
+  const s=solVacia();const avisos=[];
+  const personas={rep:[],aval:[],pagos:[],fiscal:[]};
+  secs.forEach(sec=>{
+    if(!SOL_CAMPOS_SEC[sec.tipo])return;const permitidos=SOL_CAMPOS_SEC[sec.tipo];let actual={};const lista=personas[sec.tipo];lista.push(actual);
+    for(let r=sec.r+1;r<sec.fin;r++){const row=N[r]||[];for(let c=0;c<row.length;c++){let k=solEsEtiqueta(row[c]);let enCelda="";
+      if(!k&&T[r][c].indexOf(":")>0){const [izq,...der]=T[r][c].split(":");k=solEsEtiqueta(solN(izq));enCelda=der.join(":").trim();} // "RFC: XXX" en una sola celda
+      if(!k)continue;let key=k;
+      if(sec.tipo==="fiscal"&&k==="nombre")key="razonSocial";
+      if(sec.tipo==="fiscal"&&k==="telefono")key="celular";
+      if(sec.tipo!=="fiscal"&&k==="telefono")key="celular";
+      if(permitidos.indexOf(key)<0)continue;
+      if(sec.tipo==="aval"&&key==="nombre"&&actual.nombre){actual={};lista.push(actual);} // segundo aval dentro de la misma sección
+      const v=enCelda||valorDerecha(r,c);if(v&&!actual[key])actual[key]=v;}}});
+  const f0=Object.assign({},...personas.fiscal);
+  Object.keys(s.fiscal).forEach(k=>{if(f0[k])s.fiscal[k]=k==="rfc"?solRfc(f0[k]):f0[k];});
+  if(!s.fiscal.celular&&f0.telefono)s.fiscal.celular=f0.telefono;
+  const r0=Object.assign({},...personas.rep);Object.keys(s.rep).forEach(k=>{if(r0[k])s.rep[k]=k==="rfc"?solRfc(r0[k]):r0[k];});
+  const avs=personas.aval.filter(a=>a.nombre||a.rfc);if(avs.length)s.avales=avs.map(a=>{const o={...solPersona(),tiempo:"",parentesco:""};Object.keys(o).forEach(k=>{if(a[k])o[k]=k==="rfc"?solRfc(a[k]):a[k];});return o;});
+  const p0=Object.assign({},...personas.pagos);Object.keys(s.pagos).forEach(k=>{if(p0[k])s.pagos[k]=p0[k];});
+  /* tablas */
+  const leerTabla=(rIni,colsDef,limite)=>{const out=[];let vacias=0;for(let r=rIni;r<Math.min(limite,N.length);r++){const row=N[r]||[];
+      if(row.some(x=>x&&(solEsNota(x)||x.length<=45&&SOL_SECCION.some(([,re])=>re.test(x))||/PRINCIPALES|REFERENCIAS (FAMILIARES|DE CLIENTES|DE PROVEEDORES)/.test(x))))break;
+      const o={};let algo=false;Object.keys(colsDef).forEach(k=>{const c=colsDef[k];const v=c==null?"":(T[r][c]||"");o[k]=v;if(v)algo=true;});
+      if(!algo){if(++vacias>=2)break;continue;}vacias=0;out.push(o);}return out;};
+  const finSec=r=>{const s2=secs.find(x=>x.r>r);return s2?s2.r:N.length;};
+  const buscaTabla=(reTitulo,mapa)=>{for(let r=0;r<N.length;r++){const row=N[r]||[];const c0=row.findIndex(x=>x&&x.length<=60&&!solEsNota(x)&&reTitulo.test(x));if(c0<0)continue;
+      const cols={};Object.keys(mapa).forEach(k=>{if(mapa[k]===0){cols[k]=c0;return;}const j=row.findIndex((x,ix)=>ix!==c0&&x&&mapa[k].test(x));cols[k]=j>=0?j:null;});
+      return leerTabla(r+1,cols,finSec(r));}return null;};
+  const fam=buscaTabla(/REFERENCIAS? FAMILIARES|^FAMILIARES/,{nombre:0,direccion:/DIRECCION|DOMICILIO/,telefono:/TELEFONO|TEL|CELULAR/,parentesco:/PARENTESCO/});
+  const cli=buscaTabla(/PRINCIPALES CLIENTES|REFERENCIAS? (DE )?CLIENTES|^CLIENTES/,{empresa:0,contacto:/CONTACTO/,telefono:/TELEFONO|TEL|CELULAR/,tiempo:/TIEMPO/});
+  const prov=buscaTabla(/PRINCIPALES PROVEEDORES|REFERENCIAS? (DE )?PROVEEDORES|^PROVEEDORES/,{empresa:0,contacto:/CONTACTO/,telefono:/TELEFONO|TEL|CELULAR/,tiempo:/TIEMPO/});
+  const relleno=(arr,vacio)=>{const a=(arr||[]).filter(x=>Object.values(x).some(Boolean));while(a.length<3)a.push(vacio());return a;};
+  s.refFam=relleno(fam,solRefFam);s.refCli=relleno(cli,solRefCom);s.refProv=relleno(prov,solRefCom);
+  const ban=buscaTabla(/^BANCO$/,{banco:0,cuenta:/CUENTA/,apertura:/APERTURA/,saldo:/SALDO/,ejecutivo:/EJECUTIVO/,telefono:/TELEFONO|TEL/});
+  if(ban&&ban.length)s.bancos=ban;
+  /* transporte: encabezado "Tipo de Equipo | Marca | …"; la clase va a la izquierda */
+  for(let r=0;r<N.length;r++){const row=N[r]||[];const cT=row.findIndex(x=>/^TIPO DE EQUIPO$|^TIPO$/.test(x||""));if(cT<0||!row.some(x=>/MARCA|PLACA/.test(x||"")))continue;
+    const col=re=>{const j=row.findIndex(x=>x&&re.test(x));return j>=0?j:null;};
+    const cols={tipo:cT,marca:col(/MARCA/),modelo:col(/MODELO|ANO/),placa:col(/PLACA/),color:col(/COLOR/)};
+    const filas=[];let vacias=0;for(let i=r+1;i<N.length;i++){const rr=N[i]||[];if(rr.some(x=>x&&(solEsNota(x)||SOL_SECCION.some(([,re])=>re.test(x)))))break;
+      let clase="";for(let j=0;j<cT;j++)if(T[i][j]){clase=T[i][j];break;}
+      const o={clase,tipo:T[i][cols.tipo]||"",marca:cols.marca!=null?T[i][cols.marca]||"":"",modelo:cols.modelo!=null?T[i][cols.modelo]||"":"",placa:cols.placa!=null?T[i][cols.placa]||"":"",color:cols.color!=null?T[i][cols.color]||"":""};
+      if(!Object.values(o).some(Boolean)){if(++vacias>=2)break;continue;}vacias=0;filas.push(o);}
+    if(filas.length){const base=SOL_CLASES_TR.map(c=>({clase:c,tipo:"",marca:"",modelo:"",placa:"",color:""}));
+      filas.forEach(fl=>{const ix=base.findIndex(b=>solN(b.clase)&&solN(fl.clase).startsWith(solN(b.clase).slice(0,6))&&!b.tipo&&!b.marca&&!b.placa);if(ix>=0)base[ix]={...base[ix],...fl,clase:base[ix].clase};else base.push(fl);});
+      s.transporte=base;}
+    break;}
+  /* qué no se encontró */
+  [["Razón social",s.fiscal.razonSocial],["RFC del cliente",s.fiscal.rfc],["Domicilio fiscal",s.fiscal.calle],["Representante legal",s.rep.nombre],["Aval",s.avales[0]&&s.avales[0].nombre],
+   ["Responsable de pagos",s.pagos.nombre],["Referencias familiares",fam&&fam.length],["Referencias de clientes",cli&&cli.length],["Referencias de proveedores",prov&&prov.length]].forEach(([l,v])=>{if(!v)avisos.push(l);});
+  s._hoja=hoja;s._avisos=avisos;return s;}
+
+/* ---------- Descargar la solicitud en Excel (formato HT Rent) ---------- */
+const SOL_EXCELJS="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js";
+const SOL_PLANTILLA="plantilla-solicitud-alta.xlsx"; // en el mismo sitio que la app
+async function solDescargarExcel(sol,nombre){
+  await solCargarScript(SOL_EXCELJS);
+  let wb=new window.ExcelJS.Workbook();let ws=null;
+  try{const r=await fetch(SOL_PLANTILLA,{cache:"no-store"});if(!r.ok)throw 0;await wb.xlsx.load(await r.arrayBuffer());ws=wb.getWorksheet("DATOS CLIENTE")||wb.worksheets[0];}
+  catch(e){throw new Error("no se encontró la plantilla del formato ("+SOL_PLANTILLA+") en el sitio de la app.");}
+  const put=(a,v)=>{if(v==null||v==="")return;if(typeof v==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(v)){const [y,m,d]=v.split("-").map(Number);ws.getCell(a).value=new Date(Date.UTC(y,m-1,d));return;}ws.getCell(a).value=(typeof v==="string"&&/^[1-9]\d{0,14}$/.test(v))?Number(v):v;};
+  const F=sol.fiscal;[["E10",F.razonSocial],["Q10",F.nombreComercial],["E11",F.calle],["Q11",F.tipoCliente],["E12",F.colonia],["E13",F.cp],["Q13",F.contacto],["E14",F.municipio],["Q14",F.celular],["E15",F.estado],["Q15",F.correo],["E16",F.rfc],["Q16",F.web]].forEach(x=>put(...x));
+  const per=(r,p)=>[["E"+r,p.nombre],["S"+r,p.rfc],["E"+(r+1),p.calle],["K"+(r+1),p.colonia],["O"+(r+1),p.cp],["R"+(r+1),p.municipio],["U"+(r+1),p.estado],["E"+(r+2),p.estadoCivil],["L"+(r+2),p.profesion],["S"+(r+2),p.celular],["E"+(r+3),p.telCasa],["L"+(r+3),p.telOficina],["S"+(r+3),p.correo]].forEach(x=>put(...x));
+  per(22,sol.rep);const a0=sol.avales[0]||{};per(31,a0);put("E35",a0.tiempo);put("L35",a0.parentesco);
+  const P=sol.pagos;[["E41",P.nombre],["L41",P.celular],["S41",P.telOficina],["E42",P.usoCfdi],["L42",P.metodoPago],["S42",P.formaPago],["H43",P.correosFactura],["E44",P.comentarios]].forEach(x=>put(...x));
+  const tabla=(lista,filas,campos)=>filas.forEach((r,i)=>{const o=lista[i]||{};campos.forEach(([c,k])=>put(c+r,o[k]));});
+  tabla(sol.refFam,[51,52,53],[["C","nombre"],["J","direccion"],["Q","telefono"],["T","parentesco"]]);
+  tabla(sol.refCli,[56,57,58],[["C","empresa"],["J","contacto"],["Q","telefono"],["T","tiempo"]]);
+  tabla(sol.refProv,[61,62,63],[["C","empresa"],["J","contacto"],["Q","telefono"],["T","tiempo"]]);
+  tabla(sol.bancos,[72],[["C","banco"],["G","cuenta"],["J","apertura"],["M","saldo"],["P","ejecutivo"],["T","telefono"]]);
+  const tr=sol.transporte||[];[79,80,81].forEach((r,i)=>{const o=tr[i]||{};[["G","tipo"],["J","marca"],["M","modelo"],["P","placa"],["T","color"]].forEach(([c,k])=>put(c+r,o[k]));});
+  /* lo que no cabe en el formato va a una hoja aparte */
+  const extra=[];
+  sol.avales.slice(1).forEach((a,i)=>extra.push([`Aval ${i+2}`,a.nombre,a.rfc,[a.calle,a.colonia,a.cp,a.municipio,a.estado].filter(Boolean).join(", "),a.estadoCivil,a.celular,a.correo,a.parentesco,a.tiempo]));
+  sol.refFam.slice(3).forEach(r=>extra.push(["Ref. familiar",r.nombre,"",r.direccion,"",r.telefono,"",r.parentesco,""]));
+  sol.refCli.slice(3).forEach(r=>extra.push(["Ref. cliente",r.empresa,"",r.contacto,"",r.telefono,"","",r.tiempo]));
+  sol.refProv.slice(3).forEach(r=>extra.push(["Ref. proveedor",r.empresa,"",r.contacto,"",r.telefono,"","",r.tiempo]));
+  sol.bancos.slice(1).forEach(b=>extra.push(["Ref. bancaria",b.banco,b.cuenta,b.ejecutivo,b.apertura,b.telefono,"",b.saldo,""]));
+  tr.slice(3).forEach(t=>extra.push(["Unidad",[t.clase,t.tipo].filter(Boolean).join(" · "),t.placa,[t.marca,t.modelo].filter(Boolean).join(" "),t.color,"","","",""]));
+  if(extra.length){const wx=wb.addWorksheet("ADICIONALES");wx.columns=[{header:"Concepto",width:16},{header:"Nombre / Empresa",width:36},{header:"RFC / Cuenta / Placa",width:20},{header:"Dirección / Contacto",width:40},{header:"Edo. civil / Apertura",width:16},{header:"Teléfono",width:14},{header:"Correo",width:28},{header:"Parentesco / Saldo",width:16},{header:"Tiempo de conocerlo",width:16}];
+    wx.getRow(1).eachCell(c=>{c.font={bold:true,color:{argb:"FFFFFFFF"}};c.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF0B3D66"}};});extra.forEach(r=>wx.addRow(r));}
+  const buf=await wb.xlsx.writeBuffer();
+  const blob=new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+  const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;
+  a.download=`Solicitud Alta de Cliente - ${String(nombre||F.razonSocial||"cliente").replace(/[\\/:*?"<>|]+/g," ").trim().slice(0,80)}.xlsx`;
+  document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1500);}
 
 /* ---------- Reglas de validación ---------- */
 function solValidar(sol,tipoPersona){
@@ -1524,7 +1651,9 @@ function SolicitudAlta({f,puedeEditar,onClose,onAplicar,subirDoc}){
     if(!nueva.fiscal.razonSocial&&!nueva.fiscal.rfc){alert("El Excel no tiene el formato de la Solicitud Alta de Cliente (hoja DATOS CLIENTE).");return false;}
     const hay=solAvance(solRef.current,tipoPersona)>10;
     if(hay&&!window.confirm("Se reemplazará lo capturado con los datos del Excel. ¿Continuar?"))return false;
-    setSol(p=>({...nueva,docs:{...p.docs,solicitud:{archivo,fecha:HOY,metodo:"excel"}},revisiones:p.revisiones}));return true;}
+    const avisos=nueva._avisos||[];const hoja=nueva._hoja;delete nueva._avisos;delete nueva._hoja;
+    setSol(p=>({...nueva,docs:{...p.docs,solicitud:{archivo,fecha:HOY,metodo:"excel"}},revisiones:p.revisiones}));
+    setTimeout(()=>alert(`Solicitud importada desde la hoja "${hoja}".`+(avisos.length?`\n\nNo se encontró en el Excel: ${avisos.join(", ")}.\nRevísalo y captúralo a mano si hace falta.`:"\n\nSe encontraron todas las secciones.")),50);return true;}
   async function cargar(slot,file){if(!file)return;cancelRef.current={v:false};setProg({k:slot.k,msg:"Abriendo archivo…",pct:0});
     try{const r=await solLeerArchivo(file,{onProg:(msg,pct)=>setProg({k:slot.k,msg,pct}),cancel:cancelRef.current});
       if(r.metodo==="excel"){if(slot.k!=="solicitud"){alert("Para este documento usa PDF o foto; el Excel solo aplica a la solicitud.");return;}
@@ -1542,6 +1671,8 @@ function SolicitudAlta({f,puedeEditar,onClose,onAplicar,subirDoc}){
   function quitarDoc(k,idx){if(!window.confirm("¿Quitar esta lectura? (El archivo en el expediente no se borra.)"))return;setSol(p=>{const docs={...p.docs};if(Array.isArray(docs[k])){docs[k]=docs[k].filter((_,i)=>i!==idx);}else delete docs[k];return {...p,docs};});}
   function justificar(x){const nota=window.prompt(`Justifica por qué se acepta:\n\n${x.t}`,x.just?x.just.nota:"");if(nota===null)return;
     setSol(p=>{const rv={...(p.revisiones||{})};if(!nota.trim())delete rv[x.id];else rv[x.id]={nota:nota.trim(),por:(USUARIO&&USUARIO.nombre)||"",fecha:HOY};return {...p,revisiones:rv};});}
+  const [bajando,setBajando]=useState(false);
+  async function descargar(){setBajando(true);try{await solDescargarExcel(sol,f.cliente||sol.fiscal.razonSocial);}catch(e){alert("No se pudo generar el Excel: "+e.message);}finally{setBajando(false);}}
   function aplicar(){const fis=sol.fiscal;const patch={};
     if(!String(f.cliente||"").trim()&&fis.razonSocial)patch.cliente=fis.razonSocial;
     if(!String(f.correo||"").trim()&&fis.correo)patch.correo=fis.correo;
@@ -1571,7 +1702,7 @@ function SolicitudAlta({f,puedeEditar,onClose,onAplicar,subirDoc}){
       <div className="flex-1 space-y-3 overflow-y-auto p-3 sm:p-4">
         {tab==="captura" && (<>
           {!ro && <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border-2 border-dashed border-navy/30 bg-white p-3 hover:border-navy">
-            <div><p className="text-sm font-bold text-navy">📥 Importar el Excel de la solicitud</p><p className="text-xs text-slate-500">Llena toda la captura con el formato SOLICITUD ALTA DE CLIENTE que manda el cliente.</p></div>
+            <div><p className="text-sm font-bold text-navy">📥 Importar el Excel de la solicitud</p><p className="text-xs text-slate-500">Llena la captura con cualquier versión del formato SOLICITUD ALTA DE CLIENTE: busca cada dato por su etiqueta, no por su celda.</p></div>
             <span className="shrink-0 rounded-md bg-navy px-3 py-1.5 text-xs font-semibold text-white">Elegir Excel</span>
             <input type="file" accept=".xlsx,.xlsm,.xls" className="hidden" onChange={async e=>{const fl=e.target.files[0];e.target.value="";if(!fl)return;try{const wb=XLSX.read(await fl.arrayBuffer(),{type:"array",cellDates:true});if(importarExcel(wb,fl.name)&&subirTambien&&subirDoc)subirDoc(DOC_MASIVO,fl);}catch(err){alert("No se pudo leer el Excel: "+err.message);}}}/></label>}
           <SolSec n="1" t="Datos fiscales"><div className="grid grid-cols-2 gap-2 sm:grid-cols-6">
@@ -1617,6 +1748,9 @@ function SolicitudAlta({f,puedeEditar,onClose,onAplicar,subirDoc}){
               <SolIn l="Clase" v={t.clase} on={v=>s("clase",v)} ro={ro}/><SolIn l="Tipo de equipo" v={t.tipo} on={v=>s("tipo",v)} ro={ro}/><SolIn l="Marca" v={t.marca} on={v=>s("marca",v)} ro={ro}/>
               <SolIn l="Modelo" v={t.modelo} on={v=>s("modelo",v)} ro={ro}/><SolIn l="Placa" v={t.placa} on={v=>s("placa",v)} ro={ro} mono/><SolIn l="Color" v={t.color} on={v=>s("color",v)} ro={ro}/></div>);})}
               {!ro && <button onClick={()=>setSol(p=>({...p,transporte:[...p.transporte,{clase:"",tipo:"",marca:"",modelo:"",placa:"",color:""}]}))} className="text-xs font-semibold text-navy hover:underline">+ Agregar unidad</button>}</div></SolSec>
+          <button onClick={descargar} disabled={bajando} className="flex w-full items-center justify-between gap-3 rounded-xl border-2 border-navy bg-white p-3 text-left hover:bg-stone-50 disabled:opacity-50">
+            <div><p className="text-sm font-bold text-navy">⬇ Descargar solicitud en Excel</p><p className="text-xs text-slate-500">Genera el formato SOLICITUD ALTA DE CLIENTE de HT Rent con lo capturado, listo para firma o envío.</p></div>
+            <span className="shrink-0 rounded-md bg-navy px-3 py-1.5 text-xs font-semibold text-white">{bajando?"Generando…":"Descargar"}</span></button>
         </>)}
 
         {tab==="documentos" && (<>
@@ -1655,6 +1789,7 @@ function SolicitudAlta({f,puedeEditar,onClose,onAplicar,subirDoc}){
 
       <div className="flex items-center justify-end gap-2 border-t border-stone-200 bg-white px-4 py-3" style={{paddingBottom:"calc(12px + env(safe-area-inset-bottom,0px))"}}>
         {!ro && <span className="mr-auto hidden text-[11px] text-slate-400 sm:block">Después de aplicar, da clic en “Guardar cambios” de la tarjeta.</span>}
+        <button onClick={descargar} disabled={bajando} title="Descarga la solicitud en el formato Excel de HT Rent" className="rounded-lg border border-navy bg-white px-3 py-2 text-sm font-semibold text-navy hover:bg-stone-50 disabled:opacity-40">{bajando?"Generando…":"⬇ Excel"}</button>
         <button onClick={cerrar} className="rounded-lg px-3.5 py-2 text-sm font-semibold text-slate-600 hover:bg-stone-100">{ro?"Cerrar":"Cancelar"}</button>
         {!ro && <button onClick={aplicar} disabled={!!prog} className="rounded-lg border border-lime bg-lime px-5 py-2 text-sm font-bold text-lime-dark hover:brightness-95 disabled:opacity-40">Aplicar a la tarjeta</button>}
       </div>
