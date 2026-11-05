@@ -2,283 +2,620 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Plataforma HT</title>
+<meta name="theme-color" content="#12285A">
+<title>Plataforma HT Rent</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Saira:ital,wght@1,700;1,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="ht.css?v=2026-09-25b">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#12285A; --navy-2:#0A1838; --navy-3:#1E3A75;
+  --lime:#A6CE39; --lime-soft:#EEF4DD; --lime-ink:#2F4A00;
+  --bg:#F3F5F9; --card:#FFFFFF; --line:#E1E6EF; --line-2:#D5DCE8;
+  --ink:#1B2333; --mute:#5B6475; --side-ink:#E8EDF7; --side-mute:#AEB9D1;
+  --ro-bg:#E6EAF2; --ro-ink:#2B3A5C; --warn:#7A2E05; --warn-bg:#FDE9D9;
+  --side-w:256px; --top-h:68px;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg);font-size:14px;-webkit-font-smoothing:antialiased}
+a{color:var(--navy)}
+button{font:inherit;cursor:pointer}
+input{font:inherit}
+.oculto{display:none!important}
+.sr{position:absolute;left:-9999px}
+:focus-visible{outline:3px solid var(--lime);outline-offset:2px}
+
+/* ---------- acceso ---------- */
+#acceso{min-height:100%;display:grid;place-items:center;padding:24px 16px;background:linear-gradient(180deg,var(--navy) 0 42%,var(--bg) 42% 100%)}
+.tarjeta-acceso{width:100%;max-width:400px;background:var(--card);border-radius:16px;box-shadow:0 18px 50px rgba(10,24,56,.18);overflow:hidden}
+.tarjeta-acceso .franja{height:6px;background:var(--lime)}
+.tarjeta-acceso .cuerpo{padding:32px 28px 28px;display:flex;flex-direction:column;gap:16px}
+.logo{display:flex;align-items:center;gap:10px}
+.logo .sello-ht{width:38px;height:38px;border-radius:9px;background:var(--lime);color:var(--navy);font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;flex:none}
+.logo b{display:block;font-size:17px}
+.logo span{font-size:12px;color:var(--mute)}
+.campo{display:flex;flex-direction:column;gap:6px}
+.campo span{font-size:12px;font-weight:600;color:var(--mute)}
+.campo input{height:46px;border:1px solid var(--line-2);border-radius:10px;padding:0 14px;font-size:15px;background:#fff;color:var(--ink)}
+.campo input:focus{border-color:var(--navy);outline:none;box-shadow:0 0 0 3px rgba(18,40,90,.12)}
+.btn{height:46px;border-radius:10px;border:0;padding:0 18px;font-weight:700;font-size:15px}
+.btn-lima{background:var(--lime);color:var(--navy)}
+.btn-lima:hover{background:#98C02E}
+.btn-lima:disabled{opacity:.6;cursor:default}
+.aviso{min-height:18px;margin:0;font-size:13px;color:#A12C0C}
+
+/* ---------- estructura ---------- */
+#app{display:none;min-height:100%}
+#app.activo{display:flex}
+.lateral{width:var(--side-w);flex:none;background:var(--navy);color:#fff;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;height:100dvh;overflow-y:auto;transition:width .18s ease}
+.lateral .cabeza{display:flex;align-items:center;gap:10px;padding:20px 18px 16px}
+.lateral .cabeza .sello-ht{width:34px;height:34px;font-size:14px}
+.lateral .cabeza b{font-size:16px}
+.lateral .cabeza span{font-size:12px;color:#C7D0E3}
+.menu{padding:4px 12px 16px;display:flex;flex-direction:column;gap:16px;flex:1}
+.grupo{display:flex;flex-direction:column;gap:2px}
+.grupo>span{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--side-mute);padding:0 12px 4px;font-weight:600}
+.item{display:flex;align-items:center;gap:10px;min-height:38px;padding:7px 12px;border-radius:8px;color:var(--side-ink);text-decoration:none;font-size:14px;border:0;background:transparent;width:100%;text-align:left}
+.item:hover{background:rgba(255,255,255,.08);color:#fff}
+.item[aria-current="page"]{background:rgba(255,255,255,.14);color:#fff;font-weight:600}
+.item .punto{width:8px;height:8px;border-radius:4px;background:transparent;flex:none}
+.item[aria-current="page"] .punto{background:var(--lime)}
+.item .txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .chip{font-size:10px;color:#C7D0E3;border:1px solid #5A6C96;border-radius:4px;padding:1px 5px;flex:none}
+.item .ext{opacity:.7;flex:none}
+.lateral .pie{padding:12px 16px 18px;border-top:1px solid rgba(255,255,255,.1);font-size:12px;color:var(--side-mute)}
+.lateral .pie a{color:#C7D0E3}
+
+/* menú compacto (desktop, dentro de un módulo) */
+body.compacto .lateral{width:72px}
+body.compacto .lateral .cabeza div:last-child,
+body.compacto .grupo>span,
+body.compacto .item .txt,
+body.compacto .item .chip,
+body.compacto .item .ext,
+body.compacto .lateral .pie{display:none}
+body.compacto .item{justify-content:center;padding:0}
+body.compacto .item .ini{display:flex}
+body.compacto .lateral .cabeza{justify-content:center;padding:20px 0 16px}
+.item .ini{display:none;width:34px;height:34px;border-radius:8px;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:rgba(255,255,255,.08);color:#fff}
+body.compacto .item[aria-current="page"] .ini{background:var(--lime);color:var(--navy)}
+body.compacto .item .punto{display:none}
+
+.principal{flex:1;min-width:0;display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
+.superior{position:sticky;top:0;z-index:20;height:var(--top-h);display:flex;align-items:center;gap:14px;padding:0 24px;background:var(--card);border-bottom:1px solid var(--line)}
+.icono-btn{width:44px;height:44px;border-radius:10px;border:1px solid var(--line-2);background:#fff;display:flex;align-items:center;justify-content:center;flex:none;color:var(--navy)}
+.icono-btn:hover{background:var(--bg)}
+.buscador{flex:1 1 auto;max-width:560px;position:relative}
+.buscador label{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--line-2);border-radius:10px;padding:0 14px;height:44px}
+.buscador label:focus-within{border-color:var(--navy);background:#fff;box-shadow:0 0 0 3px rgba(18,40,90,.1)}
+.buscador input{border:0;background:transparent;flex:1;min-width:0;font-size:14px;color:var(--ink);outline:none}
+.panel-busqueda{position:absolute;top:52px;left:0;right:0;background:#fff;border:1px solid var(--line-2);border-radius:12px;box-shadow:0 16px 40px rgba(10,24,56,.16);max-height:min(70vh,560px);overflow:auto;z-index:40}
+.panel-busqueda .nota{padding:14px 16px;color:var(--mute);font-size:13px;margin:0}
+.res{display:flex;flex-direction:column;gap:3px;padding:11px 16px;border-top:1px solid #EEF1F6}
+.res:first-child{border-top:0}
+.res .l1{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.res .niv{font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.res .l2{font-size:12px;color:var(--mute)}
+.etq{display:inline-block;font-size:11px;font-weight:600;border-radius:999px;padding:2px 8px;background:var(--ro-bg);color:var(--ro-ink)}
+.etq.alerta{background:var(--warn-bg);color:var(--warn)}
+.usuario{display:flex;align-items:center;gap:10px;margin-left:auto;min-width:0}
+.avatar{width:40px;height:40px;border-radius:20px;background:var(--navy);color:#fff;font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;flex:none}
+.usuario .datos{display:flex;flex-direction:column;min-width:0}
+.usuario .datos b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.usuario .datos span{font-size:12px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px}
+.salir{height:40px;padding:0 14px;border-radius:10px;border:1px solid var(--line-2);background:#fff;color:var(--navy);font-weight:600;font-size:13px;flex:none}
+.salir:hover{background:var(--bg)}
+#btnMenu{display:none}
+
+/* ---------- inicio ---------- */
+.vista{flex:1;min-height:0}
+.inicio{padding:28px 32px 40px;display:flex;flex-direction:column;gap:22px;max-width:1240px;width:100%}
+.saludo h1{margin:0;font-size:28px;font-weight:700;color:var(--navy);letter-spacing:-.01em}
+.saludo p{margin:6px 0 0;color:var(--mute)}
+.cifras{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.cifra{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;display:flex;flex-direction:column;gap:4px}
+.cifra .t{font-size:13px;color:var(--mute)}
+.cifra .n{font-size:30px;font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums;line-height:1.15}
+.cifra .s{font-size:12px;color:var(--mute)}
+.caja{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 24px}
+.caja h2{margin:0 0 4px;font-size:17px;font-weight:600;color:var(--navy)}
+.caja .sub{margin:0 0 16px;font-size:12px;color:var(--mute)}
+.accesos{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.acceso-mod{display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:10px;border:1px solid var(--line);background:#F8FAFC;text-decoration:none;color:var(--ink);min-height:96px;text-align:left}
+.acceso-mod:hover{border-color:var(--navy);background:#fff}
+.acceso-mod .g{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);font-weight:600}
+.acceso-mod b{font-size:15px}
+.nivel{align-self:flex-start;font-size:11px;font-weight:600;border-radius:4px;padding:2px 7px;margin-top:auto}
+.nivel.editor{background:#E6F2C9;color:var(--lime-ink)}
+.nivel.lectura{background:var(--ro-bg);color:var(--ro-ink)}
+.vacio{color:var(--mute);font-size:13px;margin:0}
+
+/* ---------- módulo embebido ---------- */
+.modulo{display:flex;flex-direction:column;height:calc(100vh - var(--top-h));height:calc(100dvh - var(--top-h))}
+.barra-mod{display:flex;align-items:center;gap:12px;padding:10px 24px;background:var(--card);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.miga{font-size:13px;color:var(--mute);display:flex;align-items:center;gap:6px;min-width:0}
+.miga b{color:var(--navy);font-size:15px}
+.barra-mod .acc{margin-left:auto;display:flex;gap:8px}
+.btn-sec{height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--line-2);background:#fff;color:var(--navy);font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:6px;text-decoration:none}
+.btn-sec:hover{background:var(--bg)}
+.marco{flex:1;position:relative;background:var(--bg)}
+.marco iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff}
+.cargando{position:absolute;inset:0;display:grid;place-items:center;color:var(--mute);font-size:13px}
+
+/* ---------- celular ---------- */
+.nav-inferior{display:none}
+.velo{display:none}
+@media (max-width:900px){
+  :root{--top-h:60px}
+  .cifras{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .lateral{position:fixed;inset:0 auto 0 0;z-index:60;width:280px;max-width:86vw;transform:translateX(-100%);transition:transform .2s ease}
+  body.menu-abierto .lateral{transform:none}
+  body.menu-abierto .velo{display:block;position:fixed;inset:0;background:rgba(10,24,56,.45);z-index:55}
+  body.compacto .lateral{width:280px}
+  body.compacto .lateral .cabeza div:last-child,body.compacto .grupo>span,body.compacto .item .txt,body.compacto .item .chip,body.compacto .item .ext,body.compacto .lateral .pie{display:revert}
+  body.compacto .item{justify-content:flex-start;padding:7px 12px}
+  body.compacto .item .ini{display:none}
+  body.compacto .item .punto{display:block}
+  #btnMenu{display:flex}
+  #btnCompacto{display:none}
+  .superior{padding:0 12px;gap:8px}
+  .usuario .datos,.salir{display:none}
+  .avatar{width:36px;height:36px;font-size:13px}
+  .inicio{padding:20px 16px 96px;gap:18px}
+  .saludo h1{font-size:22px}
+  .cifra{padding:14px 16px}
+  .cifra .n{font-size:24px}
+  .caja{padding:16px}
+  .accesos{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .acceso-mod{min-height:88px;padding:14px}
+  .modulo{height:calc(100dvh - var(--top-h) - 64px)}
+  .barra-mod{padding:8px 12px;flex-wrap:nowrap}
+  .barra-mod .btn-sec .txt-largo{display:none}
+  .miga>span:first-child{display:none}
+  .miga b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px}
+  .barra-mod .acc{flex:none}
+  .nav-inferior{display:grid;grid-template-columns:repeat(4,1fr);position:fixed;left:0;right:0;bottom:0;z-index:30;background:#fff;border-top:1px solid var(--line);padding:4px 6px calc(6px + env(safe-area-inset-bottom));height:calc(64px + env(safe-area-inset-bottom))}
+  .nav-inferior button{border:0;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--mute);font-size:12px;font-weight:500;min-height:48px}
+  .nav-inferior button svg{stroke:currentColor}
+  .nav-inferior button[aria-current="page"]{color:var(--navy);font-weight:700}
+  .nav-inferior button[aria-current="page"]::before{content:"";width:24px;height:3px;border-radius:2px;background:var(--lime);margin-bottom:2px}
+  .panel-busqueda{position:fixed;top:var(--top-h);left:8px;right:8px;max-height:calc(100dvh - var(--top-h) - 80px)}
+}
+@media (max-width:420px){
+  .accesos{grid-template-columns:1fr}
+}
+</style>
 </head>
 <body>
 
+<!-- ================= ACCESO ================= -->
 <div id="acceso">
-  <div class="placa">
-    <div class="cinta"></div>
-    <div class="placa-cuerpo">
-      <div class="marca">Plataforma <span>HT</span></div>
-      <span class="eyebrow">HT Rent · Control de flota · Acceso interno</span>
-
-      <label>
-        <span class="lbl">Correo</span>
-        <input id="correo" type="email" autocomplete="username" spellcheck="false">
+  <form class="tarjeta-acceso" id="formAcceso" novalidate>
+    <div class="franja"></div>
+    <div class="cuerpo">
+      <div class="logo">
+        <div class="sello-ht">HT</div>
+        <div><b>HT Rent</b><span>Plataforma de Operaciones</span></div>
+      </div>
+      <label class="campo"><span>Correo</span>
+        <input id="correo" type="email" autocomplete="username" spellcheck="false" required>
       </label>
-      <label>
-        <span class="lbl">Contraseña</span>
-        <input id="clave" type="password" autocomplete="current-password">
+      <label class="campo"><span>Contraseña</span>
+        <input id="clave" type="password" autocomplete="current-password" required>
       </label>
-
-      <button class="btn ancho" id="entrar">Entrar</button>
+      <button class="btn btn-lima" id="entrar" type="submit">Entrar</button>
       <p class="aviso" id="avisoAcceso" role="status"></p>
     </div>
-  </div>
+  </form>
 </div>
 
+<!-- ================= PLATAFORMA ================= -->
 <div id="app">
-  <header>
-    <div class="cinta"></div>
-    <div class="barra">
-      <div class="marca">Plataforma <span>HT</span></div>
-      <div class="rotulo"><b>HT RENT &gt;</b><span>ARRENDA Y CRECE</span></div>
-      <div class="quien">
-        <b id="nombreUsuario">—</b><br>
-        <span class="eyebrow" id="rolUsuario"></span>
-      </div>
-      <button class="salir" id="salir">Salir</button>
+  <aside class="lateral" id="lateral" aria-label="Menú principal">
+    <div class="cabeza">
+      <div class="logo"><div class="sello-ht">HT</div></div>
+      <div><b>HT Rent</b><br><span>Plataforma de Operaciones</span></div>
     </div>
-  </header>
+    <nav class="menu" id="menu"></nav>
+    <div class="pie"><span id="versionTxt"></span></div>
+  </aside>
+  <div class="velo" id="velo"></div>
 
-  <main>
-    <section id="secResumen">
-      <h2>Parque registrado</h2>
-      <div class="cifras" id="cifras"></div>
-    </section>
-
-    <section>
-      <h2>Tus módulos</h2>
-      <div class="bahias" id="modulos"></div>
-    </section>
-
-    <section id="secConsulta">
-      <h2>Consulta de equipos</h2>
-      <div class="buscador">
-        <input id="q" placeholder="NIV, placa o cliente" spellcheck="false">
-        <button id="buscar">Buscar</button>
+  <div class="principal">
+    <header class="superior">
+      <button class="icono-btn" id="btnMenu" type="button" aria-label="Abrir menú">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <button class="icono-btn" id="btnCompacto" type="button" aria-label="Contraer menú lateral" title="Contraer o expandir el menú">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg>
+      </button>
+      <div class="buscador" id="buscador">
+        <label>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6475" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+          <span class="sr">Buscar equipo</span>
+          <input id="q" type="search" placeholder="Buscar por NIV, placa o cliente" spellcheck="false" autocomplete="off">
+        </label>
+        <div class="panel-busqueda oculto" id="panelBusqueda" role="region" aria-live="polite" aria-label="Resultados de búsqueda"></div>
       </div>
-      <div class="resultados" id="resultados"></div>
-    </section>
-  </main>
+      <div class="usuario">
+        <div class="avatar" id="avatar" aria-hidden="true">—</div>
+        <div class="datos"><b id="nombreUsuario">—</b><span id="puestoUsuario"></span></div>
+      </div>
+      <button class="salir" id="salir" type="button">Salir</button>
+    </header>
+
+    <main class="vista" id="vista"></main>
+  </div>
+
+  <nav class="nav-inferior" aria-label="Navegación">
+    <button type="button" data-nav="inicio">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Inicio</button>
+    <button type="button" data-nav="buscar">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>Buscar</button>
+    <button type="button" data-nav="modulos">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Módulos</button>
+    <button type="button" data-nav="salir">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2" aria-hidden="true"><path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H4"/></svg>Salir</button>
+  </nav>
 </div>
 
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-// ---------------------------------------------------------------
-// CONFIGURACIÓN — sustituye estos dos valores por los de tu proyecto.
-// Están en Supabase > Settings > API.
-// La llave anónima es pública por diseño: quien protege los datos es
-// Row Level Security, no el secreto de esta cadena.
-// ---------------------------------------------------------------
-const SUPABASE_URL  = 'https://ahfjstuwekcuxshclprl.supabase.co';
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFoZmpzdHV3ZWtjdXhzaGNscHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwNDg2MjYsImV4cCI6MjEwMzYyNDYyNn0.lf1uw8WHPRy21GuYlK9NzeI5JgJK2be1LrODq22CodM';
-
-const db = createClient(SUPABASE_URL, SUPABASE_ANON, {
-  db: { schema: 'core' }
-});
-
-const $ = id => document.getElementById(id);
-const acceso = $('acceso'), app = $('app'), aviso = $('avisoAcceso');
-
-/* Cambia esta versión cada vez que se suba una página nueva:
-   obliga al navegador de todos a traer la versión actualizada. */
-const VERSION = '2026-11-03a';
-
-const DESTINOS = {
-  clientes:    { nombre:'Servicio a Clientes', url:'clientes/' },
-  documentos:  { nombre:'Control de equipos y expedientes', url:'documentos.html' },
-  patios:      { nombre:'Levantamiento de patios', url:'https://ht-rent-mx.github.io/levantamiento-patio/' },
-  operaciones: { nombre:'Operaciones y taller', url:'operaciones.html' },
-  taller:      { nombre:'Taller · avance de unidades', url:'taller.html' },
-  campo:       { nombre:'Operaciones en patio (celular)', url:'campo.html' },
-  fotos:       { nombre:'Imágenes HT', url:'https://ht-rent-mx.github.io/imagenes-ht/?t=8a578d88491c462bb93198ccfa923a49' },
-  mapa_patios: { nombre:'Mapa de patios', url:'mapa-patios.html' },
-  movimientos: { nombre:'Entradas y salidas de patio', url:'movimientos.html' },
-  gastos:      { nombre:'Autorización de facturas', url:'gastos.html' },
-  salas:       { nombre:'Salas de juntas', url:'salas.html' },
-  uno_a_uno:   { nombre:'Interacciones 1 a 1', url:'uno-a-uno.html' },
-       inventario:  { nombre:'Inventario de Operaciones', url:'inventario/' },
-  admin:       { nombre:'Administración', url:'admin.html' }
-};
-
-function mostrarAviso(txt, ok=false){
-  aviso.textContent = txt;
-  aviso.classList.toggle('ok', ok);
+/* Si alguna página de un módulo regresa a "index.html" dentro del marco,
+   la plataforma no se abre dentro de sí misma: lleva la ventana completa al inicio. */
+if (window.top !== window.self) {
+  try { window.top.location.href = location.pathname.replace(/[^/]*$/, '') + '#/inicio'; } catch(_) {}
+  throw new Error('plataforma embebida');
 }
 
-// ---------------- acceso ----------------
-async function entrar(){
-  const correo = $('correo').value.trim();
-  const clave  = $('clave').value;
-  if(!correo || !clave){ mostrarAviso('Escribe tu correo y tu contraseña.'); return; }
+const SUPABASE_URL  = 'https://ahfjstuwekcuxshclprl.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFoZmpzdHV3ZWtjdXhzaGNscHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwNDg2MjYsImV4cCI6MjEwMzYyNDYyNn0.lf1uw8WHPRy21GuYlK9NzeI5JgJK2be1LrODq22CodM';
+const db = createClient(SUPABASE_URL, SUPABASE_ANON, { db: { schema: 'core' } });
 
-  $('entrar').disabled = true;
-  mostrarAviso('');
+/* Cambia esta versión cada vez que se suba una página nueva. */
+const VERSION = '2026-11-05-nueva-a';
+
+/* Grupos del menú y destino de cada módulo (clave = core.modulos.clave).
+   El orden aquí es el orden en el menú. */
+const GRUPOS = [
+  { nombre:'Inventario', claves:['inventario'] },
+  { nombre:'Patios', claves:['movimientos','patios','mapa_patios','fotos','campo'] },
+  { nombre:'Operaciones', claves:['operaciones','taller'] },
+  { nombre:'Documentos', claves:['documentos'] },
+  { nombre:'Clientes', claves:['clientes','uno_a_uno'] },
+  { nombre:'Administración', claves:['gastos','salas','admin'] }
+];
+const DESTINOS = {
+  inventario:  { nombre:'Inventario de Operaciones', corto:'IN', url:'inventario/' },
+  movimientos: { nombre:'Entradas y salidas', corto:'ES', url:'movimientos.html' },
+  patios:      { nombre:'Levantamiento de patios', corto:'LP', url:'https://ht-rent-mx.github.io/levantamiento-patio/', externo:true },
+  mapa_patios: { nombre:'Mapa de patios', corto:'MP', url:'mapa-patios.html' },
+  fotos:       { nombre:'Imágenes HT', corto:'IM', url:'https://ht-rent-mx.github.io/imagenes-ht/?t=8a578d88491c462bb93198ccfa923a49', externo:true },
+  campo:       { nombre:'Operaciones en patio', corto:'OP', url:'campo.html' },
+  operaciones: { nombre:'Operaciones y taller', corto:'OT', url:'operaciones.html' },
+  taller:      { nombre:'Taller · avance de unidades', corto:'TA', url:'taller.html' },
+  documentos:  { nombre:'Expedientes', corto:'EX', url:'documentos.html' },
+  clientes:    { nombre:'Seguimiento a clientes', corto:'SC', url:'clientes/' },
+  uno_a_uno:   { nombre:'Interacciones 1 a 1', corto:'11', url:'uno-a-uno.html' },
+  gastos:      { nombre:'Autorización de facturas', corto:'AF', url:'gastos.html' },
+  salas:       { nombre:'Salas de juntas', corto:'SJ', url:'salas.html' },
+  admin:       { nombre:'Usuarios y permisos', corto:'UP', url:'admin.html' }
+};
+/* Perfil de la plataforma: Editor (escritura o admin), Lectura, o sin acceso (no aparece). */
+const PERFIL = n => (n === 'lectura' ? 'Lectura' : 'Editor');
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = n => (n ?? 0).toLocaleString('es-MX');
+const st = { modulos: [], nombre: '', grupoDe: {} };
+GRUPOS.forEach(g => g.claves.forEach(c => st.grupoDe[c] = g.nombre));
+
+const guardar = (k, v) => { try { localStorage.setItem(k, v); } catch(_) {} };
+const leer = k => { try { return localStorage.getItem(k); } catch(_) { return null; } };
+
+/* ---------------- acceso ---------------- */
+function aviso(t){ $('avisoAcceso').textContent = t; }
+
+$('formAcceso').addEventListener('submit', async e => {
+  e.preventDefault();
+  const correo = $('correo').value.trim(), clave = $('clave').value;
+  if (!correo || !clave) { aviso('Escribe tu correo y tu contraseña.'); return; }
+  $('entrar').disabled = true; aviso('');
   const { error } = await db.auth.signInWithPassword({ email: correo, password: clave });
   $('entrar').disabled = false;
-
-  if(error){
-    mostrarAviso(error.message.includes('Invalid')
+  if (error) {
+    aviso(/invalid/i.test(error.message)
       ? 'Ese correo y contraseña no coinciden. Revísalos e inténtalo otra vez.'
       : 'No se pudo entrar: ' + error.message);
     return;
   }
   await abrirSesion();
-}
+});
 
 async function salir(){
   await db.auth.signOut();
-  app.style.display = 'none';
-  acceso.style.display = 'grid';
-  $('clave').value = '';
+  mostrarAcceso();
 }
+function mostrarAcceso(){
+  $('app').classList.remove('activo');
+  $('acceso').classList.remove('oculto');
+  $('clave').value = '';
+  history.replaceState(null, '', location.pathname);
+}
+$('salir').addEventListener('click', salir);
 
-// ---------------- sesión ----------------
+/* ---------------- sesión ---------------- */
 async function abrirSesion(){
   const { data:{ user } } = await db.auth.getUser();
-  if(!user) return;
+  if (!user) return;
+  $('acceso').classList.add('oculto');
+  $('app').classList.add('activo');
+  $('versionTxt').textContent = 'Versión ' + VERSION;
 
-  acceso.style.display = 'none';
-  app.style.display = 'flex';
+  const [{ data: perfil }, mods] = await Promise.all([
+    db.from('perfiles').select('nombre,puesto').eq('id', user.id).maybeSingle(),
+    db.from('v_mis_modulos').select('*')
+  ]);
+  st.nombre = perfil?.nombre || user.email;
+  $('nombreUsuario').textContent = st.nombre;
+  $('puestoUsuario').textContent = perfil?.puesto || user.email;
+  $('avatar').textContent = st.nombre.split(/\s+/).filter(Boolean).slice(0,2).map(p => p[0]).join('').toUpperCase() || '—';
 
-  const { data: perfil } = await db.from('perfiles')
-    .select('nombre').eq('id', user.id).maybeSingle();
-  $('nombreUsuario').textContent = perfil?.nombre || user.email;
-
-  const { data: roles } = await db.from('perfil_roles')
-    .select('rol').eq('perfil_id', user.id);
-  $('rolUsuario').textContent = (roles||[]).map(r=>r.rol.replace(/_/g,' ')).join(' · ');
-
-  await Promise.all([cargarModulos(), cargarCifras()]);
-}
-
-async function cargarModulos(){
-  const cont = $('modulos');
-  const { data, error } = await db.from('v_mis_modulos').select('*');
-
-  if(error){
-    cont.innerHTML = `<p class="vacio">No se pudieron leer tus módulos: ${error.message}</p>`;
-    return;
-  }
-  if(!data || !data.length){
-    cont.innerHTML = `<p class="vacio">Todavía no tienes módulos asignados. Pídele a un administrador que te dé un rol.</p>`;
-    return;
+  if (mods.error) {
+    st.modulos = [];
+    st.errorModulos = mods.error.message;
+  } else {
+    st.modulos = prepararModulos(mods.data || []);
   }
 
   // Mecánicos: si solo tienen el Taller (y salas), entran directo a sus trabajos una vez por sesión.
-  const claves = data.map(m => m.clave);
-  if(claves.includes('taller') && claves.every(c => ['taller','salas'].includes(c))){
-    let ya = false; try{ ya = sessionStorage.getItem('ht_taller_directo') === '1'; sessionStorage.setItem('ht_taller_directo', '1'); }catch(_){}
-    if(!ya){ location.href = `taller.html?v=${VERSION}`; return; }
+  const claves = st.modulos.map(m => m.clave);
+  if (claves.includes('taller') && claves.every(c => ['taller','salas'].includes(c)) && !location.hash) {
+    let ya = false; try { ya = sessionStorage.getItem('ht_taller_directo') === '1'; sessionStorage.setItem('ht_taller_directo','1'); } catch(_) {}
+    if (!ya) location.hash = '#/m/taller';
   }
 
-  // 2026-11-02: Seguimiento a Clientes y Documentos viven ahora como pestañas
-  // de Inventario. Quien tiene Inventario ya no ve esos mosaicos sueltos;
-  // quien no lo tiene (p. ej. abogado externo de Legal) los sigue viendo.
-  // Las páginas no se borran: siguen funcionando por su liga directa.
-  if(claves.includes('inventario')){
-    for(let i = data.length - 1; i >= 0; i--){
-      if(['clientes','documentos'].includes(data[i].clave)) data.splice(i, 1);
-    }
-  }
-
-  // App de celular de Operaciones (misma información, pensada para patio)
-  const op = data.find(m => m.clave === 'operaciones');
-  if(op && ['escritura','admin'].includes(op.nivel)) data.splice(data.indexOf(op) + 1, 0, { clave:'campo', nombre:'Operaciones en patio', nivel:op.nivel });
-
-  cont.innerHTML = data.map(m => {
-    const d = DESTINOS[m.clave] || { nombre:m.nombre, url:null };
-    const url = d.url && !d.url.includes('://') ? `${d.url}?v=${VERSION}` : d.url;
-    const estado = url ? 'Abrir módulo' : 'En construcción';
-    const tag = url ? 'a' : 'button';
-    const attr = url ? `href="${url}"` : 'type="button" disabled style="opacity:.72;cursor:default"';
-    return `<${tag} class="bahia" data-nivel="${m.nivel}" ${attr}>
-      <span class="sello">${m.nivel}</span>
-      <h3>${d.nombre}</h3>
-      <span class="estado">${estado}</span>
-    </${tag}>`;
-  }).join('');
+  pintarMenu();
+  if (leer('ht_menu_compacto') === '1') document.body.classList.add('compacto');
+  enrutar();
 }
 
-async function cargarCifras(){
-  const cont = $('cifras');
+function prepararModulos(data){
+  const lista = data.map(m => ({ clave:m.clave, nombre:m.nombre, nivel:m.nivel }));
+  const claves = lista.map(m => m.clave);
+  // Seguimiento a Clientes y Documentos viven como pestañas de Inventario:
+  // quien tiene Inventario no los ve sueltos (las páginas siguen funcionando por liga directa).
+  const finales = claves.includes('inventario')
+    ? lista.filter(m => !['clientes','documentos'].includes(m.clave))
+    : lista;
+  // App de celular de Operaciones (misma información, pensada para patio)
+  const op = finales.find(m => m.clave === 'operaciones');
+  if (op && ['escritura','admin'].includes(op.nivel)) finales.push({ clave:'campo', nombre:'Operaciones en patio', nivel:op.nivel });
+  return finales;
+}
+
+/* ---------------- menú ---------------- */
+function urlDe(clave){
+  const d = DESTINOS[clave]; if (!d) return null;
+  return d.externo ? d.url : `${d.url}?v=${VERSION}`;
+}
+
+function pintarMenu(){
+  const tiene = new Map(st.modulos.map(m => [m.clave, m]));
+  let html = `<a class="item" href="#/inicio" data-ruta="inicio"><span class="punto"></span><span class="ini">⌂</span><span class="txt">Inicio</span></a>`;
+  for (const g of GRUPOS) {
+    const items = g.claves.filter(c => tiene.has(c));
+    if (!items.length) continue;
+    html += `<div class="grupo"><span>${esc(g.nombre)}</span>${items.map(c => {
+      const m = tiene.get(c), d = DESTINOS[c] || { nombre:m.nombre, corto:'··' };
+      const ro = PERFIL(m.nivel) === 'Lectura' ? '<span class="chip">Lectura</span>' : '';
+      if (d.externo) {
+        return `<a class="item" href="${esc(d.url)}" target="_blank" rel="noopener" title="${esc(d.nombre)} (se abre en otra pestaña)">
+          <span class="punto"></span><span class="ini">${esc(d.corto)}</span><span class="txt">${esc(d.nombre)}</span>${ro}
+          <svg class="ext" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 4h6v6"/><path d="M10 14L20 4"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg></a>`;
+      }
+      return `<a class="item" href="#/m/${esc(c)}" data-ruta="m/${esc(c)}" title="${esc(d.nombre)}"><span class="punto"></span><span class="ini">${esc(d.corto)}</span><span class="txt">${esc(d.nombre)}</span>${ro}</a>`;
+    }).join('')}</div>`;
+  }
+  // Módulos que existan en la base pero que todavía no estén en un grupo
+  const sueltos = st.modulos.filter(m => !st.grupoDe[m.clave]);
+  if (sueltos.length) html += `<div class="grupo"><span>Otros</span>${sueltos.map(m =>
+    `<span class="item" title="En construcción"><span class="punto"></span><span class="ini">··</span><span class="txt">${esc(m.nombre)}</span><span class="chip">Próximamente</span></span>`).join('')}</div>`;
+  $('menu').innerHTML = html;
+}
+
+function marcarActivo(ruta){
+  document.querySelectorAll('#menu .item').forEach(a => {
+    if (a.dataset.ruta === ruta) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current');
+  });
+  const nav = ruta === 'inicio' ? 'inicio' : 'modulos';
+  document.querySelectorAll('.nav-inferior button').forEach(b => {
+    if (b.dataset.nav === nav) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current');
+  });
+}
+
+/* ---------------- rutas ---------------- */
+function enrutar(){
+  cerrarMenuMovil();
+  cerrarBusqueda();
+  const h = location.hash.replace(/^#\/?/, '');
+  const [tipo, clave] = h.split('/');
+  if (tipo === 'm' && clave && st.modulos.some(m => m.clave === clave) && DESTINOS[clave] && !DESTINOS[clave].externo) {
+    verModulo(clave);
+  } else {
+    if (h && h !== 'inicio') history.replaceState(null, '', '#/inicio');
+    verInicio();
+  }
+}
+window.addEventListener('hashchange', () => { if ($('app').classList.contains('activo')) enrutar(); });
+
+/* ---------------- inicio ---------------- */
+function saludo(){
+  const h = new Date().getHours();
+  return h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches';
+}
+
+function verInicio(){
+  marcarActivo('inicio');
+  const primerNombre = (st.nombre.split(/\s+/)[0] || '').replace(/@.*/, '');
+  const hoy = new Date().toLocaleDateString('es-MX', { weekday:'long', day:'numeric', month:'long' });
+  const accesos = st.modulos.filter(m => DESTINOS[m.clave]);
+
+  $('vista').innerHTML = `<div class="inicio">
+    <div class="saludo">
+      <h1>${saludo()}, ${esc(primerNombre)}</h1>
+      <p>${esc(hoy.charAt(0).toUpperCase() + hoy.slice(1))}</p>
+    </div>
+    <div class="cifras" id="cifras">
+      ${['Equipos activos','Patios','Fotos en el repositorio','Módulos disponibles'].map(t =>
+        `<div class="cifra"><span class="t">${t}</span><span class="n">…</span></div>`).join('')}
+    </div>
+    <section class="caja" aria-labelledby="tAccesos">
+      <h2 id="tAccesos">Tus módulos</h2>
+      <p class="sub">Solo ves los módulos de tu perfil. <b>Editor</b> puede capturar y modificar; <b>Lectura</b> solo consulta.</p>
+      ${st.errorModulos ? `<p class="vacio">No se pudieron leer tus módulos: ${esc(st.errorModulos)}</p>`
+        : !accesos.length ? `<p class="vacio">Todavía no tienes módulos asignados. Pídele a un administrador que te dé un perfil.</p>`
+        : `<div class="accesos">${GRUPOS.flatMap(g => g.claves).filter(c => accesos.some(m => m.clave === c)).map(c => {
+            const m = accesos.find(x => x.clave === c), d = DESTINOS[c], p = PERFIL(m.nivel);
+            const href = d.externo ? `href="${esc(d.url)}" target="_blank" rel="noopener"` : `href="#/m/${esc(c)}"`;
+            return `<a class="acceso-mod" ${href}>
+              <span class="g">${esc(st.grupoDe[c])}</span>
+              <b>${esc(d.nombre)}</b>
+              <span class="nivel ${p === 'Lectura' ? 'lectura' : 'editor'}">${p}${d.externo ? ' · otra pestaña' : ''}</span>
+            </a>`;
+          }).join('')}</div>`}
+    </section>
+  </div>`;
+  cargarCifras(accesos.length);
+}
+
+async function cargarCifras(nMods){
   const [eq, pa, fo] = await Promise.all([
     db.from('equipos').select('*', { count:'exact', head:true }).eq('activo', true),
-    db.from('patios').select('*',  { count:'exact', head:true }).eq('activo', true),
-    db.from('fotos').select('*',   { count:'exact', head:true })
+    db.from('patios').select('*', { count:'exact', head:true }).eq('activo', true),
+    db.from('fotos').select('*', { count:'exact', head:true })
   ]);
-
-  if(eq.error){
-    cont.innerHTML = `<p class="vacio">No se pudo leer el parque: ${eq.error.message}</p>`;
-    $('secResumen').querySelector('h2').textContent = 'Parque registrado';
-    return;
-  }
-  const fmt = n => (n ?? 0).toLocaleString('es-MX');
-  cont.innerHTML = `
-    <div class="cifra"><div class="n">${fmt(eq.count)}</div><div class="t">equipos activos</div></div>
-    <div class="cifra"><div class="n">${fmt(pa.count)}</div><div class="t">patios</div></div>
-    <div class="cifra"><div class="n">${fmt(fo.count)}</div><div class="t">fotos</div></div>`;
+  const caja = $('cifras'); if (!caja) return;
+  const c = (t, r, s) => `<div class="cifra"><span class="t">${t}</span><span class="n">${r?.error ? '—' : fmt(r?.count)}</span>${s ? `<span class="s">${s}</span>` : ''}</div>`;
+  caja.innerHTML =
+    c('Equipos activos', eq, 'Catálogo único por NIV') +
+    c('Patios', pa, 'Con mapa y levantamiento') +
+    c('Fotos en el repositorio', fo, 'Imágenes HT') +
+    `<div class="cifra"><span class="t">Módulos disponibles</span><span class="n">${fmt(nMods)}</span><span class="s">Según tu perfil</span></div>`;
 }
 
-// ---------------- consulta ----------------
-async function buscar(){
-  const q = $('q').value.trim();
-  const caja = $('resultados');
-  if(q.length < 3){
-    caja.innerHTML = `<p class="vacio">Escribe al menos tres caracteres.</p>`;
-    return;
-  }
-  caja.innerHTML = `<p class="vacio">Buscando…</p>`;
+/* ---------------- módulo embebido ---------------- */
+function verModulo(clave){
+  marcarActivo('m/' + clave);
+  const d = DESTINOS[clave], m = st.modulos.find(x => x.clave === clave), url = urlDe(clave);
+  const p = PERFIL(m.nivel);
+  $('vista').innerHTML = `<div class="modulo">
+    <div class="barra-mod">
+      <div class="miga"><span>${esc(st.grupoDe[clave] || '')} /</span><b>${esc(d.nombre)}</b>
+        <span class="nivel ${p === 'Lectura' ? 'lectura' : 'editor'}" style="margin:0 0 0 6px">${p}</span></div>
+      <div class="acc">
+        <button class="btn-sec" type="button" id="recargar" aria-label="Recargar módulo">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg><span class="txt-largo">Recargar</span></button>
+        <a class="btn-sec" href="${esc(url)}" target="_blank" rel="noopener" aria-label="Abrir en pestaña nueva">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 4h6v6"/><path d="M10 14L20 4"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg><span class="txt-largo">Pestaña nueva</span></a>
+      </div>
+    </div>
+    <div class="marco">
+      <div class="cargando" id="cargando">Abriendo ${esc(d.nombre)}…</div>
+      <iframe id="marco" title="${esc(d.nombre)}" src="${esc(url)}" allow="camera; geolocation; clipboard-write; fullscreen"></iframe>
+    </div>
+  </div>`;
+  const f = $('marco');
+  f.addEventListener('load', () => { $('cargando')?.remove(); adaptarModulo(f); });
+  $('recargar').addEventListener('click', () => { try { f.contentWindow.location.reload(); } catch(_) { f.src = url; } });
+}
 
-  const patron = `%${q}%`;
+/* Dentro de la plataforma, la barra propia de cada módulo ("← Volver a módulos")
+   sobra: el menú lateral ya hace esa función. */
+function adaptarModulo(f){
+  try {
+    const doc = f.contentDocument; if (!doc) return;
+    doc.documentElement.classList.add('en-plataforma');
+    if (!doc.getElementById('ht-en-plataforma')) {
+      const s = doc.createElement('style'); s.id = 'ht-en-plataforma';
+      s.textContent = '.en-plataforma .migaja{display:none!important}' +
+        /* Inventario (React): su menú y su barra de celular pasan a fondo claro;
+           el logo sobre azul se oculta porque la marca ya está en el menú de la plataforma. */
+        '.en-plataforma aside.tema-navy,.en-plataforma header.tema-navy{' +
+          '--navy-950:#eef2f7;--navy-900:#ffffff;--navy-800:#eef2f7;--navy-700:#d9e0ea;' +
+          '--line:rgba(18,40,90,.1);--line-strong:rgba(18,40,90,.2);' +
+          '--ink:#12285A;--ink-dim:#3f5170;--ink-mute:#5B6475;--green-strong:#3a8a12;--green:#A6CE39;color:var(--ink)}' +
+        '.en-plataforma aside.tema-navy{border-right-width:1px!important;border-right-color:#E1E6EF!important}' +
+        '.en-plataforma header.tema-navy{border-bottom-color:#A6CE39!important}' +
+        '.en-plataforma .logo-sobre-navy{display:none!important}';
+      doc.head.appendChild(s);
+    }
+  } catch(_) { /* página de otro origen: se deja igual */ }
+}
+
+/* ---------------- búsqueda global ---------------- */
+let temporizador = null, ultimaBusqueda = '';
+function cerrarBusqueda(){ $('panelBusqueda').classList.add('oculto'); }
+
+$('q').addEventListener('input', () => {
+  clearTimeout(temporizador);
+  temporizador = setTimeout(buscar, 300);
+});
+$('q').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { clearTimeout(temporizador); buscar(); }
+  if (e.key === 'Escape') { cerrarBusqueda(); $('q').blur(); }
+});
+$('q').addEventListener('focus', () => { if ($('panelBusqueda').innerHTML && $('q').value.trim().length >= 3) $('panelBusqueda').classList.remove('oculto'); });
+document.addEventListener('click', e => { if (!$('buscador').contains(e.target)) cerrarBusqueda(); });
+
+async function buscar(){
+  const q = $('q').value.trim(), panel = $('panelBusqueda');
+  if (q.length < 3) { panel.innerHTML = q ? '<p class="nota">Escribe al menos tres caracteres.</p>' : ''; panel.classList.toggle('oculto', !q); return; }
+  ultimaBusqueda = q;
+  panel.classList.remove('oculto');
+  panel.innerHTML = '<p class="nota">Buscando…</p>';
+  const patron = `%${q.replace(/[%,()]/g, ' ')}%`;
   const { data, error } = await db.from('v_equipos')
     .select('niv,placa,tipo,marca,anio,patio_registrado,estatus_operativo,cliente_actual,ubicacion_discrepante')
     .or(`niv.ilike.${patron},placa.ilike.${patron},cliente_actual.ilike.${patron}`)
-    .limit(50);
-
-  if(error){ caja.innerHTML = `<p class="vacio">La búsqueda falló: ${error.message}</p>`; return; }
-  if(!data.length){ caja.innerHTML = `<p class="vacio">Ningún equipo coincide con “${q}”.</p>`; return; }
-
-  caja.innerHTML = `<table>
-    <thead><tr>
-      <th>NIV</th><th>Placa</th><th>Tipo</th><th>Marca</th><th>Año</th>
-      <th>Patio</th><th>Estatus</th><th>Cliente</th>
-    </tr></thead><tbody>${
-      data.map(e=>`<tr>
-        <td class="niv">${e.niv||''}</td>
-        <td class="niv">${e.placa||'—'}</td>
-        <td>${e.tipo||'—'}</td>
-        <td>${e.marca||'—'}</td>
-        <td class="niv">${e.anio||'—'}</td>
-        <td>${e.patio_registrado||'—'}${e.ubicacion_discrepante?' <span class="sello">ubicación distinta</span>':''}</td>
-        <td>${e.estatus_operativo||'—'}</td>
-        <td>${e.cliente_actual||'—'}</td>
-      </tr>`).join('')
-    }</tbody></table>
-    <p class="vacio">${data.length === 50 ? 'Mostrando los primeros 50. Afina la búsqueda para ver menos.' : data.length + ' resultado(s).'}</p>`;
+    .limit(30);
+  if (q !== ultimaBusqueda) return;
+  if (error) { panel.innerHTML = `<p class="nota">La búsqueda falló: ${esc(error.message)}</p>`; return; }
+  if (!data.length) { panel.innerHTML = `<p class="nota">Ningún equipo coincide con “${esc(q)}”.</p>`; return; }
+  panel.innerHTML = data.map(e => `<div class="res">
+      <div class="l1"><span class="niv">${esc(e.niv)}</span>${e.placa ? `<span class="etq">Placa ${esc(e.placa)}</span>` : ''}${e.estatus_operativo ? `<span class="etq">${esc(e.estatus_operativo)}</span>` : ''}${e.ubicacion_discrepante ? '<span class="etq alerta">Ubicación distinta</span>' : ''}</div>
+      <div class="l2">${[e.tipo, e.marca, e.anio].filter(Boolean).map(esc).join(' · ') || '—'}</div>
+      <div class="l2">${e.patio_registrado ? 'Patio ' + esc(e.patio_registrado) : 'Sin patio'}${e.cliente_actual ? ' · Cliente ' + esc(e.cliente_actual) : ''}</div>
+    </div>`).join('') +
+    `<p class="nota">${data.length === 30 ? 'Mostrando los primeros 30. Afina la búsqueda para ver menos.' : data.length + ' resultado(s).'}</p>`;
 }
 
-// ---------------- arranque ----------------
-$('entrar').addEventListener('click', entrar);
-$('salir').addEventListener('click', salir);
-$('buscar').addEventListener('click', buscar);
-$('clave').addEventListener('keydown', e => { if(e.key==='Enter') entrar(); });
-$('correo').addEventListener('keydown', e => { if(e.key==='Enter') $('clave').focus(); });
-$('q').addEventListener('keydown', e => { if(e.key==='Enter') buscar(); });
+/* ---------------- menú en celular y menú compacto ---------------- */
+function cerrarMenuMovil(){ document.body.classList.remove('menu-abierto'); }
+$('btnMenu').addEventListener('click', () => document.body.classList.add('menu-abierto'));
+$('velo').addEventListener('click', cerrarMenuMovil);
+$('btnCompacto').addEventListener('click', () => {
+  const on = document.body.classList.toggle('compacto');
+  guardar('ht_menu_compacto', on ? '1' : '0');
+});
+document.querySelectorAll('.nav-inferior button').forEach(b => b.addEventListener('click', () => {
+  const n = b.dataset.nav;
+  if (n === 'inicio') location.hash = '#/inicio';
+  else if (n === 'buscar') { cerrarMenuMovil(); $('q').focus(); }
+  else if (n === 'modulos') document.body.classList.add('menu-abierto');
+  else if (n === 'salir') salir();
+}));
 
+/* ---------------- arranque ---------------- */
 const { data:{ session } } = await db.auth.getSession();
-if(session) await abrirSesion();
+if (session) await abrirSesion();
+db.auth.onAuthStateChange((evento) => { if (evento === 'SIGNED_OUT' && $('app').classList.contains('activo')) mostrarAcceso(); });
 </script>
 </body>
 </html>
