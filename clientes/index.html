@@ -434,6 +434,276 @@ function VentasEntregas({registros,fEjec,ejecutivos}){
 }
 
 /* ============================================================
+   EQUIPOS EN GESTIÓN — informe para Operaciones
+   Qué tipo de unidades traemos en gestión (clientes abiertos),
+   cuándo se espera entregarlas y dónde, para que Operaciones
+   prepare/repare con anticipación. Todo se calcula en el
+   navegador con los registros de la app (solo lectura).
+   ============================================================ */
+const EOP_HORIZ=[["inm","Vencida / ≤7 días",0,7],["d15","8–15 días",8,15],["d30","16–30 días",16,30],["d60","31–60 días",31,60],["m60","Más de 60 días",61,1e9]];
+const EOP_PRIOS=["Alta","Media","Baja"];
+const EOP_PISO={"Presentación con Cliente":30,"Documentando":20,"En Dictamen":15,"Dictaminado":10,"Asignación y Contrato":7,"Contrato enviado":5,"Contrato recibido":3,"Equipo listo":2,"Programación entrega":1,"Pend. entrega Fábrica":1,"Pend. entrega Cliente":1};
+function eopCond(e){if(!e||!e.condicion)return "Sin dato";const c=condLabel(e.marca,e.condicion);return c==="Usado"?"Usado / recuperado":c;}
+function eopPendientes(r){
+  const lineas=(r.equipos||[]).filter(e=>e&&e.tipo).map(e=>({e,n:Number(e.cantidad)||1}));
+  const tot=lineas.reduce((s,x)=>s+x.n,0);if(!tot)return [];
+  const pend=r.entregaModo==="parcial"?faltanCli(r):tot;
+  if(pend>=tot)return lineas;
+  if(pend<=0)return [];
+  const base=lineas.map(x=>({...x,q:x.n*pend/tot}));
+  base.forEach(x=>{x.k=Math.floor(x.q);});
+  let resto=pend-base.reduce((s,x)=>s+x.k,0);
+  base.slice().sort((a,b)=>(b.q-b.k)-(a.q-a.k)).forEach(x=>{if(resto>0){x.k++;resto--;}});
+  return base.filter(x=>x.k>0).map(x=>({e:x.e,n:x.k}));
+}
+function eopPrioridad(r,dias){
+  if(esDevuelto(r))return "Baja";
+  const et=etapaAbierta(r);
+  if(r.entregaProgramada&&dias!=null&&dias<=15)return "Alta";
+  if(et==="Entrega parcial"||estIdx(et)>=estIdx("Asignación y Contrato"))return "Alta";
+  if(["Documentando","En Dictamen","Dictaminado"].includes(et))return "Media";
+  return "Baja";
+}
+function eopHorizonte(d){if(d==null)return "m60";for(const [k,,a,b] of EOP_HORIZ)if(d<=b)return k;return "m60";}
+const eopFecha=d=>d?pad(d.getDate())+"/"+pad(d.getMonth()+1)+"/"+d.getFullYear():"";
+const eopSug=(c)=>{
+  const listo=c.prio.Alta, pronto=c.h.inm+c.h.d15;
+  if(!c.u)return "";
+  if(/^Nuevo/.test(c.cond))return listo?`Confirmar con fábrica ${listo} unidad(es) nuevas de prioridad alta`:"Unidades nuevas: seguimiento con fábrica";
+  if(listo||pronto)return `Tener listas ${Math.max(listo,pronto)} unidad(es) en las próximas 2 semanas`+(c.u>Math.max(listo,pronto)?`; programar ${c.u-Math.max(listo,pronto)} más`:"");
+  return `Programar reparación de ${c.u} unidad(es) a mediano plazo`;
+};
+
+function EquiposGestion({registros,now}){
+  const [empresa,setEmpresa]=useState("Todas");
+  const [condF,setCondF]=useState("Todas");
+  const [conDev,setConDev]=useState("no");
+  const [abierto,setAbierto]=useState(null);
+  const [bajando,setBajando]=useState(false);
+  const hoy=useMemo(()=>{const d=new Date(now);d.setHours(0,0,0,0);return d;},[now]);
+  const empresas=useMemo(()=>["Todas",...[...new Set(registros.map(r=>r.empresa).filter(Boolean))].sort()],[registros]);
+
+  /* Promedios históricos: días de alta a entrega y unidades entregadas por mes (últimos 6 meses) */
+  const hist=useMemo(()=>{
+    const dias={},todos=[],mes={};
+    const desde=new Date(hoy);desde.setMonth(desde.getMonth()-6);
+    registros.forEach(r=>{
+      if(empresa!=="Todas"&&r.empresa!==empresa)return;
+      if(seccDe(r)!=="entregados")return;
+      const d=diasAltaEntrega(r);const ep=equipoPrincipal(r);
+      if(d!=null){todos.push(d);if(ep){const f=familiaEquipo(ep.tipo);(dias[f]=dias[f]||[]).push(d);}}
+      const fe=fT(fechaEntrega(r));
+      if(fe&&fe>=desde&&fe<=new Date(now))(r.equipos||[]).filter(e=>e&&e.tipo).forEach(e=>{const k=familiaEquipo(e.tipo)+"|"+eopCond(e);mes[k]=(mes[k]||0)+(Number(e.cantidad)||1);});
+    });
+    const promFam={};Object.keys(dias).forEach(f=>{promFam[f]={p:prom(dias[f]),n:dias[f].length};});
+    const mensual={};Object.keys(mes).forEach(k=>{mensual[k]=mes[k]/6;});
+    return {promFam,promGen:prom(todos),nGen:todos.length,mensual};
+  },[registros,empresa,hoy,now]);
+
+  /* Detalle: una fila por línea de equipo pendiente de entregar */
+  const filas=useMemo(()=>{
+    const out=[];
+    registros.forEach(r=>{
+      const s=seccDe(r);
+      if(!(s==="activos"||(conDev==="si"&&s==="devueltos")))return;
+      if(empresa!=="Todas"&&r.empresa!==empresa)return;
+      const ini=inicioGestion(r);const antig=ini?Math.max(0,Math.floor(difD(ini,hoy))):null;
+      const et=etapaAbierta(r);
+      eopPendientes(r).forEach(({e,n})=>{
+        const fam=familiaEquipo(e.tipo),cond=eopCond(e);
+        if(condF!=="Todas"&&cond!==condF)return;
+        let fecha,origen;
+        const fp=fT(r.entregaProgramada);
+        if(fp){fecha=fp;origen=fp<hoy?"Programada (vencida)":"Programada";}
+        else{
+          const pf=hist.promFam[fam];const pr=pf&&pf.n>=3?pf.p:hist.promGen;
+          const piso=EOP_PISO[et]!=null?EOP_PISO[et]:7;
+          const rest=Math.max(piso,Math.round((pr!=null?pr:45)-(antig||0)));
+          fecha=new Date(hoy.getTime()+rest*DIA_MS);origen=pf&&pf.n>=3?"Estimada (prom. del tipo)":"Estimada (prom. general)";
+        }
+        const dias=Math.round(difD(hoy,fecha));
+        out.push({r,cliente:r.cliente||"",ejec:ejecDe(r),empresa:r.empresa||"",etapa:esDevuelto(r)?"Devuelto a comercial":et,fam,cond,tipo:e.tipo,marca:e.marca||"",anio:e.anio||"",n,patio:r.patioEntrega||"Sin patio",fecha,origen,dias,h:eopHorizonte(Math.max(0,dias)),prio:eopPrioridad(r,dias),antig});
+      });
+    });
+    return out.sort((a,b)=>EOP_PRIOS.indexOf(a.prio)-EOP_PRIOS.indexOf(b.prio)||a.fecha-b.fecha);
+  },[registros,empresa,condF,conDev,hist,hoy]);
+
+  const resumen=useMemo(()=>{
+    const m={};
+    filas.forEach(x=>{
+      const k=x.fam+"|"+x.cond;
+      const c=m[k]=m[k]||{k,fam:x.fam,cond:x.cond,u:0,cli:new Set(),prio:{Alta:0,Media:0,Baja:0},h:{inm:0,d15:0,d30:0,d60:0,m60:0},patios:{},tipos:{}};
+      c.u+=x.n;c.cli.add(x.r.id);c.prio[x.prio]+=x.n;c.h[x.h]+=x.n;c.patios[x.patio]=(c.patios[x.patio]||0)+x.n;c.tipos[x.tipo]=(c.tipos[x.tipo]||0)+x.n;
+    });
+    return Object.values(m).map(c=>{
+      const pf=hist.promFam[c.fam];
+      return {...c,nCli:c.cli.size,promDias:pf?pf.p:null,promN:pf?pf.n:0,mensual:hist.mensual[c.k]||0,sug:eopSug(c)};
+    }).sort((a,b)=>b.u-a.u||a.k.localeCompare(b.k));
+  },[filas,hist]);
+
+  const patios=useMemo(()=>{
+    const m={},fams=new Set();
+    filas.forEach(x=>{fams.add(x.fam);const p=m[x.patio]=m[x.patio]||{patio:x.patio,u:0,f:{},alta:0};p.u+=x.n;p.f[x.fam]=(p.f[x.fam]||0)+x.n;if(x.prio==="Alta")p.alta+=x.n;});
+    const famsOrd=[...fams].sort((a,b)=>filas.filter(x=>x.fam===b).reduce((s,x)=>s+x.n,0)-filas.filter(x=>x.fam===a).reduce((s,x)=>s+x.n,0));
+    return {rows:Object.values(m).sort((a,b)=>(a.patio==="Sin patio")-(b.patio==="Sin patio")||b.u-a.u),fams:famsOrd};
+  },[filas]);
+
+  const tot=useMemo(()=>{
+    const t={u:0,cli:new Set(),usado:0,nuevo:0,alta:0,d15:0,d30:0,sinCond:0};
+    filas.forEach(x=>{t.u+=x.n;t.cli.add(x.r.id);if(/^Usado|^Seminuevo/.test(x.cond))t.usado+=x.n;if(x.cond==="Nuevo")t.nuevo+=x.n;if(x.cond==="Sin dato")t.sinCond+=x.n;if(x.prio==="Alta")t.alta+=x.n;if(x.dias<=15)t.d15+=x.n;if(x.dias<=30)t.d30+=x.n;});
+    t.nCli=t.cli.size;return t;
+  },[filas]);
+
+  const lectura=useMemo(()=>{
+    const L=[];if(!tot.u)return L;
+    const top=resumen[0];
+    L.push(`Traemos ${tot.u} unidad(es) pendientes de entregar en ${tot.nCli} cliente(s); ${pctTxt(tot.usado,tot.u)} son usadas/recuperadas o seminuevas y ${pctTxt(tot.nuevo,tot.u)} nuevas.`);
+    if(top)L.push(`El tipo con más demanda es ${top.fam} (${top.cond.toLowerCase()}): ${top.u} unidad(es), ${top.prio.Alta} de prioridad alta.`);
+    const usadoAlta=resumen.filter(c=>/^Usado|^Seminuevo/.test(c.cond)&&c.prio.Alta>0).sort((a,b)=>b.prio.Alta-a.prio.Alta);
+    if(usadoAlta.length)L.push(`Para taller (usadas con prioridad alta): ${usadoAlta.slice(0,4).map(c=>`${c.prio.Alta} ${c.fam} ${c.cond.toLowerCase()}`).join(", ")}.`);
+    L.push(`En los próximos 15 días se esperan ${tot.d15} unidad(es) y en 30 días ${tot.d30} (fechas programadas o estimadas con el promedio histórico).`);
+    const sobre=resumen.filter(c=>c.mensual>0&&c.cond!=="Sin dato"&&(c.h.inm+c.h.d15+c.h.d30)>c.mensual*1.3).sort((a,b)=>(b.h.inm+b.h.d15+b.h.d30)/b.mensual-(a.h.inm+a.h.d15+a.h.d30)/a.mensual);
+    if(sobre.length)L.push(`Por encima de lo que normalmente se entrega al mes: ${sobre.slice(0,3).map(c=>`${c.fam} ${c.cond.toLowerCase()} (${c.h.inm+c.h.d15+c.h.d30} en 30 d vs ${Math.round(c.mensual*10)/10}/mes)`).join("; ")}.`);
+    const pTop=patios.rows.find(p=>p.patio!=="Sin patio");if(pTop)L.push(`El patio con más unidades por preparar es ${pTop.patio} (${pTop.u}).`);
+    if(tot.sinCond)L.push(`${tot.sinCond} unidad(es) no tienen condición capturada (nuevo/usado); conviene completarla en la ficha del cliente.`);
+    return L;
+  },[tot,resumen,patios]);
+
+  const descargar=async()=>{
+    setBajando(true);
+    try{
+      await solCargarScript(SOL_EXCELJS);
+      const wb=new window.ExcelJS.Workbook();
+      const hdr=ws=>{const r=ws.getRow(1);r.eachCell(c=>{c.font={bold:true,color:{argb:"FFFFFFFF"}};c.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF0B3D66"}};c.alignment={vertical:"middle",wrapText:true};});r.height=30;ws.views=[{state:"frozen",ySplit:1}];ws.autoFilter={from:{row:1,column:1},to:{row:1,column:ws.columnCount}};};
+      const filtros=`Empresa: ${empresa} · Condición: ${condF} · Devueltos a comercial: ${conDev==="si"?"incluidos":"no incluidos"} · Generado ${eopFecha(new Date())}`;
+
+      const w1=wb.addWorksheet("Resumen por tipo");
+      w1.columns=[{header:"Tipo de equipo",width:26},{header:"Condición",width:18},{header:"Unidades en gestión",width:12},{header:"Clientes",width:10},{header:"Prioridad alta",width:10},{header:"Prioridad media",width:10},{header:"Prioridad baja",width:10},{header:"Vencida / ≤7 días",width:11},{header:"8–15 días",width:10},{header:"16–30 días",width:10},{header:"31–60 días",width:10},{header:"Más de 60 días",width:10},{header:"Entregas prom./mes (6 m)",width:12},{header:"Días prom. alta→entrega",width:12},{header:"Patios",width:34},{header:"Sugerencia para Operaciones",width:60}];
+      resumen.forEach(c=>w1.addRow([c.fam,c.cond,c.u,c.nCli,c.prio.Alta,c.prio.Media,c.prio.Baja,c.h.inm,c.h.d15,c.h.d30,c.h.d60,c.h.m60,Math.round(c.mensual*10)/10,c.promDias!=null?Math.round(c.promDias):"",Object.entries(c.patios).sort((a,b)=>b[1]-a[1]).map(([p,n])=>`${p} (${n})`).join(", "),c.sug]));
+      const tr=w1.addRow(["TOTAL","",tot.u,tot.nCli,...EOP_PRIOS.map(p=>resumen.reduce((s,c)=>s+c.prio[p],0)),...EOP_HORIZ.map(([k])=>resumen.reduce((s,c)=>s+c.h[k],0)),"","","",""]);tr.font={bold:true};
+      hdr(w1);
+      w1.addRow([]);w1.addRow(["Lectura rápida"]).font={bold:true};lectura.forEach(x=>w1.addRow([x]));
+      w1.addRow([]);w1.addRow([filtros]).font={italic:true,color:{argb:"FF64748B"}};
+      w1.addRow(["Prioridad alta = cliente en Asignación y Contrato o etapa posterior, entrega parcial, o con entrega programada en ≤15 días. Media = Documentando / Dictamen. Baja = Presentación o devuelto a comercial."]).font={italic:true,color:{argb:"FF64748B"}};
+      w1.addRow(["Fecha estimada: si no hay entrega programada, se usa el promedio histórico de días de alta a entrega del tipo de equipo (o el general) menos los días que lleva el cliente en gestión."]).font={italic:true,color:{argb:"FF64748B"}};
+
+      const w2=wb.addWorksheet("Por patio");
+      w2.columns=[{header:"Patio de entrega",width:26},{header:"Unidades",width:10},{header:"Prioridad alta",width:10},...patios.fams.map(f=>({header:f,width:14}))];
+      patios.rows.forEach(p=>w2.addRow([p.patio,p.u,p.alta,...patios.fams.map(f=>p.f[f]||0)]));
+      hdr(w2);
+
+      const w3=wb.addWorksheet("Detalle");
+      w3.columns=[{header:"Prioridad",width:10},{header:"Cliente",width:34},{header:"Ejecutivo",width:20},{header:"Empresa",width:10},{header:"Etapa",width:22},{header:"Tipo de equipo",width:22},{header:"Descripción",width:40},{header:"Marca",width:10},{header:"Año",width:7},{header:"Condición",width:16},{header:"Unidades pendientes",width:11},{header:"Patio de entrega",width:22},{header:"Fecha de entrega",width:12},{header:"Origen de la fecha",width:22},{header:"Días para entrega",width:10},{header:"Días en gestión",width:10}];
+      filas.forEach(x=>{const row=w3.addRow([x.prio,x.cliente,x.ejec,x.empresa,x.etapa,x.fam,x.tipo,x.marca,x.anio,x.cond,x.n,x.patio,x.fecha,x.origen,x.dias,x.antig==null?"":x.antig]);row.getCell(13).numFmt="dd/mm/yyyy";if(x.prio==="Alta")row.getCell(1).font={bold:true,color:{argb:"FFB91C1C"}};});
+      hdr(w3);
+
+      const buf=await wb.xlsx.writeBuffer();
+      const blob=new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+      const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`Equipos en gestion - Operaciones ${toISO(new Date())}.xlsx`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
+    }catch(e){alert("No se pudo generar el Excel: "+e.message);}
+    setBajando(false);
+  };
+
+  const prioCls={Alta:"bg-red-100 text-red-700",Media:"bg-amber-100 text-amber-700",Baja:"bg-slate-100 text-slate-600"};
+  const th="px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500";
+  const thr=th+" text-right";
+  const td="px-2 py-1.5 text-sm text-slate-700";
+  const tdr="px-2 py-1.5 text-right mono text-sm text-slate-700";
+  const num=v=>v?v:<span className="text-slate-300">–</span>;
+
+  return (<div className="space-y-5">
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <div><h2 className="text-lg font-bold text-slate-900">Equipos en gestión</h2><p className="text-xs text-slate-500">Qué unidades traemos con clientes en proceso y cuándo se esperan entregar, para que Operaciones prepare y repare con anticipación</p></div>
+      <div className="flex flex-wrap items-center gap-2">
+        <SelPanel v={empresa} set={setEmpresa} pre="Empresa" opts={empresas}/>
+        <SelPanel v={condF} set={setCondF} pre="Condición" opts={["Todas","Usado / recuperado","Seminuevo","Nuevo","Sin dato"]}/>
+        <SelPanel v={conDev} set={setConDev} pre="Devueltos a comercial" opts={[["no","No incluir"],["si","Incluir"]]}/>
+        <button onClick={descargar} disabled={bajando||!filas.length} className="inline-flex items-center gap-1.5 rounded-lg border border-navy-edge bg-navy px-3.5 py-1.5 text-sm font-semibold text-white hover:bg-navy-2 disabled:opacity-50"><Icon name="download" size={15}/>{bajando?"Generando…":"Descargar Excel"}</button>
+      </div>
+    </div>
+
+    {!filas.length?<div className="rounded-xl border border-stone-200 bg-white p-8 text-center text-slate-400">No hay unidades pendientes de entregar con estos filtros.</div>:<>
+
+    <div className="rounded-xl border border-navy/20 bg-white p-4">
+      <h3 className="text-sm font-bold text-navy mb-2">Lectura rápida</h3>
+      <ul className="space-y-1.5 text-sm text-slate-700 list-disc pl-5">{lectura.map((x,i)=><li key={i}>{x}</li>)}</ul>
+    </div>
+
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <Kpi icon="truck" label="Unidades en gestión" valor={tot.u} tono="text-slate-900"/>
+      <Kpi icon="user" label="Clientes" valor={tot.nCli} tono="text-slate-900"/>
+      <Kpi icon="tag" label="Usadas / recuperadas" valor={tot.usado} tono="text-teal-700"/>
+      <Kpi icon="tag" label="Nuevas" valor={tot.nuevo} tono="text-sky-700"/>
+      <Kpi icon="alert" label="Prioridad alta" valor={tot.alta} tono="text-red-600"/>
+      <Kpi icon="calendar" label="Próximos 15 días" valor={tot.d15} tono="text-amber-600"/>
+    </div>
+
+    <div className="rounded-xl border border-stone-200 bg-white p-4">
+      <h3 className="text-sm font-bold text-slate-700">Por tipo de equipo y condición</h3>
+      <p className="text-xs text-slate-500 mb-3">Unidades pendientes de entregar. Toca una fila para ver las descripciones exactas. "Entregas/mes" es el promedio de unidades de ese tipo entregadas en los últimos 6 meses: si lo que viene en 30 días lo rebasa, hay que adelantar la preparación.</p>
+      <div className="overflow-x-auto"><table className="w-full min-w-[980px]">
+        <thead className="border-b border-stone-200"><tr>
+          <th className={th}>Tipo</th><th className={th}>Condición</th><th className={thr}>Unidades</th><th className={thr}>Clientes</th>
+          <th className={thr+" text-red-600"}>Alta</th><th className={thr+" text-amber-600"}>Media</th><th className={thr}>Baja</th>
+          <th className={thr}>≤7 d</th><th className={thr}>8–15</th><th className={thr}>16–30</th><th className={thr}>31–60</th><th className={thr}>60+</th>
+          <th className={thr}>Entregas/mes</th><th className={thr}>Días prom. a entrega</th><th className={th}>Sugerencia</th>
+        </tr></thead>
+        <tbody>{resumen.map(c=>{const prox=c.h.inm+c.h.d15+c.h.d30,alerta=c.mensual>0&&prox>c.mensual*1.3;return (<React.Fragment key={c.k}>
+          <tr onClick={()=>setAbierto(abierto===c.k?null:c.k)} className="border-b border-stone-100 hover:bg-stone-50 cursor-pointer">
+            <td className={td+" font-semibold"}>{c.fam}</td><td className={td}>{c.cond}</td>
+            <td className={tdr+" font-bold text-slate-900"}>{c.u}</td><td className={tdr}>{c.nCli}</td>
+            <td className={tdr+" font-semibold text-red-600"}>{num(c.prio.Alta)}</td><td className={tdr+" text-amber-700"}>{num(c.prio.Media)}</td><td className={tdr}>{num(c.prio.Baja)}</td>
+            <td className={tdr}>{num(c.h.inm)}</td><td className={tdr}>{num(c.h.d15)}</td><td className={tdr}>{num(c.h.d30)}</td><td className={tdr}>{num(c.h.d60)}</td><td className={tdr}>{num(c.h.m60)}</td>
+            <td className={tdr+(alerta?" font-bold text-red-600":"")} title={alerta?`En 30 días vienen ${prox}, más de lo que se entrega al mes`:""}>{c.mensual?Math.round(c.mensual*10)/10:"–"}{alerta?" ▲":""}</td>
+            <td className={tdr}>{dTxt(c.promDias)}</td>
+            <td className="px-2 py-1.5 text-xs text-slate-600">{c.sug}</td>
+          </tr>
+          {abierto===c.k && <tr className="bg-stone-50"><td colSpan={15} className="px-4 py-2 text-xs text-slate-600">
+            <div><b>Descripciones:</b> {Object.entries(c.tipos).sort((a,b)=>b[1]-a[1]).map(([t,n])=>`${n}× ${t}`).join(" · ")}</div>
+            <div className="mt-1"><b>Patios:</b> {Object.entries(c.patios).sort((a,b)=>b[1]-a[1]).map(([p,n])=>`${p} (${n})`).join(" · ")}</div>
+          </td></tr>}
+        </React.Fragment>);})}
+        <tr className="border-t-2 border-stone-300 font-bold"><td className={td+" font-bold"} colSpan={2}>Total</td><td className={tdr+" font-bold"}>{tot.u}</td><td className={tdr}>{tot.nCli}</td>
+          {EOP_PRIOS.map(p=><td key={p} className={tdr+" font-bold"}>{resumen.reduce((s,c)=>s+c.prio[p],0)}</td>)}
+          {EOP_HORIZ.map(([k])=><td key={k} className={tdr+" font-bold"}>{resumen.reduce((s,c)=>s+c.h[k],0)}</td>)}
+          <td colSpan={3}></td></tr>
+        </tbody>
+      </table></div>
+    </div>
+
+    <div className="rounded-xl border border-stone-200 bg-white p-4">
+      <h3 className="text-sm font-bold text-slate-700">Por patio de entrega</h3>
+      <p className="text-xs text-slate-500 mb-3">Dónde hay que tener listas las unidades.</p>
+      <div className="overflow-x-auto"><table className="w-full">
+        <thead className="border-b border-stone-200"><tr><th className={th}>Patio</th><th className={thr}>Unidades</th><th className={thr+" text-red-600"}>Prioridad alta</th>{patios.fams.map(f=><th key={f} className={thr}>{f}</th>)}</tr></thead>
+        <tbody>{patios.rows.map(p=><tr key={p.patio} className="border-b border-stone-100"><td className={td+" font-semibold"}>{p.patio}</td><td className={tdr+" font-bold"}>{p.u}</td><td className={tdr+" text-red-600"}>{num(p.alta)}</td>{patios.fams.map(f=><td key={f} className={tdr}>{num(p.f[f])}</td>)}</tr>)}</tbody>
+      </table></div>
+    </div>
+
+    <div className="rounded-xl border border-stone-200 bg-white p-4">
+      <h3 className="text-sm font-bold text-slate-700">Detalle por cliente</h3>
+      <p className="text-xs text-slate-500 mb-3">Ordenado por prioridad y fecha. Si el cliente no tiene entrega programada, la fecha es estimada con el promedio histórico.</p>
+      <div className="overflow-x-auto max-h-[520px]"><table className="w-full min-w-[900px]">
+        <thead className="sticky top-0 bg-white border-b border-stone-200"><tr><th className={th}>Prioridad</th><th className={th}>Cliente</th><th className={th}>Etapa</th><th className={th}>Equipo</th><th className={th}>Condición</th><th className={thr}>Unid.</th><th className={th}>Patio</th><th className={th}>Entrega</th></tr></thead>
+        <tbody>{filas.map((x,i)=><tr key={i} className="border-b border-stone-100">
+          <td className={td}><span className={`rounded px-2 py-0.5 text-[11px] font-bold ${prioCls[x.prio]}`}>{x.prio}</span></td>
+          <td className={td}><div className="font-semibold text-slate-800">{x.cliente}</div><div className="text-[11px] text-slate-400">{x.ejec}</div></td>
+          <td className={td+" text-xs"}>{x.etapa}</td>
+          <td className={td}><div>{x.fam}</div><div className="text-[11px] text-slate-400">{[x.tipo,x.marca,x.anio].filter(Boolean).join(" · ")}</div></td>
+          <td className={td+" text-xs"}>{x.cond}</td>
+          <td className={tdr+" font-semibold"}>{x.n}</td>
+          <td className={td+" text-xs"}>{x.patio}</td>
+          <td className={td}><div className={`mono text-xs font-semibold ${x.dias<0?"text-red-600":""}`}>{eopFecha(x.fecha)}</div><div className="text-[11px] text-slate-400">{x.origen}</div></td>
+        </tr>)}</tbody>
+      </table></div>
+    </div>
+
+    <p className="text-[11px] text-slate-400">Prioridad alta = cliente en Asignación y Contrato o etapa posterior, con entrega parcial, o con entrega programada en 15 días o menos. Media = Documentando o Dictamen. Baja = Presentación con cliente o devuelto a comercial. En entregas parciales solo cuentan las unidades que faltan.</p>
+    </>}
+  </div>);
+}
+
+/* ============================================================
    PANEL DE CARTERA — comportamiento de la cartera de clientes
    Embudo, etapas donde se detienen, por ejecutivo comercial,
    por tipo de equipo y otros cortes. Todo se calcula en el
@@ -947,7 +1217,7 @@ function App(){
         <TableroEtapas counts={etapaCounts} total={porEjec.length} activo={fEstatus} onPick={est=>{setFEstatus(fEstatus===est?"":est);setVista("clientes");}}/>
 
         <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
-          <div className="flex flex-wrap gap-1 border-b-[3px] border-navy"><Tab activo={vista==="clientes"} onClick={()=>setVista("clientes")}>Clientes</Tab><Tab activo={vista==="tablero"} onClick={()=>setVista("tablero")}>Tablero</Tab><Tab activo={vista==="lista"} onClick={()=>setVista("lista")}>Lista</Tab><Tab activo={vista==="dia"} onClick={()=>setVista("dia")}>Día</Tab><Tab activo={vista==="ventas"} onClick={()=>setVista("ventas")}>Ventas y Entregas</Tab>{!ES_LEGAL()&&<Tab activo={vista==="panel"} onClick={()=>setVista("panel")}>Panel de cartera</Tab>}</div>
+          <div className="flex flex-wrap gap-1 border-b-[3px] border-navy"><Tab activo={vista==="clientes"} onClick={()=>setVista("clientes")}>Clientes</Tab><Tab activo={vista==="tablero"} onClick={()=>setVista("tablero")}>Tablero</Tab><Tab activo={vista==="lista"} onClick={()=>setVista("lista")}>Lista</Tab><Tab activo={vista==="dia"} onClick={()=>setVista("dia")}>Día</Tab><Tab activo={vista==="ventas"} onClick={()=>setVista("ventas")}>Ventas y Entregas</Tab>{!ES_LEGAL()&&<Tab activo={vista==="panel"} onClick={()=>setVista("panel")}>Panel de cartera</Tab>}{!ES_LEGAL()&&<Tab activo={vista==="equipos"} onClick={()=>setVista("equipos")}>Equipos en gestión</Tab>}</div>
           <div className="flex items-center gap-2 flex-wrap">
             <div className="flex items-center gap-1.5 rounded-lg border border-stone-300 bg-white px-2.5"><Icon name="search" size={14} className="text-slate-400"/><input value={busca} onChange={e=>setBusca(e.target.value)} placeholder="Buscar cliente, NIV, folio, tel…" className="py-1.5 text-sm outline-none w-48"/></div>
             <Select value={fEjec} onChange={cambiarEjec} options={["Todos",...ejecutivos]} prefijo="Ejecutivo"/>
@@ -959,6 +1229,7 @@ function App(){
         {fEstatus && <div className="mb-3"><span className="inline-flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700">Etapa: {fEstatus} <button onClick={()=>setFEstatus("")} className="text-slate-500 hover:text-red-500"><Icon name="x" size={13}/></button></span></div>}
         {vista==="ventas" && <VentasEntregas registros={registros} fEjec={fEjec} ejecutivos={ejecutivos}/>}
         {vista==="panel" && !ES_LEGAL() && <PanelCartera registros={registros} now={now}/>}
+        {vista==="equipos" && !ES_LEGAL() && <EquiposGestion registros={registros} now={now}/>}
         {vista==="clientes" && (()=>{
           const cActivos=mostrados.filter(r=>seccDe(r)==="activos").length;
           const cEntreg=mostrados.filter(r=>seccDe(r)==="entregados").length;
