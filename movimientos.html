@@ -145,6 +145,8 @@ label>span.lbl{margin-bottom:5px}
 .sheet-foot .inner>*{flex:1}
 .hidden{display:none!important}
 @media (max-width:760px){ .grid2{grid-template-columns:1fr} }
+/* Los avisos deben verse encima de la ficha del movimiento (z 45-46) y del pie de botones */
+#nota{z-index:80;bottom:calc(84px + env(safe-area-inset-bottom))}
 </style>
 </head>
 <body>
@@ -862,6 +864,9 @@ async function elegirEquipo(id){
   const m = movActual(); if(!m) return;
   const e = equipoDe(id); if(!e) return;
   m.equipo_id = id; m.niv = e.niv;
+  /* En salida a cliente, "Quién lo recibe" arranca con el cliente asignado del equipo */
+  if(m.tipo_mov==='salida' && !String(m.destino_nombre||'').trim() && e.cliente
+     && (!m.destino_tipo || m.destino_tipo==='Cliente')) m.destino_nombre = e.cliente;
   if(m.tipo_mov!=='entrada') await prellenarAdicionales(m);
   pintarMov();
 }
