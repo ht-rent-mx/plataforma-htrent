@@ -1,0 +1,15 @@
+-- 2026-11-23 · Documentos (pedido de Rogelio). Ya aplicado en Supabase htrentmx-plataforma-ht
+-- (migraciones: documentos_reglas_holograma_placas_doble, documentos_doble_no_aplica_tanque_gondola,
+--  documentos_marcador_parcial). Se deja aquí como referencia.
+--
+-- 1) Holograma: si la ficha tiene folio de holograma -> En orden (automático).
+-- 2) Placas: placa en Inventario + Tarjeta de Circulación cargada -> En orden (automático).
+-- 3) Doble articulado NO aplica (N/A automático y sin alertas) a: dollys, cama baja/lowboy,
+--    tanques/isotanques, equipos de 3+ ejes y equipos de más de 40 (cajas 48/53, plataformas 42/48/53...).
+--    Góndola, Plataforma HQ y Plataforma Alta de 2 ejes y camión 5 ton SÍ lo llevan.
+-- 4) v_tablero.estado_documental: Completo / Parcial / Sin documentos, y
+--    documentos.fn_conteo_documental() con los conteos. Pantalla: tarjeta "Con documentos cargados parcialmente".
+--
+-- Funciones/vistas tocadas: documentos.doble_no_aplica (nueva), v_inv_base (+num_ejes),
+-- v_checklist_efectivo (+motivo_enorden_automatico), _v_doble_articulado_base, v_tablero (+estado_documental),
+-- documentos.fn_conteo_documental (nueva).
